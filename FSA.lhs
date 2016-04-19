@@ -359,9 +359,6 @@ Haskell platform.  So we emulate it here:
 >     where d = determinize f
 >           fins = states d ∖ finals d
 
-< difference ∷ (Ord a, Ord b, Ord c) ⇒ FSA a b → FSA a c → FSA a (Maybe b, Maybe (Set.Set c))
-< difference x y = x ∧ (¬) y
-
 > trimUnreachables ∷ (Ord a) ⇒ FSA a → FSA a
 > trimUnreachables fsa = FSA alpha trans init fin (isDeterministic fsa)
 >     where alpha = alphabet fsa
@@ -499,11 +496,9 @@ and minimization require DFAs as input.
 > metaFlip ∷ Set.Set (State) → State
 > metaFlip = State . Set.map label
 
-> determinize ∷ (Ord a) ⇒ FSA a → FSA a
-> determinize f
->     | isDeterministic f = f
->     | otherwise = FSA (alphabet f) trans inits fins True
->     where inits = Set.singleton (metaFlip (initials f))
+> powersetConstruction ∷ (Ord a) ⇒ FSA a → Set.Set State → (Set.Set State → Bool) → FSA a
+> powersetConstruction f start isFinal = FSA (alphabet f) trans inits fins True
+>     where inits = Set.singleton (metaFlip start)
 >           buildTransition a q = (a, q, δ f a q)
 >           buildTransitions' q = Set.map (\a → buildTransition a q)
 >                                 (alphabet f)
@@ -513,7 +508,7 @@ and minimization require DFAs as input.
 >                      (\(a, b, c) →
 >                       let d = buildTransitions (c ∖ b) in
 >                       (a ∪ d, c, c ∪ Set.map (\(_, _, z) → z) d))
->                      ((∅), (∅), Set.singleton (initials f))
+>                      ((∅), (∅), Set.singleton (start))
 >           makeRealTransition (a, b, c) = Transition a
 >                                          (metaFlip b)
 >                                          (metaFlip c)
@@ -521,9 +516,16 @@ and minimization require DFAs as input.
 >           trans = Set.map makeRealTransition trans'
 >           fins = Set.map metaFlip
 >                  (Set.filter
+>                   isFinal
+>                   (Set.map (\(_, x, _) → x) trans'))
+
+
+> determinize ∷ (Ord a) ⇒ FSA a → FSA a
+> determinize f
+>     | isDeterministic f = f
+>     | otherwise = powersetConstruction f
+>                   (initials f)
 >                   (\s → s ∩ finals f /= (∅))
->                   (Set.map (\(_, x, _) → x) trans'
->                   ∪ Set.map (\(_, _, y) → y) trans'))
 
 
 Syntactic Monoids
@@ -548,34 +550,14 @@ with the following conditions:
 
 This DFA is the syntactic monoid of the original.
 
-< generateSyntacticMonoid ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → FSA a (Set.Set c)
-< generateSyntacticMonoid f = newfsa
-<     where fsa = normalize f
-<           partial = FSA alpha (∅) (Set.singleton q) (∅) True
-<           alpha = alphabet fsa
-<           init = states fsa
-<           q = metaFlip (states fsa)
-<           newfsa = generateSyntacticMonoid' fsa partial (Set.singleton q)
+> generateSyntacticMonoid ∷ (Ord a) ⇒ FSA a → FSA a
+> generateSyntacticMonoid d = generateSyntacticMonoid' d ((< 2) . Set.size)
 
-< generateSyntacticMonoid' ∷ (Ord a) ⇒ FSA a → FSA a → (Set.Set (Set.Set State)) → FSA a
-< generateSyntacticMonoid' fsa partial toTry
-<     | states partial == states newfsa = newfsa
-<     | otherwise = generateSyntacticMonoid' fsa newfsa nextToTry
-<     where newfsa = FSA alpha newTrans init fin True
-<           alpha = alphabet fsa
-<           init = initials partial
-<           makeRealTransition (a, ps, qs) = Transition a
-<                                            (metaFlip ps)
-<                                            (metaFlip qs)
-<           nt'' a = Set.map (\q → (a, q, δ fsa a q)) toTry
-<           nt' = (⋃) Set.map nt'' alpha
-<           nt = Set.map makeRealTransition nt'
-<           newTrans = nt ∪ transitions partial
-<           tStates = Set.map (\(_, p, _) → p) nt'
-<                     ∪ Set.map (\(_, _, q) → q) nt'
-<           nextToTry = tStates ∖ toTry
-<           fin = Set.map metaFlip (Set.filter ((<2) . Set.size) nextToTry)
-<                 ∪ finals partial
+> generateSyntacticMonoid' ∷ (Ord a) ⇒ FSA a → (Set.Set State → Bool) → FSA a
+> generateSyntacticMonoid' d isFinal = powersetConstruction f
+>                                (states f)
+>                                isFinal
+>     where f = normalize d
 
 From there, it is easy to discern whether a language is SL<sub>k</sub>
 or not by simply enumerating all strings of length (k-1) and
@@ -584,82 +566,76 @@ SL<sub>k</sub>.
 
 (Note: we should check for non-trivial loops!)
 
-< wordsOfLength ∷ (Ord a, Integral b) ⇒ b → Set.Set (Symbol a) → Set.Set [Symbol a]
-< wordsOfLength n xs
-<     | n <= 0 = (∅)
-<     | n == 1 = Set.map (:[]) xs
-<     | otherwise = (⋃) (Set.map (\x → Set.map (x:) smaller) xs)
-<     where smaller = wordsOfLength (n - 1) xs
+> wordsOfLength ∷ (Ord a, Integral b) ⇒ b → Set.Set (Symbol a) → Set.Set [Symbol a]
+> wordsOfLength n xs
+>     | n <= 0 = (∅)
+>     | n == 1 = Set.map (:[]) xs
+>     | otherwise = (⋃) (Set.map (\x → Set.map (x:) smaller) xs)
+>     where smaller = wordsOfLength (n - 1) xs
 
 isSLk wants a Syntactic Monoid as an argument.  It's also a terrible
 algorithm, but we'll ignore that for now.
 
-< isSLk ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → c → Bool
-< isSLk fsa k
-<     | k > 1 = (allS id .
-<                Set.map (accepts fsa) .
-<                wordsOfLength (k-1) .
-<                alphabet) fsa
-<     | otherwise = False
+> isSLk ∷ (Ord a, Integral c) ⇒ FSA a → c → Bool
+> isSLk synmon k
+>     | k > 1 = allS (∈ synmon) (wordsOfLength (k-1) (alphabet synmon))
+>     | otherwise = False
 
 kCheck returns the smallest k for which a given FSA is SL, giving up
 after 12 for no particular reason.  Or, there is a reason, and it is
 that I don't do loop tests yet.
 
-< kCheck ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → c
-< kCheck fsa = kCheck' sm 1
-<     where sm = generateSyntacticMonoid fsa
+> kCheck ∷ (Ord a, Integral c) ⇒ FSA a → c
+> kCheck fsa = kCheck' sm 1
+>     where sm = generateSyntacticMonoid fsa
 
-< kCheck' ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → c → c
-< kCheck' sm k
-<     | k > 12 = -1
-<     | isSLk sm k = k
-<     | otherwise = kCheck' sm (k+1)
+> kCheck' ∷ (Ord a, Integral c) ⇒ FSA a → c → c
+> kCheck' sm k
+>     | k > 12 = -1
+>     | isSLk sm k = k
+>     | otherwise = kCheck' sm (k+1)
 
 We also want to be able to see what factors are disallowed.  In order
 to take only the minimal forbidden factors, we need a substring test.
 
-< isSublistOf ∷ (Eq a) ⇒ [a] → [a] → Bool
-< isSublistOf xs [] = False
-< isSublistOf xs ys
-<     | xs `isPrefixOf` ys = True
-<     | xs `isSublistOf` (tail ys) = True
-<     | otherwise = False
+> isSublistOf ∷ (Eq a) ⇒ [a] → [a] → Bool
+> isSublistOf xs [] = False
+> isSublistOf xs ys
+>     | xs `isPrefixOf` ys = True
+>     | xs `isSublistOf` (tail ys) = True
+>     | otherwise = False
 
-< isPrefixOf ∷ (Eq a) ⇒ [a] → [a] → Bool
-< isPrefixOf [] ys = True
-< isPrefixOf xs [] = False
-< isPrefixOf (x:xs) (y:ys)
-<     | x == y = xs `isPrefixOf` ys
-<     | otherwise = False
+> isPrefixOf ∷ (Eq a) ⇒ [a] → [a] → Bool
+> isPrefixOf [] ys = True
+> isPrefixOf xs [] = False
+> isPrefixOf (x:xs) (y:ys)
+>     | x == y = xs `isPrefixOf` ys
+>     | otherwise = False
 
 Then we can construct a (somewhat inefficient) test to see what
 factors are necessarily excluded.  We'll start by searching for
 factors that are disallowed *everywhere*, because that is the simplest
 of the tests.
 
-< disallowedFactors ∷ (Ord a, Ord b) ⇒ FSA a b → Set.Set [Symbol a]
-< disallowedFactors f = disallowedFactors' f'' (∅) (kCheck f) 1
-<     where f' = generateSyntacticMonoid f
-<           f'' = FSA (alphabet f') (transitions f') (initials f')
-<                 (Set.filter (not . Set.null . label) (states f'))
-<                 (isDeterministic f')
+> disallowedFactors ∷ (Ord a) ⇒ FSA a → Set.Set [Symbol a]
+> disallowedFactors f = disallowedFactors' f' (∅) (kCheck f) 1
+>     where f' = generateSyntacticMonoid' f (not . (== (∅)))
 
 We will define a convenience function that takes as input a syntactic
 monoid with initial and final states modified to reflect our current
 search, which returns a list of disallowed factors.  This is reusable
 in our search for anchored factors.
 
-< disallowedFactors' ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → Set.Set [Symbol a] → c → c → Set.Set [Symbol a]
-< disallowedFactors' f ws k x
-<     | k < 1 = Set.fromList []
-<     | x > k = ws
-<     | otherwise = disallowedFactors' f (ws ∪ newws'') k (x + 1)
-<     where newws = wordsOfLength x (alphabet f)
-<           newws' = Set.filter
-<                    (\w → (not . anyS (\x → x `isSublistOf` w)) ws)
-<                    newws
-<           newws'' = Set.filter (not . accepts f) newws'
+> disallowedFactors' ∷ (Ord a, Integral c) ⇒ FSA a → Set.Set [Symbol a] → c → c → Set.Set [Symbol a]
+> disallowedFactors' f ws k x
+>     | k < 1 = Set.fromList []
+>     | x > k = ws
+>     | otherwise = disallowedFactors' f (ws ∪ newws'') k (x + 1)
+>     where newws = wordsOfLength x (alphabet f)
+>           newws' = Set.filter
+>                    (\w → (not . anyS (\x → x `isSublistOf` w)) ws)
+>                    newws
+>           newws'' = Set.filter (not . accepts f) newws'
 
 
 Showing Data
