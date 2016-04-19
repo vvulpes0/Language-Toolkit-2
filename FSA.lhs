@@ -2,6 +2,7 @@
 > module FSA where
 
 > import qualified Data.Set as Set
+> import LogicClasses
 
 
 Introduction
@@ -16,56 +17,12 @@ of the project should allow more general use.
 In this case, finite-state automata are represented mathematically as
 directional graphs with edges labelled by formal symbols.
 
-
-Set Theory and its Symbols
-==========================
-
-The standard mathematical symbols for set operations will be used
-throughout this module.  The exception to this is that ∅ (empty set)
-is parenthesized to comply with Haskell's naming rules.  In addition,
-I define a function `unionAll` that collapses a set of sets of (a)
-into a single set of (a), using the union operation.  `unionAll` is
-also written as the N-ARY UNION symbol, ⋃.  Note that Haskell requires
-symbolic operators to be parenthesized when used in prefix notation.
-
-> infixl 7 ∩
-> (∩) ∷ Ord a ⇒ Set.Set a → Set.Set a → Set.Set a
-> (∩) = Set.intersection
-
-> infixl 6 ∪
-> (∪) ∷ Ord a ⇒ Set.Set a → Set.Set a → Set.Set a
-> (∪) = Set.union
-
-> infixl 6 ∖
-> (∖) ∷ Ord a ⇒ Set.Set a → Set.Set a → Set.Set a
-> (∖) = (Set.\\)
-
-> infixl 8 ∈
-> (∈) ∷ Ord a ⇒ a → Set.Set a → Bool
-> (∈) = Set.member
-
-> infixl 8 ∉
-> (∉) ∷ Ord a ⇒ a → Set.Set a → Bool
-> (∉) = Set.notMember
-
-> (∅) ∷ Set.Set a
-> (∅) = Set.empty
-
-> unionAll ∷ Ord a ⇒ Set.Set (Set.Set a) → Set.Set a
-> unionAll = Set.fold (∪) (∅)
-
-> (⋃) ∷ Ord a ⇒ Set.Set (Set.Set a) → Set.Set a
-> (⋃) = unionAll
-
-Older versions of Haskell (pre 7.?) don't have the Foldable typeclass,
-but we want to be able to use the `all` and `any` constructions over
-sets.  I recreate them here with allS and anyS.
-
-> allS ∷ Ord a ⇒ (a → Bool) → Set.Set a → Bool
-> allS f xs = all f (Set.toList xs)
-
-> anyS ∷ Ord a ⇒ (a → Bool) → Set.Set a → Bool
-> anyS f xs = any f (Set.toList xs)
+> instance (Ord a) ⇒ Container (FSA a) [Symbol a] where
+>     (∈) = flip accepts
+>     (∪) = union
+>     (∩) = intersection
+>     a ∖ b = a ∩ (¬) b
+>     (∅) = empty
 
 
 Data Structures
@@ -87,12 +44,12 @@ some operations, but can be slow to verify.  This module sacrifices
 space for speed, treating determinism as a property of the datatype
 itself.
 
-> data FSA a b = FSA (Set.Set (Symbol a))
->     (Set.Set (Transition a b))
->     (Set.Set (State b))
->     (Set.Set (State b))
+> data FSA a = FSA (Set.Set (Symbol a))
+>     (Set.Set (Transition a))
+>     (Set.Set State)
+>     (Set.Set State)
 >     (Bool)
->     deriving (Read, Show)
+>     deriving (Show)
 
 Here we define some accessor functions for the members of FSA, not
 because pattern matching against constructors is inherently wrong, but
@@ -100,39 +57,39 @@ because there are two arguments of the same type with no completely
 intuitive order.  Being able to export the type completely abstractly
 is only a side benefit.
 
-> alphabet ∷ FSA a b → Set.Set (Symbol a)
+> alphabet ∷ FSA a → Set.Set (Symbol a)
 > alphabet (FSA a _ _ _ _) = a
 
-> transitions ∷ FSA a b → Set.Set (Transition a b)
+> transitions ∷ FSA a → Set.Set (Transition a)
 > transitions (FSA _ t _ _ _) = t
 
-> initials ∷ FSA a b → Set.Set (State b)
+> initials ∷ FSA a → Set.Set State
 > initials (FSA _ _ i _ _) = i
 
-> finals ∷ FSA a b → Set.Set (State b)
+> finals ∷ FSA a → Set.Set State
 > finals (FSA _ _ _ f _) = f
 
-> states ∷ (Ord a, Ord b) ⇒ FSA a b → Set.Set (State b)
+> states ∷ (Ord a) ⇒ FSA a → Set.Set State
 > states f = initials f ∪ finals f ∪ others
->     where others          = (⋃) (Set.map extractStates ts)
->           extractStates t = doubleton (source t) (destination t)
->           doubleton a b   = Set.insert b (Set.singleton a)
->           ts              = transitions f
+>    where others          = (⋃) (Set.map extractStates ts)
+>          extractStates t = doubleton (source t) (destination t)
+>          doubleton a b   = Set.insert b (Set.singleton a)
+>          ts              = transitions f
 
-> isDeterministic ∷ FSA a b → Bool
+> isDeterministic ∷ FSA a → Bool
 > isDeterministic (FSA _ _ _ _ d) = d
 
 The empty FSA has a single state and accepts no strings, not even the
 empty string.
 
-> empty ∷ Integral b ⇒ FSA a b
+> empty ∷ (Ord a) ⇒ FSA a
 > empty = emptyWithAlphabet (∅)
 
 A singleton FSA is one that accepts exactly one (possibly-empty)
 string.  The number of states in such an FSA is equal to the length of
 the string plus two.
 
-> singleton ∷ (Ord a, Integral b, Ord b) ⇒ [Symbol a] → FSA a b
+> singleton ∷ (Ord a) ⇒ [Symbol a] → FSA a
 > singleton syms = FSA alphabet (trans str) begins finals True
 >     where str = filter (/= Epsilon) syms
 >           alphabet = (Set.fromList str)
@@ -150,11 +107,11 @@ the string plus two.
 >           last   = (+ 1) . fromIntegral . length $ str
 >           finals = Set.singleton (State last)
 
-> emptyWithAlphabet ∷ Integral b ⇒ Set.Set (Symbol a) → FSA a b
+> emptyWithAlphabet ∷ (Ord a) ⇒ Set.Set (Symbol a) → FSA a
 > emptyWithAlphabet as = FSA as (∅) (Set.singleton (State 0)) (∅) True
 
-> singletonWithAlphabet ∷ (Ord a, Integral b, Ord b) ⇒ [Symbol a] → Set.Set (Symbol a) → FSA a (Maybe b, Maybe b)
-> singletonWithAlphabet str as = singleton str ∨ emptyWithAlphabet as
+> singletonWithAlphabet ∷ (Ord a) ⇒ [Symbol a] → Set.Set (Symbol a) → FSA a
+> singletonWithAlphabet str as = singleton str ∩ emptyWithAlphabet as
 
 
 Formal Symbols
@@ -180,10 +137,19 @@ type is an instance of Ord to operate as the labels of an FSA's
 states.  The restriction to Ord types is due to Data.Set requiring it
 for efficient implementation of sets.
 
-> data State a = State a deriving (Eq, Ord, Read, Show)
+> data State = forall a. (Ord a, Show a, Read a) ⇒ State a -- deriving (Eq, Ord, Read, Show)
 
-> label ∷ State a → a
-> label (State a) = a
+> label ∷ State → String
+> label (State a) = show a
+
+> instance Show State where
+>     show s = "(State " ++ label s ++ ")"
+
+> instance Eq State where
+>     a == b = label a == label b
+
+> instance Ord State where
+>     compare a b = label a `compare` label b
 
 
 Transitions
@@ -199,19 +165,19 @@ Normally, the label of a transition would be referred to as such, but
 in this case that would result in a namespace clash.  Thus, this
 module refers to this edge label as a path.
 
-> data Transition a b = Transition (Symbol a) (State b) (State b)
->                       deriving (Eq, Read, Show)
+> data Transition a = Transition (Symbol a) State State
+>                     deriving (Eq, Show)
 
-> path ∷ Transition a b → Symbol a
+> path ∷ Transition a → Symbol a
 > path (Transition a _ _) = a
 
-> source ∷ Transition a b → State b
+> source ∷ Transition a → State
 > source (Transition _ b _) = b
 
-> destination ∷ Transition a b → State b
+> destination ∷ Transition a → State
 > destination (Transition _ _ c) = c
 
-> instance (Ord a, Ord b) ⇒ Ord (Transition a b) where
+> instance (Ord a) ⇒ Ord (Transition a) where
 >     t1 <= t2
 >         | s1 /= s2  = s1 < s2
 >         | p1 /= p2  = p1 < p2
@@ -224,15 +190,15 @@ exist a mechanism to determine which State to enter upon consuming a
 Symbol.  The set of Transitions describes the map, and we will use
 that to define the transition function.
 
-> data ID a b = ID (State b) [Symbol a] deriving (Eq, Ord, Read, Show)
+> data ID a = ID State [Symbol a] deriving (Eq, Ord, Show)
 
-> state ∷ ID a b → State b
+> state ∷ ID a → State
 > state (ID a _) = a
 
-> string ∷ ID a b → [Symbol a]
+> string ∷ ID a → [Symbol a]
 > string (ID _ xs) = xs
 
-> epsilonClosure ∷ (Ord a, Ord b) ⇒ FSA a b → State b → Set.Set (State b)
+> epsilonClosure ∷ (Ord a) ⇒ FSA a → State → Set.Set State
 > epsilonClosure fsa q
 >     | isDeterministic fsa = Set.singleton q
 >     | otherwise           = epsilonClosure' fsa (Set.singleton q)
@@ -244,7 +210,7 @@ that to define the transition function.
 >                     closure = seen ∪ Set.map destination seens
 >                     numNew = Set.size closure - Set.size seen
 
-> step ∷ (Ord a, Ord b) ⇒ FSA a b → Set.Set (ID a b) → Set.Set (ID a b)
+> step ∷ (Ord a) ⇒ FSA a → Set.Set (ID a) → Set.Set (ID a)
 > step fsa ids
 >     | Set.null filteredIDs = (∅)
 >     | otherwise = (⋃) (Set.map next filteredIDs)
@@ -266,98 +232,104 @@ that to define the transition function.
 We should not have to produce IDs ourselves.  We can define the transition
 function δ from an FSA, a symbol, and a state to a set of states:
 
-> δ ∷ (Ord a, Ord b) ⇒ FSA a b → Symbol a → Set.Set (State b) → Set.Set (State b)
+> δ ∷ (Ord a) ⇒ FSA a → Symbol a → Set.Set State → Set.Set State
 > δ f x = Set.map state . step f . Set.map ((flip ID) [x])
 
-> compute ∷ (Ord a, Ord b) ⇒ FSA a b → [Symbol a] → Set.Set (ID a b)
+> delta ∷ (Ord a) ⇒ FSA a → Symbol a → Set.Set State → Set.Set State
+> delta = δ
+
+> compute ∷ (Ord a) ⇒ FSA a → [Symbol a] → Set.Set (ID a)
 > compute fsa str = until (allS (null . string)) (step fsa) initialIDs
 >     where initialIDs = Set.map (flip ID str) (initials fsa)
 
-> accepts ∷ (Ord a, Ord b) ⇒ FSA a b → [Symbol a] → Bool
-> accepts fsa = anyS (`Set.member` finals fsa) . Set.map state . compute fsa
+> accepts ∷ (Ord a) ⇒ FSA a → [Symbol a] → Bool
+> accepts fsa = anyS (∈ finals fsa) . Set.map state . compute fsa
 
 
 Logical Operators
 =================
 
-> combine ∷ State a → State b → State (a, b)
-> combine a b = State (label a, label b)
+> combine ∷ State → State → State
+> combine (State a) (State b) = State (a, b)
 
-> makePairs ∷ (Ord a, Ord b) ⇒ Set.Set (State a) → Set.Set (State b) → Set.Set (State (a, b))
-> makePairs xs ys = (⋃) (Set.map (\x → Set.map (\y → combine x y) ys) xs)
+> makePairs ∷ Set.Set State → Set.Set State → Set.Set (State, State)
+> makePairs xs ys = (⋃) (Set.map (\x → Set.map (\y → (x, y)) ys) xs)
 
-> makeJustPairs ∷ (Ord a, Ord b) ⇒ Set.Set (State a) → Set.Set (State b) → Set.Set (State (Maybe a, Maybe b))
+> makeJustPairs ∷ Set.Set State → Set.Set State → Set.Set (State, State)
 > makeJustPairs xs ys = makePairs (justify xs) (justify ys)
->     where justify ∷ (Ord c) ⇒ Set.Set (State c) → Set.Set (State (Maybe c))
->           justify = Set.map (State . Just . label)
+>     where justify ∷ Set.Set State → Set.Set State
+>           justify = Set.map (\(State z) → State (Just z))
 
-> combineAlphabets ∷ Ord a ⇒ FSA a b → FSA a c → Set.Set (Symbol a)
+> combineAlphabets ∷ (Ord a) ⇒ FSA a → FSA a → Set.Set (Symbol a)
 > combineAlphabets f1 f2 = alphabet f1 ∪ alphabet f2
 
-> combineTransitions ∷ (Ord a, Ord b, Ord c) ⇒ FSA a b → FSA a c → Set.Set (Transition a (Maybe b, Maybe c))
+> combineTransitions ∷ (Ord a) ⇒ FSA a → FSA a → Set.Set (Transition a)
 > combineTransitions f1 f2 = trans
 >     where bigalpha = combineAlphabets f1 f2
+>           delta ∷ (Ord a) ⇒ FSA a → Symbol a → State → Set.Set (Maybe State)
 >           delta f a q
->               | label q == Nothing = Set.singleton (State Nothing)
->               | Set.null oneStep   = Set.singleton (State Nothing)
->               | otherwise          = Set.map (State . Just . label) oneStep
->               where oneStep = Set.map state (step f ids)
->                     (State (Just q')) = q
->                     ids = Set.singleton (ID (State q') [a])
->           unpair p = (l, r)
->               where l = (State . fst . label) p
->                     r = (State . snd . label) p
->           pair l r = State (label l, label r)
+>               | Set.null oneStep = Set.singleton (Nothing)
+>               | otherwise        = Set.map Just oneStep
+>               where oneStep = δ f a (Set.singleton q)
+>           js (State c) = State (Just c)
+>           jt (Transition a b c) = Transition a (js b) (js c)
+>           jf (FSA a t i f d) = FSA a (Set.map jt t) (Set.map js i) (Set.map js f) d
+>           j1 = jf f1
+>           j2 = jf f2
+>           m Nothing = State (Nothing ∷ Maybe Int)
+>           m (Just (State c)) = State c
 >           trans = trans' (∅) (∅) (makeJustPairs (initials f1) (initials f2))
 >           trans' trs seen ps
 >               | Set.size newseen == Set.size seen = newtrs
 >               | otherwise = trans' newtrs newseen newps
->               where newtrs = trs ∪ ((⋃) (Set.map newtrs' bigalpha))
->                     newtrs' a = (⋃) (Set.map (newtrs'' a) ps)
->                     newtrs'' a p = ((⋃)
->                                     (Set.map
->                                      (\x → Set.map
->                                       (\y → Transition a p (pair x y))
->                                       (delta f2 a r))
->                                      (delta f1 a l)))
->                         where  (l, r) = unpair p
->                     newseen = Set.map source newtrs
->                               ∪ Set.map destination newtrs
+>               where newtrs' = ((⋃) (Set.map newtrs'' bigalpha))
+>                     newtrs'' a = (⋃) (Set.map (newtrs''' a) ps)
+>                     newtrs''' a (l, r) = ((⋃)
+>                                      (Set.map
+>                                       (\x → Set.map
+>                                        (\y → (a,
+>                                              (l, r),
+>                                              (m x, m y)))
+>                                        (delta j2 a r))
+>                                       (delta j1 a l)))
+>                     newtrs = trs ∪ (Set.map
+>                                     (\(a, (x1, x2), (y1, y2))
+>                                     → Transition a
+>                                      (combine x1 x2)
+>                                      (combine y1 y2))
+>                                     newtrs')
+>                     newseen = Set.map (\(_, x, _) → x) newtrs'
+>                               ∪ Set.map (\(_, _, y) → y) newtrs'
 >                     newps   = newseen ∖ seen
 
-> infixl 7 ∧
-> (∧) ∷ (Ord a, Ord b, Ord c) ⇒ FSA a b → FSA a c → FSA a (Maybe b, Maybe c)
-> (∧) = intersection
-
-> intersection ∷ (Ord a, Ord b, Ord c) ⇒ FSA a b → FSA a c → FSA a (Maybe b, Maybe c)
+> intersection ∷ (Ord a) ⇒ FSA a → FSA a → FSA a
 > intersection f1 f2 = FSA bigalpha trans init fin det
 >     where bigalpha = combineAlphabets f1 f2
->           init = makeJustPairs (initials f1) (initials f2)
->           fin  = (makeJustPairs (finals f1) (finals f2)) ∩ sts
+>           cs = Set.map (\(x, y) → combine x y)
+>           init = cs $ makeJustPairs (initials f1) (initials f2)
+>           fin  = cs (makeJustPairs (finals f1) (finals f2)) ∩ sts
 >           trans = combineTransitions f1 f2
 >           sts = Set.map source trans ∪ Set.map destination trans
 >           det = isDeterministic f1 && isDeterministic f2
 
-> infixl 6 ∨
-> (∨) ∷ (Ord a, Ord b, Ord c) ⇒ FSA a b → FSA a c → FSA a (Maybe b, Maybe c)
-> (∨) = union
-
-> union ∷ (Ord a, Ord b, Ord c) ⇒ FSA a b → FSA a c → FSA a (Maybe b, Maybe c)
+> union ∷ (Ord a) ⇒ FSA a → FSA a → FSA a
 > union f1 f2 = FSA bigalpha trans init fin det
 >     where bigalpha = combineAlphabets f1 f2
->           init = makeJustPairs (initials f1) (initials f2)
+>           cs = Set.map (\(x, y) → combine x y)
+>           init = cs $ makeJustPairs (initials f1) (initials f2)
 >           fin1 = finals f1
 >           fin2 = finals f2
+>           n = State (Nothing ∷ Maybe Int)
 >           fin1With2 = makeJustPairs fin1 (states f2)
 >           fin2With1 = makeJustPairs (states f1) fin2
->           fin1WithN = Set.map (\x → State (Just (label x), Nothing)) fin1
->           fin2WithN = Set.map (\x → State (Nothing, Just (label x))) fin2
->           fin = sts ∩ (fin1WithN ∪ fin2WithN ∪ fin1With2 ∪ fin2With1)
+>           fin1WithN = Set.map (\(x, _) → (x, n)) fin1With2
+>           fin2WithN = Set.map (\(_, y) → (n, y)) fin2With1
+>           fin = sts ∩ cs (fin1WithN ∪ fin2WithN ∪ fin1With2 ∪ fin2With1)
 >           trans = combineTransitions f1 f2
 >           sts = Set.map source trans ∪ Set.map destination trans
 >           det = isDeterministic f1 && isDeterministic f2
 
-> renameStates ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → FSA a c
+> renameStates ∷ (Ord a) ⇒ FSA a → FSA a
 > renameStates fsa = FSA (alphabet fsa) trans init fin (isDeterministic fsa)
 >     where sts = states fsa
 >           index x xs = fromIntegral (x `findIndexInSet` xs)
@@ -379,18 +351,18 @@ Haskell platform.  So we emulate it here:
 >     | otherwise = error "element is not in the set"
 >     where (l, found, _) = Set.splitMember x s
 
-> (¬) ∷ (Ord a, Ord b) ⇒ FSA a b → FSA a (Set.Set b)
+> (¬) ∷ (Ord a) ⇒ FSA a → FSA a
 > (¬) = complement
 
-> complement ∷ (Ord a, Ord b) ⇒ FSA a b → FSA a (Set.Set b)
+> complement ∷ (Ord a) ⇒ FSA a → FSA a
 > complement f = FSA (alphabet d) (transitions d) (initials d) fins True
 >     where d = determinize f
 >           fins = states d ∖ finals d
 
-> difference ∷ (Ord a, Ord b, Ord c) ⇒ FSA a b → FSA a c → FSA a (Maybe b, Maybe (Set.Set c))
-> difference x y = x ∧ (¬) y
+< difference ∷ (Ord a, Ord b, Ord c) ⇒ FSA a b → FSA a c → FSA a (Maybe b, Maybe (Set.Set c))
+< difference x y = x ∧ (¬) y
 
-> trimUnreachables ∷ (Ord a, Ord b) ⇒ FSA a b → FSA a b
+> trimUnreachables ∷ (Ord a) ⇒ FSA a → FSA a
 > trimUnreachables fsa = FSA alpha trans init fin (isDeterministic fsa)
 >     where alpha = alphabet fsa
 >           init = initials fsa
@@ -420,13 +392,12 @@ We begin by constructing the set of Myhill-Nerode equivalence classes
 for the states of the input FSA, then simply replace each state by its
 equivalence class.
 
-> minimize ∷ (Ord a, Ord b) ⇒ FSA a b → FSA a (Set.Set (Set.Set b))
+> minimize ∷ (Ord a) ⇒ FSA a → FSA a
 > minimize fsa = trimUnreachables newfsa
 >     where dfa = determinize fsa
 >           classes = equivalenceClasses dfa
->           classOf x = State ((⋃) (Set.map
->                                   (Set.map label)
->                                   (Set.filter (x ∈) classes)))
+>           classOf x = (State . Set.map label . (⋃))
+>                       (Set.filter (x ∈) classes)
 >           init = Set.map classOf (initials dfa)
 >           fin = Set.map classOf (finals dfa)
 >           trans = (Set.map
@@ -435,7 +406,7 @@ equivalence class.
 >                    (transitions dfa))
 >           newfsa = FSA (alphabet dfa) trans init fin True
 
-> equivalenceClasses ∷ (Ord a, Ord b) ⇒ FSA a b → Set.Set (Set.Set (State b))
+> equivalenceClasses ∷ (Ord a) ⇒ FSA a → Set.Set (Set.Set State)
 > equivalenceClasses fsa = Set.map eqClass sts
 >     where sts = states fsa
 >           i = i' ∪ Set.map (\x → (x, x)) sts
@@ -456,7 +427,7 @@ pairs, the algorithm is finished; all possible distinctions have been
 discovered.  The Myhill-Nerode equivalence class of a state p, then,
 is the set of states not distinct from p.
 
-> distinguishedPairs ∷ (Ord a, Ord b) ⇒ FSA a b → Set.Set (State b, State b)
+> distinguishedPairs ∷ (Ord a) ⇒ FSA a → Set.Set (State, State)
 > distinguishedPairs fsa = fst result
 >     where allPairs = pairs (states fsa)
 >           initiallyDistinguished = ((⋃)
@@ -469,14 +440,11 @@ is the set of states not distinct from p.
 >                     (\(x, _) → (x ∪ Set.filter (f x) (allPairs ∖ x), x))
 >                     (initiallyDistinguished, (∅)))
 
-> areDistinguishedByOneStep ∷ (Ord a, Ord b) ⇒ FSA a b → Set.Set (State b, State b) → State b → State b → Bool
+> areDistinguishedByOneStep ∷ (Ord a) ⇒ FSA a → Set.Set (State, State) → State → State → Bool
 > areDistinguishedByOneStep fsa knownDistinct p q
 >     | makePair p q ∈ knownDistinct = True
 >     | otherwise = anyS (∈ knownDistinct) newPairs
->     where destinations s x = (Set.map state
->                              . step fsa
->                              . Set.singleton
->                              . ID s) [x]
+>     where destinations s x = δ fsa x (Set.singleton s)
 >           newPairs' a = (⋃) (Set.map
 >                              (pairs' (destinations q a))
 >                              (destinations p a))
@@ -504,19 +472,19 @@ to remove states that cannot be reached, the simplest way to remove
 these fail-states is to trim the unreachable states in the reversal of
 the FSA.
 
-> reverse ∷ (Ord a, Ord b) ⇒ FSA a b → FSA a b
+> reverse ∷ (Ord a) ⇒ FSA a → FSA a
 > reverse f = (FSA (alphabet f)
 >              (reverseTransitions f)
 >              (finals f) (initials f) False)
 >     where reverseTransition (Transition x s d) = Transition x d s
 >           reverseTransitions = Set.map reverseTransition . transitions
 
-> trimFailStates ∷ (Ord a, Ord b) ⇒ FSA a b → FSA a b
+> trimFailStates ∷ (Ord a) ⇒ FSA a → FSA a
 > trimFailStates = FSA.reverse . trimUnreachables . FSA.reverse
 
 An FSA is in normal form if it has been both minimized and trimmed.
 
-> normalize ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → FSA a c
+> normalize ∷ (Ord a) ⇒ FSA a → FSA a
 > normalize = renameStates . trimFailStates . minimize . trimUnreachables
 
 
@@ -528,39 +496,34 @@ improve the speed of determining whether the language represented by
 the FSA contains a string.  Further, both complexity-classification
 and minimization require DFAs as input.
 
-> metaFlip ∷ (Ord a) ⇒ Set.Set (State a) → State (Set.Set a)
+> metaFlip ∷ Set.Set (State) → State
 > metaFlip = State . Set.map label
 
-> determinize ∷ (Ord a, Ord b) ⇒ FSA a b → FSA a (Set.Set b)
+> determinize ∷ (Ord a) ⇒ FSA a → FSA a
 > determinize f
->     | isDeterministic f = FSA (alphabet f)
->                           (wrapStates (transitions f))
->                           (wrap (initials f)) (wrap (finals f))
->                           True
+>     | isDeterministic f = f
 >     | otherwise = FSA (alphabet f) trans inits fins True
 >     where inits = Set.singleton (metaFlip (initials f))
->           buildTransition a q = Transition a
->                                 (State q) (State (δ f a q))
+>           buildTransition a q = (a, q, δ f a q)
 >           buildTransitions' q = Set.map (\a → buildTransition a q)
 >                                 (alphabet f)
 >           buildTransitions = (⋃) . Set.map buildTransitions'
->           trans' = until
->                    (\(a, b, c) → Set.size b == Set.size c)
->                    (\(a, b, c) →
->                     let d = buildTransitions (c ∖ b) in
->                     (a ∪ d, c, c ∪ Set.map (label . destination) d))
->                    ((∅), (∅), Set.singleton (initials f))
->           fixTransition t = Transition (path t)
->                             ((metaFlip . label) (source t))
->                             ((metaFlip . label) (destination t))
->           trans = let (a, _, _) = trans' in Set.map fixTransition a
->           fins = Set.filter
->                  (\s → label s ∩ Set.map label (finals f) /= (∅))
->                  (Set.map source trans ∪ Set.map destination trans)
->           wrapStates' (Transition x s d) = Transition x (wrap' s) (wrap' d)
->           wrapStates = Set.map wrapStates'
->           wrap' = State . Set.singleton . label
->           wrap = Set.map wrap'
+>           trans'' = until
+>                      (\(a, b, c) → Set.size b == Set.size c)
+>                      (\(a, b, c) →
+>                       let d = buildTransitions (c ∖ b) in
+>                       (a ∪ d, c, c ∪ Set.map (\(_, _, z) → z) d))
+>                      ((∅), (∅), Set.singleton (initials f))
+>           makeRealTransition (a, b, c) = Transition a
+>                                          (metaFlip b)
+>                                          (metaFlip c)
+>           trans' = let (a, _, _) = trans'' in a
+>           trans = Set.map makeRealTransition trans'
+>           fins = Set.map metaFlip
+>                  (Set.filter
+>                   (\s → s ∩ finals f /= (∅))
+>                   (Set.map (\(_, x, _) → x) trans'
+>                   ∪ Set.map (\(_, _, y) → y) trans'))
 
 
 Syntactic Monoids
@@ -585,35 +548,34 @@ with the following conditions:
 
 This DFA is the syntactic monoid of the original.
 
-> generateSyntacticMonoid ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → FSA a (Set.Set c)
-> generateSyntacticMonoid f = newfsa
->     where fsa = normalize f
->           partial = FSA alpha (∅) (Set.singleton q) (∅) True
->           alpha = alphabet fsa
->           init = states fsa
->           q = metaFlip (states fsa)
->           newfsa = generateSyntacticMonoid' fsa partial (Set.singleton q)
+< generateSyntacticMonoid ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → FSA a (Set.Set c)
+< generateSyntacticMonoid f = newfsa
+<     where fsa = normalize f
+<           partial = FSA alpha (∅) (Set.singleton q) (∅) True
+<           alpha = alphabet fsa
+<           init = states fsa
+<           q = metaFlip (states fsa)
+<           newfsa = generateSyntacticMonoid' fsa partial (Set.singleton q)
 
-> generateSyntacticMonoid' ∷ (Ord a, Ord b) ⇒ FSA a b → FSA a (Set.Set b) → (Set.Set (State (Set.Set b))) → FSA a (Set.Set b)
-> generateSyntacticMonoid' fsa partial toTry
->     | states partial == states newfsa = newfsa
->     | otherwise = generateSyntacticMonoid' fsa newfsa nextToTry
->     where newfsa = FSA alpha newTrans init fin True
->           alpha = alphabet fsa
->           init = initials partial
->           nt a = Set.map (\q →
->                           Transition a
->                                      q
->                                      ((metaFlip .
->                                        δ fsa a .
->                                        Set.map (State) .
->                                        label)
->                                       q)
->                  ) toTry
->           newTrans = (⋃) (Set.map nt alpha) ∪ transitions partial
->           tStates = states $ FSA (∅) newTrans (∅) (∅) True
->           nextToTry = tStates ∖ states partial
->           fin = Set.filter ((<2) . Set.size . label) tStates ∪ finals partial
+< generateSyntacticMonoid' ∷ (Ord a) ⇒ FSA a → FSA a → (Set.Set (Set.Set State)) → FSA a
+< generateSyntacticMonoid' fsa partial toTry
+<     | states partial == states newfsa = newfsa
+<     | otherwise = generateSyntacticMonoid' fsa newfsa nextToTry
+<     where newfsa = FSA alpha newTrans init fin True
+<           alpha = alphabet fsa
+<           init = initials partial
+<           makeRealTransition (a, ps, qs) = Transition a
+<                                            (metaFlip ps)
+<                                            (metaFlip qs)
+<           nt'' a = Set.map (\q → (a, q, δ fsa a q)) toTry
+<           nt' = (⋃) Set.map nt'' alpha
+<           nt = Set.map makeRealTransition nt'
+<           newTrans = nt ∪ transitions partial
+<           tStates = Set.map (\(_, p, _) → p) nt'
+<                     ∪ Set.map (\(_, _, q) → q) nt'
+<           nextToTry = tStates ∖ toTry
+<           fin = Set.map metaFlip (Set.filter ((<2) . Set.size) nextToTry)
+<                 ∪ finals partial
 
 From there, it is easy to discern whether a language is SL<sub>k</sub>
 or not by simply enumerating all strings of length (k-1) and
@@ -622,82 +584,82 @@ SL<sub>k</sub>.
 
 (Note: we should check for non-trivial loops!)
 
-> wordsOfLength ∷ (Ord a, Integral b) ⇒ b → Set.Set (Symbol a) → Set.Set [Symbol a]
-> wordsOfLength n xs
->     | n <= 0 = (∅)
->     | n == 1 = Set.map (:[]) xs
->     | otherwise = (⋃) (Set.map (\x → Set.map (x:) smaller) xs)
->     where smaller = wordsOfLength (n - 1) xs
+< wordsOfLength ∷ (Ord a, Integral b) ⇒ b → Set.Set (Symbol a) → Set.Set [Symbol a]
+< wordsOfLength n xs
+<     | n <= 0 = (∅)
+<     | n == 1 = Set.map (:[]) xs
+<     | otherwise = (⋃) (Set.map (\x → Set.map (x:) smaller) xs)
+<     where smaller = wordsOfLength (n - 1) xs
 
 isSLk wants a Syntactic Monoid as an argument.  It's also a terrible
 algorithm, but we'll ignore that for now.
 
-> isSLk ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → c → Bool
-> isSLk fsa k
->     | k > 1 = (allS id .
->                Set.map (accepts fsa) .
->                wordsOfLength (k-1) .
->                alphabet) fsa
->     | otherwise = False
+< isSLk ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → c → Bool
+< isSLk fsa k
+<     | k > 1 = (allS id .
+<                Set.map (accepts fsa) .
+<                wordsOfLength (k-1) .
+<                alphabet) fsa
+<     | otherwise = False
 
 kCheck returns the smallest k for which a given FSA is SL, giving up
 after 12 for no particular reason.  Or, there is a reason, and it is
 that I don't do loop tests yet.
 
-> kCheck ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → c
-> kCheck fsa = kCheck' sm 1
->     where sm = generateSyntacticMonoid fsa
+< kCheck ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → c
+< kCheck fsa = kCheck' sm 1
+<     where sm = generateSyntacticMonoid fsa
 
-> kCheck' ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → c → c
-> kCheck' sm k
->     | k > 12 = -1
->     | isSLk sm k = k
->     | otherwise = kCheck' sm (k+1)
+< kCheck' ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → c → c
+< kCheck' sm k
+<     | k > 12 = -1
+<     | isSLk sm k = k
+<     | otherwise = kCheck' sm (k+1)
 
 We also want to be able to see what factors are disallowed.  In order
 to take only the minimal forbidden factors, we need a substring test.
 
-> isSublistOf ∷ (Eq a) ⇒ [a] → [a] → Bool
-> isSublistOf xs [] = False
-> isSublistOf xs ys
->     | xs `isPrefixOf` ys = True
->     | xs `isSublistOf` (tail ys) = True
->     | otherwise = False
+< isSublistOf ∷ (Eq a) ⇒ [a] → [a] → Bool
+< isSublistOf xs [] = False
+< isSublistOf xs ys
+<     | xs `isPrefixOf` ys = True
+<     | xs `isSublistOf` (tail ys) = True
+<     | otherwise = False
 
-> isPrefixOf ∷ (Eq a) ⇒ [a] → [a] → Bool
-> isPrefixOf [] ys = True
-> isPrefixOf xs [] = False
-> isPrefixOf (x:xs) (y:ys)
->     | x == y = xs `isPrefixOf` ys
->     | otherwise = False
+< isPrefixOf ∷ (Eq a) ⇒ [a] → [a] → Bool
+< isPrefixOf [] ys = True
+< isPrefixOf xs [] = False
+< isPrefixOf (x:xs) (y:ys)
+<     | x == y = xs `isPrefixOf` ys
+<     | otherwise = False
 
 Then we can construct a (somewhat inefficient) test to see what
 factors are necessarily excluded.  We'll start by searching for
 factors that are disallowed *everywhere*, because that is the simplest
 of the tests.
 
-> disallowedFactors ∷ (Ord a, Ord b) ⇒ FSA a b → Set.Set [Symbol a]
-> disallowedFactors f = disallowedFactors' f'' (∅) (kCheck f) 1
->     where f' = generateSyntacticMonoid f
->           f'' = FSA (alphabet f') (transitions f') (initials f')
->                 (Set.filter (not . Set.null . label) (states f'))
->                 (isDeterministic f')
+< disallowedFactors ∷ (Ord a, Ord b) ⇒ FSA a b → Set.Set [Symbol a]
+< disallowedFactors f = disallowedFactors' f'' (∅) (kCheck f) 1
+<     where f' = generateSyntacticMonoid f
+<           f'' = FSA (alphabet f') (transitions f') (initials f')
+<                 (Set.filter (not . Set.null . label) (states f'))
+<                 (isDeterministic f')
 
 We will define a convenience function that takes as input a syntactic
 monoid with initial and final states modified to reflect our current
 search, which returns a list of disallowed factors.  This is reusable
 in our search for anchored factors.
 
-> disallowedFactors' ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → Set.Set [Symbol a] → c → c → Set.Set [Symbol a]
-> disallowedFactors' f ws k x
->     | k < 1 = Set.fromList []
->     | x > k = ws
->     | otherwise = disallowedFactors' f (ws ∪ newws'') k (x + 1)
->     where newws = wordsOfLength x (alphabet f)
->           newws' = Set.filter
->                    (\w → (not . anyS (\x → x `isSublistOf` w)) ws)
->                    newws
->           newws'' = Set.filter (not . accepts f) newws'
+< disallowedFactors' ∷ (Ord a, Ord b, Integral c) ⇒ FSA a b → Set.Set [Symbol a] → c → c → Set.Set [Symbol a]
+< disallowedFactors' f ws k x
+<     | k < 1 = Set.fromList []
+<     | x > k = ws
+<     | otherwise = disallowedFactors' f (ws ∪ newws'') k (x + 1)
+<     where newws = wordsOfLength x (alphabet f)
+<           newws' = Set.filter
+<                    (\w → (not . anyS (\x → x `isSublistOf` w)) ws)
+<                    newws
+<           newws'' = Set.filter (not . accepts f) newws'
 
 
 Showing Data
