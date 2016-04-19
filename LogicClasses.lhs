@@ -31,49 +31,68 @@ container of elements of type `A`.  Then,
 >     infixl 6 ∖
 >     (∖) ∷ c → c → c
 >     (∅) ∷ c
+>     insert ∷ a → c → c
+>     singleton ∷ a → c
 >
 >     (∋) = flip (∈)
 >     a ∉ c = not (a ∈ c)
 >     c ∌ a = not (c ∋ a)
+>     singleton a = insert a (∅)
+>     insert a c = singleton a ∪ c
 
 > instance (Eq a) ⇒ Container [a] a where
->     (∈)   = elem
->     a ∪ b = a ++ (b ∖ a)
->     a ∩ b = a ∖ (a ∖ b)
->     a ∖ b = filter (∉ b) a
->     (∅)   = []
+>     (∈)    = elem
+>     a ∪ b  = a ++ (b ∖ a)
+>     a ∩ b  = a ∖ (a ∖ b)
+>     a ∖ b  = filter (∉ b) a
+>     (∅)    = []
+>     insert = (:)
 
 > instance (Ord a) ⇒ Container (Set.Set a) a where
->     (∈) = Set.member
->     (∪) = Set.union
->     (∩) = Set.intersection
->     (∖) = (Set.\\)
->     (∅) = Set.empty
+>     (∈)    = Set.member
+>     (∪)    = Set.union
+>     (∩)    = Set.intersection
+>     (∖)    = (Set.\\)
+>     (∅)    = Set.empty
+>     insert = Set.insert
 
-In this module, a `Container` is said to be `Collapsible` if it can be
-collapsed to a single value in a way that resembles a fold over a
-list.  In more recent versions of the Haskell compiler, there exists a
-`Foldable` typeclass for this purpose.
+In this module, a structure is said to be `Collapsible` if it can be
+collapsed to a single value, like a fold over a list.
 
-> class (Container c a) ⇒ Collapsible c a | c → a where
->     collapse ∷ (a → b → b) → b → c → b
+> class Collapsible c where
+>     collapse ∷ (a → b → b) → b → c a → b
+>     size ∷ (Integral a) ⇒ c b → a
+>
+>     size = collapse (\_ → (\y → y + 1)) 0
 
-> instance (Eq a) ⇒ Collapsible [a] a where
+> instance Collapsible [] where
 >     collapse = foldr
 
-> instance (Ord a) ⇒ Collapsible (Set.Set a) a where
+> instance Collapsible Set.Set where
 >     collapse = Set.fold
+>     size     = fromIntegral . Set.size
 
-> (⋃) ∷ (Eq a, Container c a, Collapsible s c) ⇒ s → c
+> (⋃) ∷ (Eq a, Container c a, Collapsible s) ⇒ s c → c
 > (⋃) = collapse (∪) (∅)
 
-> unionAll ∷ (Ord a, Container c a, Collapsible s c) ⇒ s → c
+> unionAll ∷ (Ord a, Container c a, Collapsible s) ⇒ s c → c
 > unionAll = (⋃)
 
-> allS ∷ (Collapsible s a) ⇒ (a → Bool) → s → Bool
+> allS ∷ (Collapsible s) ⇒ (a → Bool) → s a → Bool
 > allS f = collapse ((&&) . f) True
 
-> anyS ∷ (Collapsible s a) ⇒ (a → Bool) → s → Bool
+> anyS ∷ (Collapsible s) ⇒ (a → Bool) → s a → Bool
 > anyS f = collapse ((||) . f) False
 
-> x = [1,2,3] ∩ [2,3,4]
+If something is a `Collapsible` `Container`, then we can use properties
+of each typeclass to build map and filter, here called `traverse` and
+`keep` to avoid namespace collisions.
+
+> traverse ∷ (Collapsible s, Container (s b) b) ⇒ (a → b) → s a → s b
+> traverse f xs = collapse (insert . f) (∅) xs
+
+> keep ∷ (Collapsible s, Container (s a) a) ⇒ (a → Bool) → s a → s a
+> keep f xs = collapse maybeKeep (∅) xs
+>     where maybeKeep a as
+>               | f a       = insert a as
+>               | otherwise = as
