@@ -1,6 +1,9 @@
-> {-# Language UnicodeSyntax #-}
-> {-# Language FlexibleInstances #-}
-> {-# Language MultiParamTypeClasses #-}
+> {-# Language
+>   FlexibleInstances,
+>   FunctionalDependencies,
+>   MultiParamTypeClasses,
+>   UnicodeSyntax
+>   #-}
 > module LogicClasses where
 
 > import qualified Data.Set as Set
@@ -85,11 +88,11 @@ collapsed to a single value, like a fold over a list.
 > anyS f = collapse ((||) . f) False
 
 If something is a `Collapsible` `Container`, then we can use properties
-of each typeclass to build map and filter, here called `traverse` and
+of each typeclass to build map and filter, here called `tmap` and
 `keep` to avoid namespace collisions.
 
-> traverse ∷ (Collapsible s, Container (s b) b) ⇒ (a → b) → s a → s b
-> traverse f xs = collapse (insert . f) (∅) xs
+> tmap ∷ (Collapsible s, Container (s b) b) ⇒ (a → b) → s a → s b
+> tmap f xs = collapse (insert . f) (∅) xs
 
 > keep ∷ (Collapsible s, Container (s a) a) ⇒ (a → Bool) → s a → s a
 > keep f xs = collapse maybeKeep (∅) xs

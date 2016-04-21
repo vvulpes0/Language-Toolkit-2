@@ -1,4 +1,6 @@
-> {-# Language UnicodeSyntax #-}
+> {-# Language
+>   UnicodeSyntax
+>   #-}
 > module Main (main) where
 
 > import FSA
@@ -31,7 +33,7 @@ Then use that to parse a string in Jeff format and generate an FSA
 > readJeffStateList [] = return (∅)
 > readJeffStateList (x:xs)
 >     | not (null xs) = parseFail "state list" (x:xs) "Invalid separator"
->     | otherwise = return . Set.fromList . traverse State $ splitOn ',' x
+>     | otherwise = return . Set.fromList . tmap State $ splitOn ',' x
 
 > readJeffTransitionList ∷ (Monad m) ⇒ [String] → m (Set (Transition String))
 > readJeffTransitionList [] = return (∅)
@@ -55,10 +57,10 @@ Then use that to parse a string in Jeff format and generate an FSA
 >                   initialStates ← readJeffStateList (initialParse!!0)
 >                   finalStates   ← readJeffStateList (initialParse!!2)
 >                   transitions   ← readJeffTransitionList (initialParse!!1)
->                   let alphabet  = traverse path transitions in
+>                   let alphabet  = tmap path transitions in
 >                       return (FSA alphabet transitions
 >                                   initialStates finalStates False)
->     where initialParse = (traverse (keep (not . null) . splitOn '\n')
+>     where initialParse = (tmap (keep (not . null) . splitOn '\n')
 >                          . splitOn '!') s
 
 Sometimes users give us input that is not what we expect.  Tell them
