@@ -550,11 +550,15 @@ including the one used for determinization, we call this particular
 instance *the* powerset graph.  If our source FSA happens to be
 normalized, we can gather a lot of information from this graph.
 
+We will tag any states not disjoint from the set of final states in
+the source as accepting.
+
 > generatePowerSetGraph :: (Ord a) => FSA a -> FSA a
-> generatePowerSetGraph d = generatePowerSetGraph' d ((< 2) . size)
+> generatePowerSetGraph f = generatePowerSetGraph' d hasAccept
+>     where d             = normalize f
+>           hasAccept qs  = intersection (finals d) qs /= empty
 
 > generatePowerSetGraph' :: (Ord a) => FSA a -> (Set State -> Bool) -> FSA a
-> generatePowerSetGraph' d isFinal = powersetConstruction f
+> generatePowerSetGraph' f isFinal = powersetConstruction f
 >                                    (states f)
 >                                    isFinal
->     where f = normalize d
