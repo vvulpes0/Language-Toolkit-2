@@ -1,6 +1,3 @@
-> {-# Language
->   UnicodeSyntax
->   #-}
 > module Main (main) where
 
 > import FSA
@@ -20,7 +17,7 @@ An FSA in Jeff's format consists of three parts separated by `!':
 
 To start, we'll define a function to split a string on a delimiter
 
-> splitOn ∷ Eq a ⇒ a → [a] → [[a]]
+> splitOn :: Eq a => a -> [a] -> [[a]]
 > splitOn _ [] = [[]]
 > splitOn b (a:as)
 >     | a == b = []:x
@@ -29,20 +26,20 @@ To start, we'll define a function to split a string on a delimiter
 
 Then use that to parse a string in Jeff format and generate an FSA
 
-> readJeffStateList ∷ (Monad m) ⇒ [String] → m (Set State)
-> readJeffStateList [] = return (∅)
+> readJeffStateList :: (Monad m) => [String] -> m (Set State)
+> readJeffStateList [] = return empty
 > readJeffStateList (x:xs)
 >     | not (null xs) = parseFail "state list" (x:xs) "Invalid separator"
 >     | otherwise = return . Set.fromList . tmap State $ splitOn ',' x
 
-> readJeffTransitionList ∷ (Monad m) ⇒ [String] → m (Set (Transition String))
-> readJeffTransitionList [] = return (∅)
+> readJeffTransitionList :: (Monad m) => [String] -> m (Set (Transition String))
+> readJeffTransitionList [] = return empty
 > readJeffTransitionList (a:as) = do
->                                 x  ← readJeffTransition a
->                                 xs ← readJeffTransitionList as
+>                                 x  <- readJeffTransition a
+>                                 xs <- readJeffTransitionList as
 >                                 return (Set.insert x xs)
 
-> readJeffTransition ∷ (Monad m) ⇒ String → m (Transition String)
+> readJeffTransition :: (Monad m) => String -> m (Transition String)
 > readJeffTransition s 
 >     | length xs < 3 = parseFail "Transition" s "Not enough components"
 >     | length xs > 3 = parseFail "Transition" s "Too many components"
@@ -50,14 +47,14 @@ Then use that to parse a string in Jeff format and generate an FSA
 >                           (State (xs!!0)) (State (xs!!1)))
 >     where xs = splitOn ',' s
 
-> readJeff ∷ (Monad m) ⇒ String → m (FSA String)
+> readJeff :: (Monad m) => String -> m (FSA String)
 > readJeff s 
 >     | length initialParse /= 3 = parseFail "FSA" s "Not a Jeff"
 >     | otherwise = do
->                   initialStates ← readJeffStateList (initialParse!!0)
->                   finalStates   ← readJeffStateList (initialParse!!2)
->                   transitions   ← readJeffTransitionList (initialParse!!1)
->                   let alphabet  = tmap path transitions in
+>                   initialStates <- readJeffStateList (initialParse!!0)
+>                   finalStates   <- readJeffStateList (initialParse!!2)
+>                   transitions   <- readJeffTransitionList (initialParse!!1)
+>                   let alphabet  = tmap edgeLabel transitions in
 >                       return (FSA alphabet transitions
 >                                   initialStates finalStates False)
 >     where initialParse = (tmap (keep (not . null) . splitOn '\n')
@@ -66,7 +63,7 @@ Then use that to parse a string in Jeff format and generate an FSA
 Sometimes users give us input that is not what we expect.  Tell them
 that, and what we think may have gone wrong:
 
-> parseFail ∷ (Show a, Monad m) ⇒ String → a → String → m b
+> parseFail :: (Show a, Monad m) => String -> a -> String -> m b
 > parseFail target input reason = fail message
 >     where message = ("Failed to parse " ++ target ++ ": " ++
 >                      show input ++ ".  " ++ reason ++ ".")
