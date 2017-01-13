@@ -23,14 +23,6 @@ of the project should allow more general use.
 In this case, finite-state automata are represented mathematically as
 directional graphs with edges labelled by formal symbols.
 
-> instance (Ord a) => Container (FSA a) [Symbol a] where
->     isIn            = accepts
->     union           = funion
->     intersection    = fintersection
->     difference a b  = intersection a (complement b)
->     empty           = emptyWithAlphabet empty
->     singleton s     = singletonWithAlphabet s (Set.fromList s)
-
 
 Data Structures
 ===============
@@ -51,10 +43,10 @@ some operations, but can be slow to verify.  This module sacrifices
 space for speed, treating determinism as a property of the datatype
 itself.
 
-> data FSA a = FSA (Set (Symbol a))
->     (Set (Transition a))
->     (Set State)
->     (Set State)
+> data FSA e n = FSA (Set (Symbol e))
+>     (Set (Transition e n))
+>     (Set (State n))
+>     (Set (State n))
 >     (Bool)
 >     deriving (Show, Read)
 
@@ -63,13 +55,16 @@ represented languages as the criterion for equivalence of the FSAs
 themselves.  First, an FSA represents the empty language if it has
 no accepting states:
 
-> isNull :: (Ord a) => FSA a -> Bool
+> isNull :: (Ord e, Ord n) => FSA e n -> Bool
 > isNull = (== empty) . finals . trimUnreachables
 
-> instance (Ord a) => Eq (FSA a) where
->     a == b = (alphabet a == alphabet b) &&
->              isNull (difference a b) &&
->              isNull (difference b a)
+> isomorphic :: (Ord e, Ord n1, Ord n2) => FSA e n1 -> FSA e n2 -> Bool
+> isomorphic a b = (alphabet a == alphabet b) &&
+>                  isNull (autDifference a b) &&
+>                  isNull (autDifference b a)
+
+> instance (Ord e, Ord n) => Eq (FSA e n) where
+>     (==) = isomorphic
 
 Here we define some accessor functions for the members of FSA, not
 because pattern matching against constructors is inherently wrong, but
@@ -77,37 +72,41 @@ because there are two arguments of the same type with no completely
 intuitive order.  Being able to export the type completely abstractly
 is only a side benefit.
 
-> alphabet :: FSA a -> Set (Symbol a)
+> alphabet :: FSA e n -> Set (Symbol e)
 > alphabet (FSA a _ _ _ _) = a
 
-> transitions :: FSA a -> Set (Transition a)
+> transitions :: FSA e n -> Set (Transition e n)
 > transitions (FSA _ t _ _ _) = t
 
-> initials :: FSA a -> Set State
+> initials :: FSA e n -> Set (State n)
 > initials (FSA _ _ i _ _) = i
 
-> finals :: FSA a -> Set State
+> finals :: FSA e n -> Set (State n)
 > finals (FSA _ _ _ f _) = f
 
-> states :: (Ord a) => FSA a -> Set State
+> states :: (Ord e, Ord n) => FSA e n -> Set (State n)
 > states f = unionAll [initials f, finals f, others]
 >    where others           = unionAll $ tmap extractStates ts
 >          extractStates t  = doubleton (source t) (destination t)
 >          doubleton a b    = insert b (singleton a)
 >          ts               = transitions f
 
-> isDeterministic :: FSA a -> Bool
+> isDeterministic :: FSA e n -> Bool
 > isDeterministic (FSA _ _ _ _ d) = d
 
 A singleton FSA is one that accepts exactly one (possibly-empty)
 string.  The number of states in such an FSA is equal to the length of
 the string plus two.
 
-> emptyWithAlphabet :: (Ord a) => Set (Symbol a) -> FSA a
+> emptyWithAlphabet :: (Ord e, Num n, Ord n) => Set (Symbol e) -> FSA e n
 > emptyWithAlphabet as = FSA as empty (singleton (State 0)) empty True
 
-> singletonWithAlphabet :: (Ord a) => [Symbol a] -> Set (Symbol a) -> FSA a
-> singletonWithAlphabet syms as = FSA as (trans str) begins finals True
+> emptyLanguage :: (Ord e, Ord n, Num n) => FSA e n
+> emptyLanguage = emptyWithAlphabet empty
+
+> singletonWithAlphabet :: (Ord e, Enum n, Num n, Ord n) =>
+>                          Set (Symbol e) -> [Symbol e] -> FSA e n
+> singletonWithAlphabet as syms = FSA as (trans str) begins finals True
 >     where str = keep (/= Epsilon) syms
 >           trans xs = union (trans' xs 1) failTransitions
 >           trans' [] n = tmap (\a -> Transition a (State n) fail) as
@@ -124,6 +123,9 @@ the string plus two.
 >           last = (+ 1) . fromIntegral . length $ str
 >           finals = singleton (State last)
 
+> singletonLanguage :: (Ord e, Enum n, Num n, Ord n) => [Symbol e] -> FSA e n
+> singletonLanguage s = singletonWithAlphabet (Set.fromList s) s
+
 
 Formal Symbols
 --------------
@@ -132,8 +134,8 @@ The edges of an FSA are labelled by either a formal symbol or the
 pseudo-symbol ε.  Specifically, an edge labelled by ε represents a
 transition that may occur without consuming any further input.
 
-> data Symbol a = Epsilon
->               | Symbol a
+> data Symbol e = Epsilon
+>               | Symbol e
 >               deriving (Eq, Ord, Read, Show)
 
 
@@ -141,37 +143,13 @@ States
 ------
 
 The vertices of the graph representation of an FSA are states, which
-can be labelled with any arbitrary values.  Typically these values are
-integers for ease of representation, but often it is useful to use
-complete strings here.  This implementation allows any value whose
-type is an instance of Ord to operate as the labels of an FSA's
-states.  The restriction to Ord types is due to Data.Set requiring it
-for efficient implementation of sets.
+can be labelled with any arbitrary values, so long as every state of
+a single automaton is labelled with an element of the same type.
 
-> data State = forall a. (Ord a, Show a, Read a) => State a
+> data State n = State n deriving (Eq, Ord, Read, Show)
 
-> nodeLabel :: State -> String
-> nodeLabel (State a) = show a
-
-> instance Show State where
->     showsPrec p (State s) = showParen (p > app_prec) $
->                             showString "State " .
->                             showsPrec (app_prec + 1) (show s)
->                     where app_prec = 10
-
-> instance Read State where
->     readsPrec d r = readParen (d > app_prec)
->                     (\r -> [(State m, t) |
->                            ("State", s) <- lex r,
->                            (m, t) <- (readsPrec :: Int -> ReadS String) (app_prec + 1) s]) r
->         where app_prec = 10
-
-> instance Eq State where
->     a == b = nodeLabel a == nodeLabel b
-
-> instance Ord State where
->     compare a b = compare (nodeLabel a) (nodeLabel b)
-
+> nodeLabel :: State n -> n
+> nodeLabel (State a) = a
 
 Transitions
 -----------
@@ -182,16 +160,16 @@ components to a transition: an edge label, and two states.  If a computation
 in the first state encounters a symbol matching the transition's
 edge label, then it moves to the second state.
 
-> data Transition a = Transition (Symbol a) State State
+> data Transition e n = Transition (Symbol e) (State n) (State n)
 >                     deriving (Eq, Ord, Show, Read)
 
-> edgeLabel :: Transition a -> Symbol a
+> edgeLabel :: Transition e n -> Symbol e
 > edgeLabel (Transition a _ _) = a
 
-> source :: Transition a -> State
+> source :: Transition e n -> State n
 > source (Transition _ b _) = b
 
-> destination :: Transition a -> State
+> destination :: Transition e n -> State n
 > destination (Transition _ _ c) = c
 
 To determine whether an FSA accepts a string of Symbols, there must
@@ -199,15 +177,15 @@ exist a mechanism to determine which State to enter upon consuming a
 Symbol.  The set of Transitions describes the map, and we will use
 that to define the transition function.
 
-> data ID a = ID State [Symbol a] deriving (Eq, Ord, Show)
+> data ID e n = ID (State n) [Symbol e] deriving (Eq, Ord, Read, Show)
 
-> state :: ID a -> State
+> state :: ID e n -> State n
 > state (ID a _) = a
 
-> string :: ID a -> [Symbol a]
+> string :: ID e n -> [Symbol e]
 > string (ID _ xs) = xs
 
-> epsilonClosure :: (Ord a) => FSA a -> State -> Set State
+> epsilonClosure :: (Ord e, Ord n) => FSA e n -> State n -> Set (State n)
 > epsilonClosure fsa q
 >     | isDeterministic fsa  = singleton q
 >     | otherwise            = epsilonClosure' fsa (singleton q)
@@ -219,7 +197,7 @@ that to define the transition function.
 >                     closure = union seen $ tmap destination seens
 >                     numNew = size closure - size seen
 
-> step :: (Ord a) => FSA a -> Set (ID a) -> Set (ID a)
+> step :: (Ord e, Ord n) => FSA e n -> Set (ID e n) -> Set (ID e n)
 > step fsa ids
 >     | filteredIDs == empty  = empty
 >     | otherwise             = unionAll $ tmap next filteredIDs
@@ -241,78 +219,76 @@ that to define the transition function.
 We should not have to produce IDs ourselves.  We can define the transition
 function `delta` from an FSA, a symbol, and a state to a set of states:
 
-> delta :: (Ord a) => FSA a -> Symbol a -> Set State -> Set State
+> delta :: (Ord e, Ord n) =>
+>          FSA e n -> Symbol e -> Set (State n) -> Set (State n)
 > delta f x = tmap state . step f . tmap ((flip ID) [x])
 
-> compute :: (Ord a) => FSA a -> [Symbol a] -> Set (ID a)
+> compute :: (Ord e, Ord n) => FSA e n -> [Symbol e] -> Set (ID e n)
 > compute fsa str = until (allS (null . string)) (step fsa) initialIDs
 >     where initialIDs = tmap (flip ID str) (initials fsa)
 
-> accepts :: (Ord a) => FSA a -> [Symbol a] -> Bool
+> accepts :: (Ord e, Ord n) => FSA e n -> [Symbol e] -> Bool
 > accepts fsa = anyS (isIn (finals fsa)) . tmap state . compute fsa
 
 
 Logical Operators
 =================
 
-> combine :: State -> State -> State
+> combine :: State a -> State b -> State (a, b)
 > combine (State a) (State b) = State (a, b)
 
-> makePairs :: Set State -> Set State -> Set (State, State)
+> makePairs :: (Ord a, Ord b) =>
+>              Set (State a) -> Set (State b) -> Set (State a, State b)
 > makePairs xs ys = unionAll $ tmap (\x -> tmap (\y -> (x, y)) ys) xs
 
-> makeJustPairs :: Set State -> Set State -> Set (State, State)
+> makeJustPairs :: (Ord a, Ord b) =>
+>                  Set (State a) -> Set (State b) ->
+>                  Set (State (Maybe a), State (Maybe b))
 > makeJustPairs xs ys = makePairs (justify xs) (justify ys)
->     where justify :: Set State -> Set State
+>     where justify :: Ord c => Set (State c) -> Set (State (Maybe c))
 >           justify = tmap (\(State z) -> State (Just z))
 
-> combineAlphabets :: (Ord a) => FSA a -> FSA a -> Set (Symbol a)
+> combineAlphabets :: Ord e => FSA e n -> FSA e n1 -> Set (Symbol e)
 > combineAlphabets f1 f2 = union (alphabet f1) (alphabet f2)
 
-> combineTransitions :: (Ord a) => FSA a -> FSA a -> Set (Transition a)
+> combineTransitions :: (Ord e, Ord n, Ord n1) => FSA e n -> FSA e n1 ->
+>                       Set (Transition e (Maybe n, Maybe n1))
 > combineTransitions f1 f2 = trans
 >     where bigalpha = combineAlphabets f1 f2
->           delta' :: (Ord a) => FSA a -> Symbol a -> State -> Set (Maybe State)
->           delta' f a q
->               | oneStep == empty  = singleton (Nothing)
->               | otherwise         = tmap Just oneStep
->               where oneStep = delta f a (singleton q)
->           js (State c) = State (Just c)
->           jt (Transition a b c) = Transition a (js b) (js c)
->           jf (FSA a t i f d) = FSA a (tmap jt t) (tmap js i) (tmap js f) d
->           j1 = jf f1
->           j2 = jf f2
->           m Nothing = State (Nothing :: Maybe Int)
->           m (Just (State c)) = State c
->           trans = (trans' empty empty
->                    (makeJustPairs (initials f1) (initials f2)))
->           trans' trs seen ps
->               | size newseen == size seen = newtrs
->               | otherwise = trans' newtrs newseen newps
->               where newtrs' = unionAll $ tmap newtrs'' bigalpha
->                     newtrs'' a = unionAll $ tmap (newtrs''' a) ps
->                     newtrs''' a (l, r) = (unionAll
->                                           (tmap
->                                            (\x -> tmap
->                                                   (\y -> (a,
->                                                           (l, r),
->                                                           (m x, m y)))
->                                                   (delta' j2 a r))
->                                            (delta' j1 a l)))
->                     newtrs = (union trs
->                               (tmap
->                                (\(a, (x1, x2), (y1, y2))
->                                     -> (Transition a
->                                         (combine x1 x2)
->                                         (combine y1 y2)))
->                                newtrs'))
->                     newseen = (union
->                                (tmap (\(_, x, _) -> x) newtrs')
->                                (tmap (\(_, _, y) -> y) newtrs'))
->                     newps   = difference newseen seen
+>           mDestinations x f q
+>               | extensions == empty  = singleton (State Nothing)
+>               | otherwise            = tmap
+>                                        (State . Just . nodeLabel)
+>                                        extensions
+>               where extensions = delta f x (singleton q)
+>           nexts x f = maybe
+>                       (singleton (State Nothing))
+>                       (mDestinations x f . State) .
+>                       nodeLabel
+>           nextPairs x qp = unionAll $
+>                            tmap (\a -> tmap (stateFromPair . (,) a) n2) n1
+>               where n1 = nexts x f1 . State . fst $ nodeLabel qp
+>                     n2 = nexts x f2 . State . snd $ nodeLabel qp
+>           stateFromPair (q1, q2) = State (nodeLabel q1, nodeLabel q2)
+>           extensionsOnSymbol qp x = tmap (Transition x qp) $
+>                                     nextPairs x qp
+>           extensions qp = unionAll $ tmap (extensionsOnSymbol qp) bigalpha
+>           initialset = tmap stateFromPair $
+>                        makeJustPairs (initials f1) (initials f2)
+>           (_, _, trans) = until
+>                           (\(new, _, _) -> new == empty)
+>                           (\(new, prev, partial) ->
+>                            let exts   = unionAll $ tmap extensions new
+>                                seen   = union new prev
+>                                dests  = tmap destination exts
+>                            in (difference dests seen,
+>                                seen,
+>                                union exts partial))
+>                           (initialset, empty, empty)
 
-> fintersection :: (Ord a) => FSA a -> FSA a -> FSA a
-> fintersection f1 f2 = FSA bigalpha trans init fin det
+> autIntersection :: (Ord e, Ord n1, Ord n2) => FSA e n1 -> FSA e n2 ->
+>                    FSA e (Maybe n1, Maybe n2)
+> autIntersection f1 f2 = FSA bigalpha trans init fin det
 >     where bigalpha = combineAlphabets f1 f2
 >           cs = tmap (\(x, y) -> combine x y)
 >           init = cs $ makeJustPairs (initials f1) (initials f2)
@@ -322,18 +298,18 @@ Logical Operators
 >           sts = union (tmap source trans) (tmap destination trans)
 >           det = isDeterministic f1 && isDeterministic f2
 
-> funion :: (Ord a) => FSA a -> FSA a -> FSA a
-> funion f1 f2 = FSA bigalpha trans init fin det
+> autUnion :: (Ord e, Ord n1, Ord n2) => FSA e n1 -> FSA e n2 ->
+>             FSA e (Maybe n1, Maybe n2)
+> autUnion f1 f2 = FSA bigalpha trans init fin det
 >     where bigalpha = combineAlphabets f1 f2
 >           cs = tmap (\(x, y) -> combine x y)
 >           init = cs $ makeJustPairs (initials f1) (initials f2)
 >           fin1 = finals f1
 >           fin2 = finals f2
->           n = State (Nothing :: Maybe Int)
 >           fin1With2 = makeJustPairs fin1 (states f2)
 >           fin2With1 = makeJustPairs (states f1) fin2
->           fin1WithN = tmap (\(x, _) -> (x, n)) fin1With2
->           fin2WithN = tmap (\(_, y) -> (n, y)) fin2With1
+>           fin1WithN = tmap (\(x, _) -> (x, State Nothing)) fin1With2
+>           fin2WithN = tmap (\(_, y) -> (State Nothing, y)) fin2With1
 >           fin = (intersection sts
 >                  (cs
 >                   (unionAll [fin1WithN, fin2WithN, fin1With2, fin2With1])))
@@ -341,7 +317,7 @@ Logical Operators
 >           sts = union (tmap source trans) (tmap destination trans)
 >           det = isDeterministic f1 && isDeterministic f2
 
-> renameStates :: (Ord a) => FSA a -> FSA a
+> renameStates :: (Ord e, Ord n) => FSA e n -> FSA e Int
 > renameStates fsa = FSA (alphabet fsa) trans init fin (isDeterministic fsa)
 >     where sts = states fsa
 >           index x xs = fromIntegral (x `findIndexInSet` xs)
@@ -363,12 +339,18 @@ Haskell platform.  So we emulate it here:
 >     | otherwise = error "element is not in the set"
 >     where (l, found, _) = Set.splitMember x s
 
-> complement :: (Ord a) => FSA a -> FSA a
+> complement :: (Ord e, Ord n) => FSA e n -> FSA e (Set n)
 > complement f = FSA (alphabet d) (transitions d) (initials d) fins True
 >     where d = determinize f
 >           fins = difference (states d) (finals d)
 
-> trimUnreachables :: (Ord a) => FSA a -> FSA a
+Given both intersection and complement, we can produce automata difference
+
+> autDifference :: (Ord e, Ord n1, Ord n2) => FSA e n1 -> FSA e n2 ->
+>                  FSA e (Maybe n1, Maybe (Set n2))
+> autDifference f1 f2 = autIntersection f1 $ complement f2
+
+> trimUnreachables :: (Ord e, Ord n) => FSA e n -> FSA e n
 > trimUnreachables fsa = FSA alpha trans init fin (isDeterministic fsa)
 >     where alpha = alphabet fsa
 >           init = initials fsa
@@ -398,7 +380,7 @@ We begin by constructing the set of Myhill-Nerode equivalence classes
 for the states of the input FSA, then simply replace each state by its
 equivalence class.
 
-> minimize :: (Ord a) => FSA a -> FSA a
+> minimize :: (Ord e, Ord n) => FSA e n -> FSA e (Set (Set n))
 > minimize fsa = trimUnreachables newfsa
 >     where dfa = determinize fsa
 >           classes = equivalenceClasses dfa
@@ -412,7 +394,7 @@ equivalence class.
 >                    (transitions dfa))
 >           newfsa = FSA (alphabet dfa) trans init fin True
 
-> equivalenceClasses :: (Ord a) => FSA a -> Set (Set State)
+> equivalenceClasses :: (Ord e, Ord n) => FSA e n -> Set (Set (State n))
 > equivalenceClasses fsa = tmap eqClass sts
 >     where sts = states fsa
 >           i = union i' $ tmap (\x -> (x, x)) sts
@@ -434,7 +416,7 @@ pairs, the algorithm is finished; all possible distinctions have been
 discovered.  The Myhill-Nerode equivalence class of a state p, then,
 is the set of states not distinct from p.
 
-> distinguishedPairs :: (Ord a) => FSA a -> Set (State, State)
+> distinguishedPairs :: (Ord e, Ord n) => FSA e n -> Set (State n, State n)
 > distinguishedPairs fsa = fst result
 >     where allPairs = pairs (states fsa)
 >           initiallyDistinguished = unionAll $
@@ -448,7 +430,12 @@ is the set of states not distinct from p.
 >                                  x))
 >                     (initiallyDistinguished, empty))
 
-> areDistinguishedByOneStep :: (Ord a) => FSA a -> Set (State, State) -> State -> State -> Bool
+> areDistinguishedByOneStep :: (Ord e, Ord n) =>
+>                              FSA e n ->
+>                              Set (State n, State n) ->
+>                              State n ->
+>                              State n ->
+>                              Bool
 > areDistinguishedByOneStep fsa knownDistinct p q
 >     | isIn knownDistinct (makePair p q) = True
 >     | otherwise = anyS (isIn knownDistinct) newPairs
@@ -467,7 +454,7 @@ direction.
 > makePair a b = (min a b, max a b)
 
 > pairs :: (Ord a) => Set a -> Set (a, a)
-> pairs xs = unionAll $ tmap (\x -> pairs' (keep (>x) xs) x) xs
+> pairs xs = unionAll $ tmap (\x -> pairs' (keep (> x) xs) x) xs
 
 > pairs' :: (Ord a) => Set a -> a -> Set (a, a)
 > pairs' xs x = tmap (\y -> makePair x y) xs
@@ -480,19 +467,19 @@ to remove states that cannot be reached, the simplest way to remove
 these fail-states is to trim the unreachable states in the reversal of
 the FSA.
 
-> reverse :: (Ord a) => FSA a -> FSA a
+> reverse :: (Ord e, Ord n) => FSA e n -> FSA e n
 > reverse f = (FSA (alphabet f)
 >              (reverseTransitions f)
 >              (finals f) (initials f) False)
 >     where reverseTransition (Transition x s d) = Transition x d s
 >           reverseTransitions = tmap reverseTransition . transitions
 
-> trimFailStates :: (Ord a) => FSA a -> FSA a
+> trimFailStates :: (Ord e, Ord n) => FSA e n -> FSA e n
 > trimFailStates = FSA.reverse . trimUnreachables . FSA.reverse
 
 An FSA is in normal form if it has been both minimized and trimmed.
 
-> normalize :: (Ord a) => FSA a -> FSA a
+> normalize :: (Ord e, Ord n) => FSA e n -> FSA e Int
 > normalize = renameStates . trimFailStates . minimize . trimUnreachables
 
 
@@ -504,12 +491,16 @@ improve the speed of determining whether the language represented by
 the FSA contains a string.  Further, both complexity-classification
 and minimization require DFAs as input.
 
-> metaFlip :: Set (State) -> State
+> metaFlip :: Ord n => Set (State n) -> State (Set n)
 > metaFlip = State . tmap nodeLabel
 
-> powersetConstruction :: (Ord a) => FSA a -> Set State -> (Set State -> Bool) -> FSA a
-> powersetConstruction f start isFinal = FSA (alphabet f) trans inits fins True
->     where inits = singleton (metaFlip start)
+> powersetConstruction :: (Ord e, Ord n) =>
+>                         FSA e n ->
+>                         Set (State n) ->
+>                         (Set (State n) -> Bool) ->
+>                         FSA e (Set n)
+> powersetConstruction f start isFinal = FSA (alphabet f) trans init fin True
+>     where init = singleton (metaFlip start)
 >           buildTransition a q = (a, q, delta f a q)
 >           buildTransitions' q = tmap (\a -> buildTransition a q)
 >                                 (alphabet f)
@@ -525,18 +516,25 @@ and minimization require DFAs as input.
 >                                          (metaFlip c)
 >           trans' = let (a, _, _) = trans'' in a
 >           trans = tmap makeRealTransition trans'
->           fins = tmap metaFlip
->                  (keep
->                   isFinal
->                   (tmap (\(_, x, _) -> x) trans'))
+>           fin = tmap metaFlip
+>                 (keep
+>                  isFinal
+>                  (tmap (\(_, x, _) -> x) trans'))
 
 
-> determinize :: (Ord a) => FSA a -> FSA a
+> determinize :: (Ord e, Ord n) => FSA e n -> FSA e (Set n)
 > determinize f
->     | isDeterministic f = f
+>     | isDeterministic f = wrapped
 >     | otherwise = powersetConstruction f
 >                   (initials f)
 >                   (\s -> intersection s (finals f) /= empty)
+>     where wrapped = FSA (alphabet f) wt wi wf (isDeterministic f)
+>           wt = tmap (\t -> Transition (edgeLabel t)
+>                            (metaFlip . singleton $ source t)
+>                            (metaFlip . singleton $ destination t)) $
+>                transitions f
+>           wi = tmap (metaFlip . singleton) $ initials f
+>           wf = tmap (metaFlip . singleton) $ finals f
 
 
 The Powerset Graph
@@ -553,12 +551,15 @@ normalized, we can gather a lot of information from this graph.
 We will tag any states not disjoint from the set of final states in
 the source as accepting.
 
-> generatePowerSetGraph :: (Ord a) => FSA a -> FSA a
+> generatePowerSetGraph :: (Ord e, Ord n) => FSA e n -> FSA e (Set Int)
 > generatePowerSetGraph f = generatePowerSetGraph' d hasAccept
 >     where d             = normalize f
 >           hasAccept qs  = intersection (finals d) qs /= empty
 
-> generatePowerSetGraph' :: (Ord a) => FSA a -> (Set State -> Bool) -> FSA a
+> generatePowerSetGraph' :: (Ord e, Ord n) =>
+>                           FSA e n ->
+>                           (Set (State n) -> Bool) ->
+>                           FSA e (Set n)
 > generatePowerSetGraph' f isFinal = powersetConstruction f
 >                                    (states f)
 >                                    isFinal
