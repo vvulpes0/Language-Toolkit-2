@@ -26,20 +26,20 @@ To start, we'll define a function to split a string on a delimiter
 
 Then use that to parse a string in Jeff format and generate an FSA
 
-> readJeffStateList :: (Monad m) => [String] -> m (Set State)
+> readJeffStateList :: (Monad m) => [String] -> m (Set (State String))
 > readJeffStateList [] = return empty
 > readJeffStateList (x:xs)
 >     | not (null xs) = parseFail "state list" (x:xs) "Invalid separator"
 >     | otherwise = return . Set.fromList . tmap State $ splitOn ',' x
 
-> readJeffTransitionList :: (Monad m) => [String] -> m (Set (Transition String))
+> readJeffTransitionList :: (Monad m) => [String] -> m (Set (Transition String String))
 > readJeffTransitionList [] = return empty
 > readJeffTransitionList (a:as) = do
 >                                 x  <- readJeffTransition a
 >                                 xs <- readJeffTransitionList as
 >                                 return (Set.insert x xs)
 
-> readJeffTransition :: (Monad m) => String -> m (Transition String)
+> readJeffTransition :: (Monad m) => String -> m (Transition String String)
 > readJeffTransition s 
 >     | length xs < 3 = parseFail "Transition" s "Not enough components"
 >     | length xs > 3 = parseFail "Transition" s "Too many components"
@@ -47,7 +47,7 @@ Then use that to parse a string in Jeff format and generate an FSA
 >                           (State (xs!!0)) (State (xs!!1)))
 >     where xs = splitOn ',' s
 
-> readJeff :: (Monad m) => String -> m (FSA String)
+> readJeff :: (Monad m) => String -> m (FSA String String)
 > readJeff s 
 >     | length initialParse /= 3 = parseFail "FSA" s "Not a Jeff"
 >     | otherwise = do
