@@ -11,27 +11,27 @@ A Path is
 * the set of states along the path
 * the length of the path (depth of the terminal state)
 
-> data Path e n = Path [Symbol e] (State n) (Set (State n)) Int
+> data Path n e = Path [Symbol e] (State n) (Set (State n)) Int
 >               deriving (Eq, Show)
 
-> endstate :: Path e n -> State n
+> endstate :: Path n e -> State n
 > endstate (Path _ s _ _ ) = s
 
-> stateset :: Path e n -> Set (State n)
+> stateset :: Path n e -> Set (State n)
 > stateset (Path _ _ ss _) = ss
 
-> labels :: Path e n -> [Symbol e]
+> labels :: Path n e -> [Symbol e]
 > labels (Path ls _ _ _) = ls
 
-> word :: Path e n -> [Symbol e]
+> word :: Path n e -> [Symbol e]
 > word = Prelude.reverse . labels
 
-> depth :: Path e n -> Int
+> depth :: Path n e -> Int
 > depth (Path _ _ _ d) = d
 
 In order to have a Set of Path, Path must be Ord:
 
-> instance (Ord e, Ord n) => Ord (Path e n) where
+> instance (Ord e, Ord n) => Ord (Path n e) where
 >     p1 <= p2
 >        | d1 /= d2   = d1 < d2
 >        | l1 /= l2   = l1 < l2
@@ -45,7 +45,7 @@ In order to have a Set of Path, Path must be Ord:
 The extensions of a path p are paths extending p by a single edge
 
 > extend :: (Ord e, Ord n) =>
->           FSA e n -> Path e n -> Set (Transition e n) -> Set (Path e n)
+>           FSA n e -> Path n e -> Set (Transition n e) -> Set (Path n e)
 > extend fsa p = tmap (\t ->
 >                      Path
 >                      (edgeLabel t : labels p)
@@ -54,14 +54,14 @@ The extensions of a path p are paths extending p by a single edge
 >                      (depth p + 1))
 
 > extensions :: (Ord e, Ord n) =>
->               FSA e n -> Path e n -> Set (Path e n)
+>               FSA n e -> Path n e -> Set (Path n e)
 > extensions fsa p = extend fsa p $
 >                    keep ((== endstate p) . source) (transitions fsa)
 
 The non-trivial extensions of a path are extensions other than self-loops
 
 > ntExtensions :: (Ord e, Ord n) =>
->                 FSA e n -> Path e n -> Set (Path e n)
+>                 FSA n e -> Path n e -> Set (Path n e)
 > ntExtensions fsa p = extend fsa p
 >                      (keep (\t ->
 >                             (source t == endstate p) &&
@@ -71,7 +71,7 @@ The non-trivial extensions of a path are extensions other than self-loops
 Acyclic extensions of a path are extensions other than back-edges
 
 > acyclicExtensions :: (Ord e, Ord n) =>
->                      FSA e n -> Path e n -> Set (Path e n)
+>                      FSA n e -> Path n e -> Set (Path n e)
 > acyclicExtensions fsa p = extend fsa p
 >                           (keep (\t ->
 >                                  (source t == endstate p) &&
@@ -86,10 +86,10 @@ except for self-edges on singleton states, as is needed in traversing
 the powerset graph in finding free forbidden factors.
 
 > augAcExtensions :: (Ord e, Ord n) =>
->                    FSA e n ->
->                    (Transition e n -> Bool) ->
->                    Path e n ->
->                    Set (Path e n)
+>                    FSA n e ->
+>                    (Transition n e -> Bool) ->
+>                    Path n e ->
+>                    Set (Path n e)
 > augAcExtensions fsa q p = extend fsa p
 >                           (keep (\t ->
 >                                  (q t) ||
@@ -100,7 +100,7 @@ the powerset graph in finding free forbidden factors.
 
 Initial open list for traversal from initial states
 
-> initialsPaths :: (Ord e, Ord n) => FSA e n -> Set (Path e n)
+> initialsPaths :: (Ord e, Ord n) => FSA n e -> Set (Path n e)
 > initialsPaths = tmap iPath . initials
 >     where iPath s = Path [] s (singleton s) 0
 
@@ -115,19 +115,19 @@ traversalQDFS:
 * Paths are not added to the open list unless their depth is <= bound
 
 > traversalQDFS :: (Ord e, Ord n) =>
->                  (FSA e n -> Path e n -> Bool) ->
->                  FSA e n ->
+>                  (FSA n e -> Path n e -> Bool) ->
+>                  FSA n e ->
 >                  Int ->
->                  Set (Path e n) ->
->                  Set (Path e n) ->
->                  Set (Path e n)
+>                  Set (Path n e) ->
+>                  Set (Path n e) ->
+>                  Set (Path n e)
 > traversalQDFS qf fsa bound open closed
 >     | open == empty     = closed
 >     | depth p >= bound  = traversalQDFS qf fsa bound ps addIf
 >     | otherwise         = traversalQDFS qf fsa bound
 >                           (union ps $ extensions fsa p)
 >                           addIf
->     where (p, ps) = Set.deleteFindMin open
+>     where (p, ps) = choose open
 >           addIf
 >               | qf fsa p   = insert p closed
 >               | otherwise  = closed
@@ -136,39 +136,39 @@ traversalDFS fsa bound open closed
 = closed plus all (possibly trivial) extensions of paths in open
   that are of length <= bound
 
-> traversalDFS :: (Ord e, Ord n) => FSA e n -> Int ->
->                 Set (Path e n) -> Set (Path e n) -> Set (Path e n)
+> traversalDFS :: (Ord e, Ord n) => FSA n e -> Int ->
+>                 Set (Path n e) -> Set (Path n e) -> Set (Path n e)
 > traversalDFS = traversalQDFS truth
 
 traversal fsa bound
 initialsPaths plus all their extensions that are of length <= bound
 
-> traversal :: (Ord e, Ord n) => FSA e n -> Int -> Set (Path e n)
+> traversal :: (Ord e, Ord n) => FSA n e -> Int -> Set (Path n e)
 > traversal fsa bound = traversalDFS fsa bound (initialsPaths fsa) empty
 
 > acyclicPathsQ :: (Ord e, Ord n) =>
->                  (FSA e n -> Path e n -> Bool) ->  -- predicate
->                  FSA e n ->                        -- graph
->                  Set (Path e n) ->                 -- open
->                  Set (Path e n) ->                 -- closed
->                  Set (Path e n)
+>                  (FSA n e -> Path n e -> Bool) ->  -- predicate
+>                  FSA n e ->                        -- graph
+>                  Set (Path n e) ->                 -- open
+>                  Set (Path n e) ->                 -- closed
+>                  Set (Path n e)
 > acyclicPathsQ qf fsa open closed
 >     | open == empty  = closed
 >     | otherwise      = acyclicPathsQ qf fsa
 >                        (union ps $ acyclicExtensions fsa p)
 >                        addIf
->     where (p, ps) = Set.deleteFindMin open
+>     where (p, ps) = choose open
 >           addIf
 >               | qf fsa p   = insert p closed
 >               | otherwise  = closed
 
-> acyclicPaths :: (Ord e, Ord n) => FSA e n -> Set (Path e n)
+> acyclicPaths :: (Ord e, Ord n) => FSA n e -> Set (Path n e)
 > acyclicPaths fsa = acyclicPathsQ truth fsa (initialsPaths fsa) empty
 
 acceptsDFS fsa bound
 = all accepted strings of length <= bound
 
-> acceptsDFS :: Ord n => FSA String n -> Int -> Set String
+> acceptsDFS :: Ord n => FSA n String -> Int -> Set String
 > acceptsDFS fsa bound = tmap (displaySyms . word) $
 >                        traversalQDFS accepting
 >                        fsa bound (initialsPaths fsa) empty
@@ -180,7 +180,7 @@ rejectsDFS fsa bound
   has no outedges and that endstate is not final or w+ when it has
   no outedges but is final
 
-> rejectsDFS :: Ord n => FSA String n -> Int -> Set String
+> rejectsDFS :: Ord n => FSA n String -> Int -> Set String
 > rejectsDFS fsa bound = tmap (displaySyms . word) $
 >                        traversalRejects
 >                        fsa bound (initialsPaths fsa) empty
@@ -188,21 +188,21 @@ rejectsDFS fsa bound
 rejectingPaths fsa bound
 = all rejecting Paths of length <= bound
 
-> rejectingPaths :: (Ord e, Ord n) => FSA e n -> Int -> Set (Path e n)
+> rejectingPaths :: (Ord e, Ord n) => FSA n e -> Int -> Set (Path n e)
 > rejectingPaths fsa bound = traversalQDFS rejecting
 >                            fsa bound (initialsPaths fsa) empty
 >     where rejecting fsa p = doesNotContain (endstate p) $ finals fsa
 
-> traversalRejects :: Ord n => FSA String n -> Int ->
->                     Set (Path String n) -> Set (Path String n) ->
->                     Set (Path String n)
+> traversalRejects :: Ord n => FSA n String -> Int ->
+>                     Set (Path n String) -> Set (Path n String) ->
+>                     Set (Path n String)
 > traversalRejects fsa bound open closed
 >     | open == empty     = closed
 >     | exts == empty     = traversalRejects fsa bound ps addDead
 >     | depth p >= bound  = traversalRejects fsa bound ps addLive
 >     | otherwise         = traversalRejects fsa bound
 >                           (union ps exts) addLive
->     where (p, ps) = Set.deleteFindMin open
+>     where (p, ps) = choose open
 >           exts = extensions fsa p
 >           rejecting = doesNotContain (endstate p) $ finals fsa
 >           addDead
