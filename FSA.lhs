@@ -53,7 +53,7 @@ itself.
 FSAs represent languages, so it makes sense to use equivalence of the
 represented languages as the criterion for equivalence of the FSAs
 themselves.  First, an FSA represents the empty language if it has
-no accepting states:
+no reachable accepting states:
 
 > isNull :: (Ord e, Ord n) => FSA n e -> Bool
 > isNull = (== empty) . finals . trimUnreachables
@@ -165,9 +165,9 @@ Transitions
 
 If a state is the vertex of a graph, then a transition is its edge.
 Since an FSA is represented by a directed graph, there are three
-components to a transition: an edge label, and two states.  If a computation
-in the first state encounters a symbol matching the transition's
-edge label, then it moves to the second state.
+components to a transition: an edge label, and two states.  If a
+computation in the first state encounters a symbol matching the
+transition's edge label, then it moves to the second state.
 
 > data Transition n e = Transition (Symbol e) (State n) (State n)
 >                     deriving (Eq, Ord, Show, Read)
@@ -246,9 +246,8 @@ Logical Operators
 > combine :: State a -> State b -> State (a, b)
 > combine (State a) (State b) = State (a, b)
 
-> makePairs :: (Ord a, Ord b) =>
->              Set (State a) -> Set (State b) -> Set (State a, State b)
-> makePairs xs ys = unionAll $ tmap (\x -> tmap (\y -> (x, y)) ys) xs
+> makePairs :: (Ord a, Ord b) => Set a -> Set b -> Set (a, b)
+> makePairs xs ys = unionAll $ tmap (\x -> tmap ((,) x) ys) xs
 
 > makeJustPairs :: (Ord a, Ord b) =>
 >                  Set (State a) -> Set (State b) ->
@@ -259,6 +258,36 @@ Logical Operators
 
 > combineAlphabets :: Ord e => FSA n e -> FSA n1 e -> Set (Symbol e)
 > combineAlphabets f1 f2 = union (alphabet f1) (alphabet f2)
+
+The Cartesian construction for automata is closely related to the
+tensor product of graphs.  Given two automata, M1 and M2, we construct
+a new automata M3 such that:
+
+* states(M3) is a subset of the Cartesian product of
+  (states(M1) or Nothing) with (states(M2) or Nothing)
+* Any lack of explicit transition in either M1 or M2 is
+  considered a transition to Nothing in that automaton.
+  This effectively makes each input total.
+* If (q1, q2) and (q1', q2') are states of M3,
+  then there is a transition from (q1, q2) to (q1', q2')
+  iff there exists both a transition from q1 to q1' in M1
+  and a transition from q2 to q2' in M2.
+
+This construction results in an automaton that tracks a string through
+both of its input automata.  States may be tagged as accepting to
+obtain either an intersection or a union:
+
+* For a intersection, a state (q1, q2) in states(M3) is accepting
+  iff q1 is accepting in M1 and q2 is accepting in M2.
+* For a union, a state (q1, q2) in states(M3) is accepting
+  iff q1 is accepting in M1 or q2 is accepting in M2.
+
+In either case, the set of initial states in the new automaton is
+equal to the Cartesian product of the initial states of M1 with
+the initial states of M2.
+
+The Cartesian construction preserves determinism
+and guarantees totality of the result.
 
 > combineTransitions :: (Ord e, Ord n, Ord n1) => FSA n e -> FSA n1 e ->
 >                       Set (Transition (Maybe n, Maybe n1) e)
@@ -326,27 +355,33 @@ Logical Operators
 >           sts = union (tmap source trans) (tmap destination trans)
 >           det = isDeterministic f1 && isDeterministic f2
 
-> renameStates :: (Ord e, Ord n, Ord n1, Enum n1) => FSA n e -> FSA n1 e
-> renameStates fsa = FSA (alphabet fsa) trans init fin (isDeterministic fsa)
->     where sts = states fsa
->           index x xs = toEnum (x `findIndexInSet` xs)
->           renameTransition t = Transition (edgeLabel t) a b
->               where a = renameState (source t)
->                     b = renameState (destination t)
->           renameState q = State (q `index` sts)
->           trans = tmap renameTransition (transitions fsa)
->           init = tmap renameState (initials fsa)
->           fin = tmap renameState (finals fsa)
+Given both intersection and complement, we have automata difference
 
-The renameStates function had been using Set.findIndex, but I have
-been made aware that this does not exist in older versions of the
-Haskell platform.  So we emulate it here:
+> autDifference :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e ->
+>                  FSA (Maybe n1, Maybe (Set n2)) e
+> autDifference f1 f2 = autIntersection f1 $ complement f2
 
-> findIndexInSet :: (Ord a) => a -> Set a -> Int
-> findIndexInSet x s
->     | found = size l
->     | otherwise = error "element is not in the set"
->     where (l, found, _) = Set.splitMember x s
+For a total functional FSA, the complement can be obtained by simply
+inverting the notion of accepting states.  Totality is necessary, as
+any sink-states in the original will be accepting in the complement.
+Functionality is necessary, as:
+
+        -> (0)  -a-> ((1)) -a)        (x) is a state, ((x)) is accepting
+            |                         -a-> represents a transition on a
+            +----a->  (2)  -a)        -a) represents a self-edge on a
+
+becomes under this construction:
+
+        ->((0)) -a->  (1)  -a)
+           |
+           +-----a-> ((2)) -a)
+
+and the string "a" is accepted in both.
+
+> complement :: (Ord e, Ord n) => FSA n e -> FSA (Set n) e
+> complement f = FSA (alphabet d) (transitions d) (initials d) fins True
+>     where d = determinize f
+>           fins = difference (states d) (finals d)
 
 > complementDeterminized :: (Ord e, Ord n) => FSA n e -> FSA n e
 > complementDeterminized f
@@ -356,34 +391,6 @@ Haskell platform.  So we emulate it here:
 >                                  (initials f)
 >                                  (difference (states f) (finals f))
 >                                  True
-
-> complement :: (Ord e, Ord n) => FSA n e -> FSA (Set n) e
-> complement f = FSA (alphabet d) (transitions d) (initials d) fins True
->     where d = determinize f
->           fins = difference (states d) (finals d)
-
-Given both intersection and complement, we can produce automata difference
-
-> autDifference :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e ->
->                  FSA (Maybe n1, Maybe (Set n2)) e
-> autDifference f1 f2 = autIntersection f1 $ complement f2
-
-> trimUnreachables :: (Ord e, Ord n) => FSA n e -> FSA n e
-> trimUnreachables fsa = FSA alpha trans init fin (isDeterministic fsa)
->     where alpha = alphabet fsa
->           init = initials fsa
->           fin = intersection reachables (finals fsa)
->           trans = keep ((isIn reachables) . source) (transitions fsa)
->           reachables = reachables' init
->           reachables' qs
->               | newqs == qs  = qs
->               | otherwise    = reachables' newqs
->               where initialIDs a = tmap (flip ID (a : [])) qs
->                     next = (unionAll
->                             (tmap
->                              (tmap state . step fsa . initialIDs)
->                              alpha))
->                     newqs = union next qs
 
 
 Minimization
@@ -476,6 +483,26 @@ direction.
 
 > pairs' :: (Ord a) => Set a -> a -> Set (a, a)
 > pairs' xs x = tmap (\y -> makePair x y) xs
+
+An FSA is certainly not minimal if there are states that cannot be
+reached by any path from the initial state.  We can trim those.
+
+> trimUnreachables :: (Ord e, Ord n) => FSA n e -> FSA n e
+> trimUnreachables fsa = FSA alpha trans init fin (isDeterministic fsa)
+>     where alpha = alphabet fsa
+>           init = initials fsa
+>           fin = intersection reachables (finals fsa)
+>           trans = keep ((isIn reachables) . source) (transitions fsa)
+>           reachables = reachables' init
+>           reachables' qs
+>               | newqs == qs  = qs
+>               | otherwise    = reachables' newqs
+>               where initialIDs a = tmap (flip ID (a : [])) qs
+>                     next = (unionAll
+>                             (tmap
+>                              (tmap state . step fsa . initialIDs)
+>                              alpha))
+>                     newqs = union next qs
 
 An FSA will often contain states from which no path at all leads to an
 accepting state.  These represent failure to match a pattern, which
@@ -581,3 +608,33 @@ the source as accepting.
 > generatePowerSetGraph' f isFinal = powersetConstruction f
 >                                    (states f)
 >                                    isFinal
+
+
+Miscellaneous Functions
+=======================
+
+After several operations, the nodeLabel type of an FSA becomes a deep
+mixture of pairs, maybes, and sets.  We can smash these into a smaller
+type to improve memory usage and processing speed.
+
+> renameStates :: (Ord e, Ord n, Ord n1, Enum n1) => FSA n e -> FSA n1 e
+> renameStates fsa = FSA (alphabet fsa) trans init fin (isDeterministic fsa)
+>     where sts = states fsa
+>           index x xs = toEnum (x `findIndexInSet` xs)
+>           renameTransition t = Transition (edgeLabel t) a b
+>               where a = renameState (source t)
+>                     b = renameState (destination t)
+>           renameState q = State (q `index` sts)
+>           trans = tmap renameTransition (transitions fsa)
+>           init = tmap renameState (initials fsa)
+>           fin = tmap renameState (finals fsa)
+
+The renameStates function had been using Set.findIndex, but I have
+been made aware that this does not exist in older versions of the
+Haskell platform.  So we emulate it here:
+
+> findIndexInSet :: (Ord a) => a -> Set a -> Int
+> findIndexInSet x s
+>     | found = size l
+>     | otherwise = error "element is not in the set"
+>     where (l, found, _) = Set.splitMember x s
