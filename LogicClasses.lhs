@@ -84,7 +84,11 @@ container with either unions or intersections:
 > unionAll = collapse union empty
 
 > intersectAll :: (Container c a, Collapsible s) => s c -> c
-> intersectAll = collapse intersection empty
+> intersectAll xs
+>     | size xlist == 0  = empty
+>     | otherwise        = collapse intersection x xs'
+>     where xlist     = collapse (:) [] xs
+>           (x, xs')  = choose xlist
 
 It is nice to have tests for existential and universal satisfaction of
 predicates:
