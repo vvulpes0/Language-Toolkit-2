@@ -1,4 +1,4 @@
-> module Main (main) where
+> module ReadJeff where
 
 > import FSA
 > import LogicClasses
@@ -68,4 +68,4 @@ that, and what we think may have gone wrong:
 > readAndRelabelJeff :: String -> FSA Int String
 > readAndRelabelJeff = renameStates . readJeff
 
-> main = interact ((++ "\n") . show . readAndRelabelJeff)
+< main = interact ((++ "\n") . show . readAndRelabelJeff)

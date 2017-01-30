@@ -107,7 +107,9 @@ string.  The number of states in such an FSA is equal to the length of
 the string plus two.
 
 > emptyWithAlphabet :: (Ord e, Num n, Ord n) => Set (Symbol e) -> FSA n e
-> emptyWithAlphabet as = FSA as empty (singleton (State 0)) empty True
+> emptyWithAlphabet as = FSA as trans (singleton q) empty True
+>     where trans  = tmap (flip (flip Transition q) q) as
+>           q      = State 0
 
 > emptyLanguage :: (Ord e, Ord n, Num n) => FSA n e
 > emptyLanguage = emptyWithAlphabet empty
@@ -159,6 +161,9 @@ a single automaton is labelled with an element of the same type.
 
 > nodeLabel :: State n -> n
 > nodeLabel (State a) = a
+
+> instance Functor State where
+>     fmap f (State a) = State (f a)
 
 Transitions
 -----------
@@ -346,8 +351,8 @@ and guarantees totality of the result.
 >           fin2 = finals f2
 >           fin1With2 = makeJustPairs fin1 (states f2)
 >           fin2With1 = makeJustPairs (states f1) fin2
->           fin1WithN = tmap (\(x, _) -> (x, State Nothing)) fin1With2
->           fin2WithN = tmap (\(_, y) -> (State Nothing, y)) fin2With1
+>           fin1WithN = tmap (flip (,) (State Nothing) . fmap Just) fin1
+>           fin2WithN = tmap ((,) (State Nothing) . fmap Just) fin2
 >           fin = (intersection sts
 >                  (cs
 >                   (unionAll [fin1WithN, fin2WithN, fin1With2, fin2With1])))
@@ -355,11 +360,25 @@ and guarantees totality of the result.
 >           sts = union (tmap source trans) (tmap destination trans)
 >           det = isDeterministic f1 && isDeterministic f2
 
-Given both intersection and complement, we have automata difference
+For the difference A - B, the final states are those that are
+accepting in A and non-accepting in B.
 
 > autDifference :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e ->
->                  FSA (Maybe n1, Maybe (Set n2)) e
-> autDifference f1 f2 = autIntersection f1 $ complement f2
+>                  FSA (Maybe n1, Maybe n2) e
+> autDifference f1 f2 = FSA bigalpha trans init fin det
+>     where bigalpha = combineAlphabets f1 f2
+>           cs = tmap (\(x, y) -> combine x y)
+>           init = cs $ makeJustPairs (initials f1) (initials f2)
+>           fin1 = finals f1
+>           fin1WithNonFin2 = makeJustPairs fin1
+>                             (difference (states f2) (finals f2))
+>           fin1WithN = tmap (flip (,) (State Nothing) . fmap Just) fin1
+>           fin = (intersection sts
+>                  (cs
+>                   (unionAll [fin1WithNonFin2, fin1WithN])))
+>           trans = combineTransitions f1 f2
+>           sts = union (tmap source trans) (tmap destination trans)
+>           det = isDeterministic f1 && isDeterministic f2
 
 For a total functional FSA, the complement can be obtained by simply
 inverting the notion of accepting states.  Totality is necessary, as
