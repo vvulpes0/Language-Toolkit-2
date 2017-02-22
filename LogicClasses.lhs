@@ -102,7 +102,7 @@ If something is a `Collapsible` `Container`, then we can use
 properties of each typeclass to build map and filter, here called
 `tmap` and `keep` to avoid namespace collisions.
 
-> tmap :: (Collapsible s, Container (s b) b) => (a -> b) -> s a -> s b
+> tmap :: (Collapsible s, Container (s b1) b) => (a -> b) -> s a -> s b1
 > tmap f xs = collapse (insert . f) empty xs
 
 > keep :: (Collapsible s, Container (s a) a) => (a -> Bool) -> s a -> s a

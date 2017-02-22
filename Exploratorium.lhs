@@ -33,27 +33,20 @@ constraint.  So "satisfies" is universal, and "has" is existential.
 
 > satisfies :: (Ord a1, Ord a2, Ord b) =>
 >              FSA a1 b -> FSA a2 b -> Bool
-> satisfies constraint fsa = isomorphic fsa'
->                            (autIntersection fsa' constraint)
->     where fsa' = extendAlphabetTo (alphabet constraint) fsa
+> satisfies constraint fsa = isNull $ autIntersection fsa constraint'
+>     where constraint' = complement $
+>                         contractAlphabetTo (alphabet fsa) constraint
 
 > has :: (Ord a1, Ord a2, Ord b) =>
 >        FSA a1 b -> FSA a2 b -> Bool
-> has constraint fsa =  not $ isomorphic empty'
->                       (autIntersection fsa constraint')
->     where constraint' = contractAlphabetTo alpha constraint
->           empty'      = emptyWithAlphabet alpha
->           alpha       = alphabet fsa
+> has constraint fsa =  not . isNull $ autIntersection fsa constraint'
+>     where constraint' = contractAlphabetTo (alphabet fsa) constraint
 
 > obligatoriness :: FSA Integer String
 > obligatoriness = FSA (Set.fromList [Symbol "w0.s0",Symbol "w0.s1",Symbol "w0.s2",Symbol "w1.s0",Symbol "w1.s1",Symbol "w1.s2",Symbol "w2.s0",Symbol "w2.s1",Symbol "w2.s2",Symbol "w3.s0",Symbol "w3.s1",Symbol "w3.s2",Symbol "w4.s0",Symbol "w4.s1",Symbol "w4.s2"]) (Set.fromList [Transition (Symbol "w0.s0") (State 0) (State 0),Transition (Symbol "w0.s0") (State 1) (State 1),Transition (Symbol "w0.s1") (State 0) (State 0),Transition (Symbol "w0.s1") (State 1) (State 1),Transition (Symbol "w0.s2") (State 0) (State 1),Transition (Symbol "w0.s2") (State 1) (State 1),Transition (Symbol "w1.s0") (State 0) (State 0),Transition (Symbol "w1.s0") (State 1) (State 1),Transition (Symbol "w1.s1") (State 0) (State 0),Transition (Symbol "w1.s1") (State 1) (State 1),Transition (Symbol "w1.s2") (State 0) (State 1),Transition (Symbol "w1.s2") (State 1) (State 1),Transition (Symbol "w2.s0") (State 0) (State 0),Transition (Symbol "w2.s0") (State 1) (State 1),Transition (Symbol "w2.s1") (State 0) (State 0),Transition (Symbol "w2.s1") (State 1) (State 1),Transition (Symbol "w2.s2") (State 0) (State 1),Transition (Symbol "w2.s2") (State 1) (State 1),Transition (Symbol "w3.s0") (State 0) (State 0),Transition (Symbol "w3.s0") (State 1) (State 1),Transition (Symbol "w3.s1") (State 0) (State 0),Transition (Symbol "w3.s1") (State 1) (State 1),Transition (Symbol "w3.s2") (State 0) (State 1),Transition (Symbol "w3.s2") (State 1) (State 1),Transition (Symbol "w4.s0") (State 0) (State 0),Transition (Symbol "w4.s0") (State 1) (State 1),Transition (Symbol "w4.s1") (State 0) (State 0),Transition (Symbol "w4.s1") (State 1) (State 1),Transition (Symbol "w4.s2") (State 0) (State 1),Transition (Symbol "w4.s2") (State 1) (State 1)]) (Set.fromList [State 0]) (Set.fromList [State 1]) True
 
 > culminativity :: FSA Integer String
 > culminativity = FSA (Set.fromList [Symbol "w0.s0",Symbol "w0.s1",Symbol "w0.s2",Symbol "w1.s0",Symbol "w1.s1",Symbol "w1.s2",Symbol "w2.s0",Symbol "w2.s1",Symbol "w2.s2",Symbol "w3.s0",Symbol "w3.s1",Symbol "w3.s2",Symbol "w4.s0",Symbol "w4.s1",Symbol "w4.s2"]) (Set.fromList [Transition (Symbol "w0.s0") (State 0) (State 0),Transition (Symbol "w0.s0") (State 1) (State 1),Transition (Symbol "w0.s0") (State 2) (State 2),Transition (Symbol "w0.s1") (State 0) (State 0),Transition (Symbol "w0.s1") (State 1) (State 1),Transition (Symbol "w0.s1") (State 2) (State 2),Transition (Symbol "w0.s2") (State 0) (State 1),Transition (Symbol "w0.s2") (State 1) (State 2),Transition (Symbol "w0.s2") (State 2) (State 2),Transition (Symbol "w1.s0") (State 0) (State 0),Transition (Symbol "w1.s0") (State 1) (State 1),Transition (Symbol "w1.s0") (State 2) (State 2),Transition (Symbol "w1.s1") (State 0) (State 0),Transition (Symbol "w1.s1") (State 1) (State 1),Transition (Symbol "w1.s1") (State 2) (State 2),Transition (Symbol "w1.s2") (State 0) (State 1),Transition (Symbol "w1.s2") (State 1) (State 2),Transition (Symbol "w1.s2") (State 2) (State 2),Transition (Symbol "w2.s0") (State 0) (State 0),Transition (Symbol "w2.s0") (State 1) (State 1),Transition (Symbol "w2.s0") (State 2) (State 2),Transition (Symbol "w2.s1") (State 0) (State 0),Transition (Symbol "w2.s1") (State 1) (State 1),Transition (Symbol "w2.s1") (State 2) (State 2),Transition (Symbol "w2.s2") (State 0) (State 1),Transition (Symbol "w2.s2") (State 1) (State 2),Transition (Symbol "w2.s2") (State 2) (State 2),Transition (Symbol "w3.s0") (State 0) (State 0),Transition (Symbol "w3.s0") (State 1) (State 1),Transition (Symbol "w3.s0") (State 2) (State 2),Transition (Symbol "w3.s1") (State 0) (State 0),Transition (Symbol "w3.s1") (State 1) (State 1),Transition (Symbol "w3.s1") (State 2) (State 2),Transition (Symbol "w3.s2") (State 0) (State 1),Transition (Symbol "w3.s2") (State 1) (State 2),Transition (Symbol "w3.s2") (State 2) (State 2),Transition (Symbol "w4.s0") (State 0) (State 0),Transition (Symbol "w4.s0") (State 1) (State 1),Transition (Symbol "w4.s0") (State 2) (State 2),Transition (Symbol "w4.s1") (State 0) (State 0),Transition (Symbol "w4.s1") (State 1) (State 1),Transition (Symbol "w4.s1") (State 2) (State 2),Transition (Symbol "w4.s2") (State 0) (State 1),Transition (Symbol "w4.s2") (State 1) (State 2),Transition (Symbol "w4.s2") (State 2) (State 2)]) (Set.fromList [State 0]) (Set.fromList [State 0,State 1]) True
-
-                            herein lie dragons
-                      they will fuck you, not gently
-                           you are not prepared
 
 > filesToRead :: IO [FilePath]
 > filesToRead = fmap lines $ readFile "to_read"
