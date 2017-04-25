@@ -58,10 +58,22 @@ no reachable accepting states:
 > isNull :: (Ord e, Ord n) => FSA n e -> Bool
 > isNull = (== empty) . finals . trimUnreachables
 
+Calls to `isomorphic` should work for NFAs as well as DFAs, but in the
+current implementation, in general, will not.  This is because
+multiple start states are combined with the cartesian product to
+create c, rather than mapped from a to their counterparts in b, a much
+harder problem.
+
 > isomorphic :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e -> Bool
-> isomorphic a b = (alphabet a == alphabet b) &&
->                  isNull (autDifference a b) &&
->                  isNull (autDifference b a)
+> isomorphic a b = (alphabet a        == alphabet b)         &&
+>                  (size (initials a) == size (initials b))  &&
+>                  (size (finals a)   == size (finals b))    &&
+>                  (size (states a)   == size (states b))    &&
+>                  (size (initials a) == size (initials c))  &&
+>                  (size (finals a)   == size (finals c))    &&
+>                  (size (states a)   == s)
+>     where c  = autUnion a b
+>           s  = size . keep ((/=) (State (Nothing, Nothing))) $ states c
 
 > instance (Ord e, Ord n) => Eq (FSA n e) where
 >     (==) = isomorphic
@@ -629,6 +641,113 @@ the source as accepting.
 >                                    isFinal
 
 
+The Syntactic Monoid
+====================
+
+In the powerset graph (PSG), states are labelled by sets of states.
+For all states Q and symbols x, there is an edge labelled by x from Q
+to the state labelled by Q' such that for all q' in Q', there exists
+some q in Q such that q goes to q' on x.  The syntactic monoid differs
+in that the states are effectively labelled by functions.  Here we
+will use lists of the form [q_0, q_1, ..., q_n].
+
+The syntactic monoid a DFA whose states are labelled [0, 1, ..., n]
+will always contain the state [0, 1, ..., n].  This is the initial
+state.  There exist edges between states are found by mapping over the
+list.  That is, if delta is the transition function from QxSigma->Q:
+
+    delta' [q_0, ..., q_n] x = [delta q_0 x, ..., delta q_n x]
+
+Any state labelled by a function mapping an initial state to a final
+state is considered accepting in the syntactic monoid.
+
+> extractState :: [State x] -> State [x]
+> extractState = State . map nodeLabel
+
+> generateSyntacticMonoid :: (Ord e, Ord n) =>
+>                            FSA n e -> FSA ([Maybe n], [Symbol e]) e
+> generateSyntacticMonoid m = FSA (alphabet m) t i f True
+>     where i          = singleton . fmap (flip (,) [])  .
+>                        extractState . map (fmap Just) $ s
+>           s          = Set.toList (initials m) ++
+>                        Set.toList (difference (states m) (initials m))
+>           n          = size (initials m)
+>           i'         = if (intersection (finals m) (initials m) /= empty)
+>                        then i
+>                        else empty
+>           (t,_,f,_)  = generateSyntacticMonoid' m n (empty, i, i', i)
+
+> generateSyntacticMonoid' :: (Ord e, Ord n) => FSA n e -> Int ->
+>                             (Set (Transition ([Maybe n], [Symbol e]) e),
+>                              Set (State ([Maybe n], [Symbol e])),
+>                              Set (State ([Maybe n], [Symbol e])),
+>                              Set (State ([Maybe n], [Symbol e]))) ->
+>                             (Set (Transition ([Maybe n], [Symbol e]) e),
+>                              Set (State ([Maybe n], [Symbol e])),
+>                              Set (State ([Maybe n], [Symbol e])),
+>                              Set (State ([Maybe n], [Symbol e])))
+> generateSyntacticMonoid' f n former@(ot, os, ofi, s)
+>     | size s == 0   = former
+>     | otherwise     = generateSyntacticMonoid' f n next
+>     where next      = (union nt ot, union ns os, union nf ofi, ns)
+>           alpha     = alphabet f
+>           step a q  = replaceDestinationFromMap (union s os) $
+>                       Transition a q (step' a q)
+>           step' a   = fmap (mapsnd (++ [a])) .
+>                       fmap (mapfst $
+>                             tmap (maybe Nothing
+>                                   (flip (curry (pull .
+>                                                 uncurry (flip (delta f) .
+>                                                          singleton .
+>                                                          State)))
+>                                    a)))
+>           pull xs   = if xs == empty
+>                       then Nothing
+>                       else nodeLabel $ fmap Just (chooseOne xs)
+>           nt        = mergeByDestFst . unionAll $ tmap nt' alpha
+>           nt' a     = tmap (step a) s
+>           ns        = keep (isNotIn os' . fmap fst) (tmap destination nt)
+>           nf        = keep hasFinal ns
+>           os'       = tmap (fmap fst) os
+>           fins      = nodeLabel . extractState . map (fmap Just) .
+>                       Set.toList $ finals f
+>           hasFinal  = not . (==0) . size . intersection fins .
+>                       take n . fst . nodeLabel
+
+> replaceDestinationFromMap :: (Container (c (State (a, b))) (State (a, b)),
+>                               Collapsible c, Eq a) =>
+>                              c (State (a, b)) -> Transition (a, b) e ->
+>                              Transition (a, b) e
+> replaceDestinationFromMap m t
+>     | size m' == 0  = t
+>     | otherwise     = Transition (edgeLabel t) (source t) (chooseOne m')
+>     where m'  = keep ((==) (fn $ destination t) . fn) m
+>           fn  = fst . nodeLabel
+
+> mergeByDestFst :: (Container (c (Transition (n, n') e))
+>                    (Transition (n, n') e),
+>                    Collapsible c, Ord n, Ord n', Ord e) =>
+>                   c (Transition (n, n') e) -> c (Transition (n, n') e)
+> mergeByDestFst l = mergeByDestFst' empty l
+
+> mergeByDestFst' :: (Container (c (Transition (n, n') e))
+>                     (Transition (n, n') e),
+>                     Collapsible c, Ord n, Ord n', Ord e) =>
+>                    c (Transition (n, n') e) -> c (Transition (n, n') e) ->
+>                    c (Transition (n, n') e)
+> mergeByDestFst' p l
+>     | size l == 0  = p
+>     | otherwise    = mergeByDestFst'
+>                      (union p   .
+>                       insert x  $
+>                       tmap (set_dest (destination x)) sds)
+>                      (difference xs sds)
+>     where (x, xs)       = choose l
+>           fnd           = fst . nodeLabel . destination
+>           sds           = keep ((==) (fnd x) . fnd) xs
+>           set_dest d t  = Transition (edgeLabel t) (source t) d
+
+
 Miscellaneous Functions
 =======================
 
@@ -637,16 +756,27 @@ mixture of pairs, maybes, and sets.  We can smash these into a smaller
 type to improve memory usage and processing speed.
 
 > renameStates :: (Ord e, Ord n, Ord n1, Enum n1) => FSA n e -> FSA n1 e
-> renameStates fsa = FSA (alphabet fsa) trans init fin (isDeterministic fsa)
->     where sts = states fsa
->           index x xs = toEnum (x `findIndexInSet` xs)
->           renameTransition t = Transition (edgeLabel t) a b
->               where a = renameState (source t)
->                     b = renameState (destination t)
->           renameState q = State (q `index` sts)
->           trans = tmap renameTransition (transitions fsa)
->           init = tmap renameState (initials fsa)
->           fin = tmap renameState (finals fsa)
+> renameStates fsa = renameStatesBy f fsa
+>     where sts      = Set.fromList $
+>                      zip (Set.toList . tmap nodeLabel $ states fsa)
+>                      [1..]
+>           f x      = pull $ keep ((== x) . fst) sts
+>           pull xs  = if xs == empty
+>                      then toEnum 0
+>                      else toEnum . snd $ chooseOne xs
+
+> renameStatesBy :: (Ord e, Ord n, Ord n1) =>
+>                   (n -> n1) -> FSA n e -> FSA n1 e
+> renameStatesBy f a = FSA (alphabet a) trans init fin (isDeterministic a)
+>     where sts    = states a
+>           rnt t  = Transition
+>                    (edgeLabel t)
+>                    (rns (source t))
+>                    (rns (destination t))
+>           rns    = fmap f
+>           trans  = tmap rnt (transitions a)
+>           init   = tmap rns (initials a)
+>           fin    = tmap rns (finals a)
 
 The renameStates function had been using Set.findIndex, but I have
 been made aware that this does not exist in older versions of the
@@ -657,3 +787,11 @@ Haskell platform.  So we emulate it here:
 >     | found = size l
 >     | otherwise = error "element is not in the set"
 >     where (l, found, _) = Set.splitMember x s
+
+Mapping on tuples:
+
+> mapfst :: (a -> b) -> (a, c) -> (b, c)
+> mapfst f (a, b) = (f a, b)
+
+> mapsnd :: (b -> c) -> (a, b) -> (a, c)
+> mapsnd f (a, b) = (a, f b)
