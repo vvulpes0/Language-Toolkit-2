@@ -437,18 +437,21 @@ for the states of the input FSA, then simply replace each state by its
 equivalence class.
 
 > minimize :: (Ord e, Ord n) => FSA n e -> FSA (Set (Set n)) e
-> minimize fsa = trimUnreachables newfsa
->     where dfa = determinize fsa
->           classes = equivalenceClasses dfa
+> minimize = minimizeOver equivalenceClasses . determinize
+
+> minimizeOver :: (Ord e, Ord n) =>
+>                 (FSA n e -> Set (Set (State n))) -> FSA n e -> FSA (Set n) e
+> minimizeOver r fsa = trimUnreachables newfsa
+>     where classes = r fsa
 >           classOf x = (State . tmap nodeLabel . unionAll)
 >                       (keep (contains x) classes)
->           init = tmap classOf (initials dfa)
->           fin = tmap classOf (finals dfa)
+>           init = tmap classOf (initials fsa)
+>           fin = tmap classOf (finals fsa)
 >           trans = (tmap
 >                    (\(Transition a p q) ->
 >                     Transition a (classOf p) (classOf q))
->                    (transitions dfa))
->           newfsa = FSA (alphabet dfa) trans init fin True
+>                    (transitions fsa))
+>           newfsa = FSA (alphabet fsa) trans init fin True
 
 > equivalenceClasses :: (Ord e, Ord n) => FSA n e -> Set (Set (State n))
 > equivalenceClasses fsa = tmap eqClass sts
@@ -557,6 +560,65 @@ An FSA is in normal form if it has been both minimized and trimmed.
 
 > normalize :: (Ord e, Ord n) => FSA n e -> FSA Int e
 > normalize = renameStates . trimFailStates . minimize . trimUnreachables
+
+
+J-Minimization
+==============
+
+Note that a state in an FSA is a representation of a (set of)
+string(s).  The standard minimization algorithm considers two strings
+w and v equivalent iff for all u, wu and vu are the same state or
+otherwise equivalent by a recursive application of this definition.
+
+A different equivalence relation exists, though.  Consider w and v
+equivalent iff for all u1 and u2, u1wu2 and u1vu2 are the same state
+or otherwise equivalent by a recursive application of this definition.
+
+For the time being, we will only be J-minimizing syntactic monoids.
+It seems that their structure leads to the largest J-minimal automaton
+recognizing a given stringset.
+
+> jEquivalenceClasses :: (Ord e, Ord n) =>
+>                        FSA ([Maybe n], [Symbol e]) e ->
+>                        Set (Set (State ([Maybe n], [Symbol e])))
+> jEquivalenceClasses f = jEquivalenceClasses' f (equivalenceClasses f)
+
+
+> jEquivalenceClasses' :: (Ord e, Ord n) =>
+>                         FSA ([Maybe n], [Symbol e]) e ->
+>                         Set (Set (State ([Maybe n], [Symbol e]))) ->
+>                         Set (Set (State ([Maybe n], [Symbol e])))
+> jEquivalenceClasses' f xi
+>     | size new == size xi  = xi
+>     | otherwise            = jEquivalenceClasses' f new
+>     where new = unionAll $ tmap (splitJEqClass f xi) xi
+
+> splitJEqClass :: (Ord e, Ord n) =>
+>                  FSA ([Maybe n], [Symbol e]) e ->
+>                  Set (Set (State ([Maybe n], [Symbol e]))) ->
+>                  Set (State ([Maybe n], [Symbol e])) ->
+>                  Set (Set (State ([Maybe n], [Symbol e])))
+> splitJEqClass f xi s = collapse sje xi (states f)
+>     where sje a b = splitJEqClassFrom f b s a
+
+> splitJEqClassFrom :: (Ord e, Ord n) =>
+>                      FSA ([Maybe n], [Symbol e]) e ->
+>                      Set (Set (State ([Maybe n], [Symbol e]))) ->
+>                      Set (State ([Maybe n], [Symbol e])) ->
+>                      State ([Maybe n], [Symbol e]) ->
+>                      Set (Set (State ([Maybe n], [Symbol e])))
+> splitJEqClassFrom f xi s q
+>     | size s == 0  = empty
+>     | otherwise    = insert (insert x ys) (splitJEqClassFrom f xi ys' q)
+>     where (x, xs)  = choose s
+>           d        = pull                                   .
+>                      until (allS (null . string)) (step f)  .
+>                      singleton . ID q . snd . nodeLabel
+>           pull xs  = if size xs == 0
+>                      then Nothing
+>                      else Just (chooseOne xs)
+>           ys       = keep ((==) (d x) . d) xs
+>           ys'      = difference xs ys
 
 
 Determinization
