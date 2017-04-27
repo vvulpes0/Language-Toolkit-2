@@ -437,7 +437,7 @@ for the states of the input FSA, then simply replace each state by its
 equivalence class.
 
 > minimize :: (Ord e, Ord n) => FSA n e -> FSA (Set (Set n)) e
-> minimize = minimizeOver equivalenceClasses . determinize
+> minimize = minimizeOver nerode . determinize
 
 > minimizeOver :: (Ord e, Ord n) =>
 >                 (FSA n e -> Set (Set (State n))) -> FSA n e -> FSA (Set n) e
@@ -453,8 +453,8 @@ equivalence class.
 >                    (transitions fsa))
 >           newfsa = FSA (alphabet fsa) trans init fin True
 
-> equivalenceClasses :: (Ord e, Ord n) => FSA n e -> Set (Set (State n))
-> equivalenceClasses fsa = tmap eqClass sts
+> nerode :: (Ord e, Ord n) => FSA n e -> Set (Set (State n))
+> nerode fsa = tmap eqClass sts
 >     where sts = states fsa
 >           i = union i' $ tmap (\x -> (x, x)) sts
 >           i' = difference (pairs sts) $ distinguishedPairs fsa
@@ -570,55 +570,46 @@ string(s).  The standard minimization algorithm considers two strings
 w and v equivalent iff for all u, wu and vu are the same state or
 otherwise equivalent by a recursive application of this definition.
 
-A different equivalence relation exists, though.  Consider w and v
-equivalent iff for all u1 and u2, u1wu2 and u1vu2 are the same state
-or otherwise equivalent by a recursive application of this definition.
+A different equivalence relation exists, though.  Consider a syntactic
+monoid M.  Then two elements w and v are J-equivalent iff the
+two-sides ideals MwM and MvM are equal.  In terms of automata, we know
+that the right-ideals of two states are equivalent if the states are
+in the same Nerode-equivalence class.  If the left ideals are also
+equal, then the states are J-equivalent.
 
-For the time being, we will only be J-minimizing syntactic monoids.
-It seems that their structure leads to the largest J-minimal automaton
-recognizing a given stringset.
+> jEquivalence :: (Ord e, Ord n) =>
+>                 FSA ([Maybe n], [Symbol e]) e ->
+>                 Set (Set (State ([Maybe n], [Symbol e])))
+> jEquivalence f = splitJEqClass f (nerode f)
 
-> jEquivalenceClasses :: (Ord e, Ord n) =>
->                        FSA ([Maybe n], [Symbol e]) e ->
->                        Set (Set (State ([Maybe n], [Symbol e])))
-> jEquivalenceClasses f = jEquivalenceClasses' f (equivalenceClasses f)
-
-
-> jEquivalenceClasses' :: (Ord e, Ord n) =>
->                         FSA ([Maybe n], [Symbol e]) e ->
->                         Set (Set (State ([Maybe n], [Symbol e]))) ->
->                         Set (Set (State ([Maybe n], [Symbol e])))
-> jEquivalenceClasses' f xi
->     | size new == size xi  = xi
->     | otherwise            = jEquivalenceClasses' f new
->     where new = unionAll $ tmap (splitJEqClass f xi) xi
 
 > splitJEqClass :: (Ord e, Ord n) =>
 >                  FSA ([Maybe n], [Symbol e]) e ->
 >                  Set (Set (State ([Maybe n], [Symbol e]))) ->
->                  Set (State ([Maybe n], [Symbol e])) ->
 >                  Set (Set (State ([Maybe n], [Symbol e])))
-> splitJEqClass f xi s = collapse sje xi (states f)
->     where sje a b = splitJEqClassFrom f b s a
+> splitJEqClass f xi
+>     | size new == size xi  = xi
+>     | otherwise            = splitJEqClass f new
+>     where new = unionAll $ tmap (splitJEqClass' f xi) xi
 
-> splitJEqClassFrom :: (Ord e, Ord n) =>
->                      FSA ([Maybe n], [Symbol e]) e ->
->                      Set (Set (State ([Maybe n], [Symbol e]))) ->
->                      Set (State ([Maybe n], [Symbol e])) ->
->                      State ([Maybe n], [Symbol e]) ->
->                      Set (Set (State ([Maybe n], [Symbol e])))
-> splitJEqClassFrom f xi s q
+> splitJEqClass' :: (Ord e, Ord n) =>
+>                   FSA ([Maybe n], [Symbol e]) e ->
+>                   Set (Set (State ([Maybe n], [Symbol e]))) ->
+>                   Set (State ([Maybe n], [Symbol e])) ->
+>                   Set (Set (State ([Maybe n], [Symbol e])))
+> splitJEqClass' f xi s
 >     | size s == 0  = empty
->     | otherwise    = insert (insert x ys) (splitJEqClassFrom f xi ys' q)
+>     | otherwise    = insert (insert x ys) (splitJEqClass' f xi ys')
 >     where (x, xs)  = choose s
->           d        = pull                                   .
->                      until (allS (null . string)) (step f)  .
->                      singleton . ID q . snd . nodeLabel
->           pull xs  = if size xs == 0
->                      then Nothing
->                      else Just (chooseOne xs)
->           ys       = keep ((==) (d x) . d) xs
+>           ys       = keep ((==) (pl x) . pl) xs
 >           ys'      = difference xs ys
+>           pl a     = tmap (d a) (states f)
+>           d a q    = pull                                   .
+>                      until (allS (null . string)) (step f)  .
+>                      singleton . ID q . snd $ nodeLabel a
+>           pull cs  = if size cs == 0
+>                      then Nothing
+>                      else Just . state $ chooseOne cs
 
 
 Determinization
