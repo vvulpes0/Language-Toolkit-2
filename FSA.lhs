@@ -83,7 +83,7 @@ harder problem.
 >     union = curry (renameStates . uncurry autUnion)
 >     intersection = curry (renameStates . uncurry autIntersection)
 >     difference = curry (renameStates . uncurry autDifference)
->     empty = renameStates $ emptyLanguage
+>     empty = emptyLanguage
 >     singleton = renameStates . singletonLanguage
 
 Here we define some accessor functions for the members of FSA, not
@@ -118,19 +118,19 @@ A singleton FSA is one that accepts exactly one (possibly-empty)
 string.  The number of states in such an FSA is equal to the length of
 the string plus two.
 
-> emptyWithAlphabet :: (Ord e, Num n, Ord n) => Set (Symbol e) -> FSA n e
+> emptyWithAlphabet :: (Ord e, Enum n, Ord n) => Set (Symbol e) -> FSA n e
 > emptyWithAlphabet as = FSA as trans (singleton q) empty True
 >     where trans  = tmap (flip (flip Transition q) q) as
->           q      = State 0
+>           q      = State $ toEnum 0
 
-> emptyLanguage :: (Ord e, Ord n, Num n) => FSA n e
+> emptyLanguage :: (Ord e, Ord n, Enum n) => FSA n e
 > emptyLanguage = emptyWithAlphabet empty
 
-> singletonWithAlphabet :: (Ord e, Enum n, Num n, Ord n) =>
+> singletonWithAlphabet :: (Ord e, Enum n, Enum n, Ord n) =>
 >                          Set (Symbol e) -> [Symbol e] -> FSA n e
 > singletonWithAlphabet as syms = FSA as (trans str) begins finals True
 >     where str = keep (/= Epsilon) syms
->           trans xs = union (trans' xs 1) failTransitions
+>           trans xs = union (trans' xs (toEnum 1)) failTransitions
 >           trans' [] n = tmap (\a -> Transition a (State n) fail) as
 >           trans' (x:xs) n = let m = succ n in
 >                             (union (trans' xs m) $
@@ -139,11 +139,11 @@ the string plus two.
 >                                             then State m
 >                                             else fail))
 >                              as)
->           fail = State 0
+>           fail = State $ toEnum 0
 >           failTransitions = tmap (\a -> Transition a fail fail) as
->           begins = singleton (State 1)
+>           begins = singleton (State $ toEnum 1)
 >           last = (+ 1) . fromIntegral . length $ str
->           finals = singleton (State last)
+>           finals = singleton (State $ toEnum last)
 
 > singletonLanguage :: (Ord e, Enum n, Num n, Ord n) => [Symbol e] -> FSA n e
 > singletonLanguage s = singletonWithAlphabet (Set.fromList s) s
@@ -653,17 +653,10 @@ and minimization require DFAs as input.
 
 > determinize :: (Ord e, Ord n) => FSA n e -> FSA (Set n) e
 > determinize f
->     | isDeterministic f = wrapped
+>     | isDeterministic f = renameStatesBy singleton f
 >     | otherwise = powersetConstruction f
 >                   (initials f)
 >                   (\s -> intersection s (finals f) /= empty)
->     where wrapped = FSA (alphabet f) wt wi wf (isDeterministic f)
->           wt = tmap (\t -> Transition (edgeLabel t)
->                            (metaFlip . singleton $ source t)
->                            (metaFlip . singleton $ destination t)) $
->                transitions f
->           wi = tmap (metaFlip . singleton) $ initials f
->           wf = tmap (metaFlip . singleton) $ finals f
 
 
 The Powerset Graph
