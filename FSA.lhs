@@ -572,10 +572,12 @@ otherwise equivalent by a recursive application of this definition.
 
 A different equivalence relation exists, though.  Consider a syntactic
 monoid M.  Then two elements w and v are J-equivalent iff the
-two-sides ideals MwM and MvM are equal.  In terms of automata, we know
-that the right-ideals of two states are equivalent if the states are
-in the same Nerode-equivalence class.  If the left ideals are also
-equal, then the states are J-equivalent.
+two-sides ideals MwM and MvM are equal.
+
+This is not equivalent to the statement that wM and vM are equivalent
+as well as Mw and Mv.  There are stringsets for which two or more
+elements are considered distinct when looking at each one-sided ideal
+but are actually equivalent in terms of their two-sided ideals.
 
 > jEquivalence :: (Ord e, Ord n) =>
 >                 FSA ([Maybe n], [Symbol e]) e ->
