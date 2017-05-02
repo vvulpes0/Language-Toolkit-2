@@ -580,8 +580,8 @@ equal, then the states are J-equivalent.
 > jEquivalence :: (Ord e, Ord n) =>
 >                 FSA ([Maybe n], [Symbol e]) e ->
 >                 Set (Set (State ([Maybe n], [Symbol e])))
-> jEquivalence f = splitJEqClass f (nerode f)
-
+> jEquivalence f = splitJEqClass f $
+>                  Set.fromList [finals f, difference (states f) (finals f)]
 
 > splitJEqClass :: (Ord e, Ord n) =>
 >                  FSA ([Maybe n], [Symbol e]) e ->
@@ -601,15 +601,40 @@ equal, then the states are J-equivalent.
 >     | size s == 0  = empty
 >     | otherwise    = insert (insert x ys) (splitJEqClass' f xi ys')
 >     where (x, xs)  = choose s
->           ys       = keep ((==) (pl x) . pl) xs
+>           ys       = keep ((==) (p2 f x) . p2 f) xs
 >           ys'      = difference xs ys
->           pl a     = tmap (d a) (states f)
->           d a q    = pull                                   .
+
+The primitive left-ideal of an element x of the syntactic monoid is
+the set of elements {ax} for all elements a:
+
+> pl :: (Ord n, Ord e) => FSA (n, [Symbol e]) e ->
+>       State (n, [Symbol e]) -> Set (State (n, [Symbol e]))
+> pl f x = unmaybe $ tmap (d x) (states f)
+>     where d a q    = pull                                   .
 >                      until (allS (null . string)) (step f)  .
 >                      singleton . ID q . snd $ nodeLabel a
 >           pull cs  = if size cs == 0
 >                      then Nothing
 >                      else Just . state $ chooseOne cs
+>           unmaybe cs
+>               | size cs == 0  = empty
+>               | otherwise     = case y of
+>                                   Just a  -> insert a (unmaybe ys)
+>                                   _       -> unmaybe ys
+>               where (y, ys) = choose cs
+
+> pr :: (Ord n, Ord e) => FSA n e -> State n -> Set (State n)
+> pr f x = snd $ until
+>          ((==) 0 . size . fst)
+>          (\(a,b) -> let p = pr' a
+>                     in (difference p b, union p b))
+>          (singleton x, singleton x)
+>     where pr'     = tmap state . unionAll . tmap pr''
+>           pr'' x  = step f $ tmap (ID x . singleton) (alphabet f)
+
+> p2 :: (Ord n, Ord e) => FSA (n, [Symbol e]) e ->
+>       State (n, [Symbol e]) -> Set (State (n, [Symbol e]))
+> p2 f = unionAll . tmap (pr f) . pl f
 
 
 Determinization

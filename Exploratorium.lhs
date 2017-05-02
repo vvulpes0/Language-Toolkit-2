@@ -67,3 +67,10 @@ constraint.  So "satisfies" is universal, and "has" is existential.
 
 > languages :: (t1 -> [(FilePath, FSA Int String)] -> [String]) -> t1 -> IO ()
 > languages f c = mapM_ putStrLn =<< fmap (f c) readAll
+
+> checkPT :: IO [FilePath]
+> checkPT = fmap (tmap fst) . fmap (keep (isPT . snd)) $ readAll
+
+> isPT :: (Ord n, Ord e) => FSA n e -> Bool
+> isPT m = isomorphic m' (minimizeOver jEquivalence m')
+>     where m' = generateSyntacticMonoid m
