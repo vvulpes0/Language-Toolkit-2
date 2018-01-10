@@ -10,7 +10,6 @@
 > import qualified Data.Set as Set
 > import LogicClasses
 
-
 Introduction
 ============
 
@@ -117,6 +116,11 @@ is only a side benefit.
 A singleton FSA is one that accepts exactly one (possibly-empty)
 string.  The number of states in such an FSA is equal to the length of
 the string plus two.
+
+> totalWithAlphabet :: (Ord e, Enum n, Ord n) => Set (Symbol e) -> FSA n e
+> totalWithAlphabet as = FSA as trans (singleton q) (singleton q) True
+>     where trans  = tmap (flip (flip Transition q) q) as
+>           q      = State $ toEnum 0
 
 > emptyWithAlphabet :: (Ord e, Enum n, Ord n) => Set (Symbol e) -> FSA n e
 > emptyWithAlphabet as = FSA as trans (singleton q) empty True

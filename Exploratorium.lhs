@@ -2,6 +2,7 @@
 
 > import LogicClasses
 > import FSA
+> import ExtractSP
 > import ReadJeff
 > import Data.Set (Set)
 > import qualified Data.Set as Set
@@ -74,3 +75,8 @@ constraint.  So "satisfies" is universal, and "has" is existential.
 > isPT :: (Ord n, Ord e) => FSA n e -> Bool
 > isPT m = isomorphic m' (minimizeOver jEquivalence m')
 >     where m' = generateSyntacticMonoid m
+
+> spConstraints :: IO ()
+> spConstraints  =  mapM_ (\(a,b) ->
+>                          putStrLn a >>
+>                          mapM_ print (extractForbiddenSSQs b)) =<< readAll

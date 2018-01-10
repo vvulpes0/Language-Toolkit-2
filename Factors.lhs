@@ -5,22 +5,60 @@
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
-> negativePiecewiseFactor :: (Enum a, Ord a, Ord b) => Set (Symbol b) -> [Set (Symbol b)] -> FSA a b
-> positivePiecewiseFactor :: (Enum a, Ord a, Ord b) => Set (Symbol b) -> [Set (Symbol b)] -> FSA a b
-> negativeInitialFactor :: (Enum a, Ord a, Ord b) => Set (Symbol b) -> [Set (Symbol b)] -> FSA a b
-> positiveInitialFactor :: (Enum a, Ord a, Ord b) => Set (Symbol b) -> [Set (Symbol b)] -> FSA a b
-> negativeFinalFactor :: (Enum a, Ord a, Ord b) => Set (Symbol b) -> [Set (Symbol b)] -> FSA a b
-> positiveFinalFactor :: (Enum a, Ord a, Ord b) => Set (Symbol b) -> [Set (Symbol b)] -> FSA a b
-> negativeFactor :: (Enum a, Ord a, Ord b) => Set (Symbol b) -> [Set (Symbol b)] -> FSA a b
-> positiveFactor :: (Enum a, Ord a, Ord b) => Set (Symbol b) -> [Set (Symbol b)] -> FSA a b
-> negativePiecewiseFactor = piecewise False
-> positivePiecewiseFactor = piecewise True
-> negativeInitialFactor = initialLocal False
-> positiveInitialFactor = initialLocal True
-> negativeFinalFactor = finalLocal False
-> positiveFinalFactor = finalLocal True
-> negativeFactor = local False
-> positiveFactor = local True
+> data Factor e       =  Factor [Set (Symbol e)] Bool Bool deriving (Eq, Ord, Read, Show)
+> data Piece e        =  Piece [Set (Symbol e)] deriving (Eq, Ord, Read, Show)
+> data Atom e         =  Local (Factor e) | Piecewise (Piece e) deriving (Eq, Ord, Read, Show)
+> data Literal e      =  Literal Bool (Atom e) deriving (Eq, Ord, Read, Show)
+> data Disjunction e  =  Disjunction (Set (Literal e)) deriving (Eq, Ord, Read, Show)
+> data Conjunction e  =  Conjunction (Set (Disjunction e)) deriving (Eq, Ord, Read, Show) -- Primitive Constraint
+
+> buildFactor :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> Factor e -> Bool -> FSA n e
+> buildFactor alpha (Factor factor anchoredToHead anchoredToTail) = flip (flip f alpha) factor
+>     where f = case (anchoredToHead, anchoredToTail) of
+>                 (True,   True)   ->  word
+>                 (True,   False)  ->  initialLocal
+>                 (False,  True)   ->  finalLocal
+>                 (False,  False)  ->  local
+> buildPiece :: (Enum n, Ord n, Ord e) =>
+>              Set (Symbol e) -> Piece e -> Bool -> FSA n e
+> buildPiece alpha (Piece []) _              = complementDeterminized $
+>                                              emptyWithAlphabet alpha
+> buildPiece alpha (Piece factor) isPositive = FSA alpha trans
+>                                              (singleton (State $ toEnum 0))
+>                                              (if isPositive then fin else fin')
+>                                              True
+>     where tagged         = zip factor $ tmap (State . toEnum) [0..]
+>           selftrans n x  = Transition x n n
+>           succtrans n x  = Transition x n (fmap succ n)
+>           trans'         = unionAll $
+>                            tmap
+>                            (\(symset, st) ->
+>                             union
+>                             (tmap (succtrans st) (intersection alpha symset))
+>                             (tmap (selftrans st) (difference alpha symset))
+>                            )
+>                            tagged
+>           trans          = union
+>                            (tmap (selftrans nextState) alpha)
+>                            trans'
+>           fin'           = Set.fromList $ tmap snd tagged
+>           nextState      = State . succ . maximum $ tmap (nodeLabel . snd) tagged
+>           fin            = singleton nextState
+> buildAtom :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> Atom e -> Bool -> FSA n e
+> buildAtom alpha (Local f)      =  buildFactor alpha f
+> buildAtom alpha (Piecewise p)  =  buildPiece alpha p
+> buildLiteral :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> Literal e -> FSA n e
+> buildLiteral alpha (Literal isPositive atom) = buildAtom alpha atom isPositive
+> buildDisjunction :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> Disjunction e -> FSA n e
+> buildDisjunction alpha (Disjunction literals) = unionAll . tmap (buildLiteral alpha) . Set.toList $ literals
+> buildConjunction :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> Conjunction e -> FSA n e
+> buildConjunction alpha (Conjunction disjunctions) = intersectAll . tmap (buildDisjunction alpha) . Set.toList $ disjunctions
+> build :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> Set (Conjunction e) -> FSA n e
+> build alpha conjunctions = intersectAll . tmap (buildConjunction alpha) . Set.toList $ conjunctions
+> makeConstraintList :: (Ord e) => [[[(Bool, Atom e)]]] -> Set (Conjunction e)
+> makeConstraintList = Set.fromList . tmap (Conjunction . Set.fromList . tmap (Disjunction . Set.fromList . tmap (uncurry Literal)))
+> buildFromList :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> [[[(Bool, Atom e)]]] -> FSA n e
+> buildFromList alpha = build alpha . makeConstraintList
 
 > w0s0 :: Set (Symbol String)
 > w0s1 :: Set (Symbol String)
@@ -96,33 +134,41 @@
 > wxs1 = unionAll [w0s1, w1s1, w2s1, w3s1, w4s1]
 > wxs2 = unionAll [w0s2, w1s2, w2s2, w3s2, w4s2]
 
-> piecewise :: (Enum a, Ord a, Ord b) =>
+> word :: (Enum a, Ord a, Ord b) =>
 >              Bool -> Set (Symbol b) -> [Set (Symbol b)] -> FSA a b
-> piecewise _ alpha []               = complementDeterminized $
->                                      emptyWithAlphabet alpha
-> piecewise isPositive alpha symseq  = FSA
->                                      alpha
->                                      trans
->                                      (singleton (State $ toEnum 0))
->                                      (if isPositive then fin else fin')
->                                      True
->     where tagged         = zip symseq $ tmap toEnum [0..]
->           selftrans n x  = Transition x (State n) (State n)
->           succtrans n x  = Transition x (State n) (State $ succ n)
+> word True alpha []            = emptyWithAlphabet alpha
+> word False alpha []           = FSA alpha trans
+>                                 (singleton startState)
+>                                 (singleton finalState) True
+>     where selftrans n x = Transition x n n
+>           succtrans n x = Transition x n (fmap succ n)
+>           startState    = State (toEnum 0)
+>           finalState    = fmap succ startState
+>           trans         = unionAll
+>                           [tmap (succtrans startState) alpha,
+>                            tmap (selftrans finalState) alpha]
+> word isPositive alpha symseq  = FSA alpha trans
+>                                 (singleton (State $ toEnum 0))
+>                                 (if isPositive then fin else fin')
+>                                 True
+>     where tagged         = zip symseq $ tmap (State . toEnum) [0..]
+>           selftrans n x  = Transition x n n
+>           succtrans n x  = Transition x n (fmap succ n)
 >           trans'         = unionAll $
 >                            tmap
 >                            (\(symset, st) ->
 >                             union
 >                             (tmap (succtrans st) (intersection alpha symset))
->                             (tmap (selftrans st) (difference alpha symset))
+>                             (tmap (\x -> Transition x st failState) (difference alpha symset))
 >                            )
 >                            tagged
 >           trans          = union
->                            (tmap (selftrans nextState) alpha)
+>                            (tmap (succtrans nextState) alpha)
 >                            trans'
->           fin'           = Set.fromList $ tmap (State . snd) tagged
->           nextState      = succ . maximum $ tmap snd tagged
->           fin            = singleton (State nextState)
+>           fin'           = insert failState . Set.fromList $ tmap snd tagged
+>           nextState      = State . succ . maximum $ tmap (nodeLabel . snd) tagged
+>           failState      = fmap succ nextState
+>           fin            = singleton nextState
 
 > initialLocal :: (Enum a, Ord a, Ord b) =>
 >                 Bool -> Set (Symbol b) -> [Set (Symbol b)] -> FSA a b
