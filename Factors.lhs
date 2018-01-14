@@ -5,28 +5,28 @@
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
-> data Factor e       =  Factor [Set (Symbol e)] Bool Bool deriving (Eq, Ord, Read, Show)
-> data Piece e        =  Piece [Set (Symbol e)] deriving (Eq, Ord, Read, Show)
-> data Atom e         =  Local (Factor e) | Piecewise (Piece e) deriving (Eq, Ord, Read, Show)
-> data Literal e      =  Literal Bool (Atom e) deriving (Eq, Ord, Read, Show)
+> data Factor e       =  Substring [Set (Symbol e)] Bool Bool | Subsequence [Set (Symbol e)] deriving (Eq, Ord, Read, Show)
+> data Literal e      =  Literal Bool (Factor e) deriving (Eq, Ord, Read, Show)
 > data Disjunction e  =  Disjunction (Set (Literal e)) deriving (Eq, Ord, Read, Show)
 > data Conjunction e  =  Conjunction (Set (Disjunction e)) deriving (Eq, Ord, Read, Show) -- Primitive Constraint
 
+> required :: Factor e -> Literal e
+> required = Literal True
+> forbidden :: Factor e -> Literal e
+> forbidden = Literal False
+
 > buildFactor :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> Factor e -> Bool -> FSA n e
-> buildFactor alpha (Factor factor anchoredToHead anchoredToTail) = flip (flip f alpha) factor
+> buildFactor alpha (Substring factor anchoredToHead anchoredToTail) = flip (flip f alpha) factor
 >     where f = case (anchoredToHead, anchoredToTail) of
 >                 (True,   True)   ->  word
 >                 (True,   False)  ->  initialLocal
 >                 (False,  True)   ->  finalLocal
 >                 (False,  False)  ->  local
-> buildPiece :: (Enum n, Ord n, Ord e) =>
->              Set (Symbol e) -> Piece e -> Bool -> FSA n e
-> buildPiece alpha (Piece []) _              = complementDeterminized $
->                                              emptyWithAlphabet alpha
-> buildPiece alpha (Piece factor) isPositive = FSA alpha trans
->                                              (singleton (State $ toEnum 0))
->                                              (if isPositive then fin else fin')
->                                              True
+> buildFactor alpha (Subsequence factor) =  (\isPositive ->
+>                                            FSA alpha trans
+>                                            (singleton (State $ toEnum 0))
+>                                            (if isPositive then fin else fin')
+>                                            True)
 >     where tagged         = zip factor $ tmap (State . toEnum) [0..]
 >           selftrans n x  = Transition x n n
 >           succtrans n x  = Transition x n (fmap succ n)
@@ -44,20 +44,19 @@
 >           fin'           = Set.fromList $ tmap snd tagged
 >           nextState      = State . succ . maximum $ tmap (nodeLabel . snd) tagged
 >           fin            = singleton nextState
-> buildAtom :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> Atom e -> Bool -> FSA n e
-> buildAtom alpha (Local f)      =  buildFactor alpha f
-> buildAtom alpha (Piecewise p)  =  buildPiece alpha p
 > buildLiteral :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> Literal e -> FSA n e
-> buildLiteral alpha (Literal isPositive atom) = buildAtom alpha atom isPositive
+> buildLiteral alpha (Literal isPositive factor) = buildFactor alpha factor isPositive
 > buildDisjunction :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> Disjunction e -> FSA n e
 > buildDisjunction alpha (Disjunction literals) = unionAll . tmap (buildLiteral alpha) . Set.toList $ literals
 > buildConjunction :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> Conjunction e -> FSA n e
 > buildConjunction alpha (Conjunction disjunctions) = intersectAll . tmap (buildDisjunction alpha) . Set.toList $ disjunctions
 > build :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> Set (Conjunction e) -> FSA n e
 > build alpha conjunctions = intersectAll . tmap (buildConjunction alpha) . Set.toList $ conjunctions
-> makeConstraintList :: (Ord e) => [[[(Bool, Atom e)]]] -> Set (Conjunction e)
-> makeConstraintList = Set.fromList . tmap (Conjunction . Set.fromList . tmap (Disjunction . Set.fromList . tmap (uncurry Literal)))
-> buildFromList :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> [[[(Bool, Atom e)]]] -> FSA n e
+> makeConstraint :: (Ord e) => [[Literal e]] -> Conjunction e
+> makeConstraint = Conjunction . Set.fromList . tmap (Disjunction . Set.fromList)
+> makeConstraintList :: (Ord e) => [[[Literal e]]] -> Set (Conjunction e)
+> makeConstraintList = Set.fromList . tmap makeConstraint
+> buildFromList :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> [[[Literal e]]] -> FSA n e
 > buildFromList alpha = build alpha . makeConstraintList
 
 > w0s0 :: Set (Symbol String)
@@ -133,6 +132,19 @@
 > wxs0 = unionAll [w0s0, w1s0, w2s0, w3s0, w4s0]
 > wxs1 = unionAll [w0s1, w1s1, w2s1, w3s1, w4s1]
 > wxs2 = unionAll [w0s2, w1s2, w2s2, w3s2, w4s2]
+
+> wplus :: Set (Symbol String)
+> wpluss0 :: Set (Symbol String)
+> wpluss1 :: Set (Symbol String)
+> wpluss2 :: Set (Symbol String)
+> wplusplus :: Set (Symbol String)
+> wplusminus :: Set (Symbol String)
+> wplus = wx `difference` w0
+> wpluss0 = wxs0 `difference` w0
+> wpluss1 = wxs1 `difference` w0
+> wpluss2 = wxs2 `difference` w0
+> wplusplus = wxplus `difference` w0
+> wplusminus = wxminus `difference` w0
 
 > word :: (Enum a, Ord a, Ord b) =>
 >              Bool -> Set (Symbol b) -> [Set (Symbol b)] -> FSA a b

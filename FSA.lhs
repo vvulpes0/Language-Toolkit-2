@@ -83,7 +83,7 @@ harder problem.
 >     intersection = curry (renameStates . uncurry autIntersection)
 >     difference = curry (renameStates . uncurry autDifference)
 >     empty = emptyLanguage
->     singleton = renameStates . singletonLanguage
+>     singleton = (\a -> renameStates a `asTypeOf` a) . singletonLanguage
 
 Here we define some accessor functions for the members of FSA, not
 because pattern matching against constructors is inherently wrong, but
@@ -130,7 +130,7 @@ the string plus two.
 > emptyLanguage :: (Ord e, Ord n, Enum n) => FSA n e
 > emptyLanguage = emptyWithAlphabet empty
 
-> singletonWithAlphabet :: (Ord e, Enum n, Enum n, Ord n) =>
+> singletonWithAlphabet :: (Ord e, Enum n, Ord n) =>
 >                          Set (Symbol e) -> [Symbol e] -> FSA n e
 > singletonWithAlphabet as syms = FSA as (trans str) begins finals True
 >     where str = keep (/= Epsilon) syms
@@ -149,7 +149,7 @@ the string plus two.
 >           last = (+ 1) . fromIntegral . length $ str
 >           finals = singleton (State $ toEnum last)
 
-> singletonLanguage :: (Ord e, Enum n, Num n, Ord n) => [Symbol e] -> FSA n e
+> singletonLanguage :: (Ord e, Enum n, Ord n) => [Symbol e] -> FSA n e
 > singletonLanguage s = singletonWithAlphabet (Set.fromList s) s
 
 
