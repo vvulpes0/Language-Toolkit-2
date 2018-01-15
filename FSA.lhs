@@ -165,6 +165,9 @@ input.
 >               | Symbol e
 >               deriving (Eq, Ord, Read, Show)
 
+> instance Functor Symbol where
+>     fmap _ Epsilon     =  Epsilon
+>     fmap f (Symbol e)  =  Symbol (f e)
 
 States
 ------
@@ -685,9 +688,9 @@ and minimization require DFAs as input.
 > determinize :: (Ord e, Ord n) => FSA n e -> FSA (Set n) e
 > determinize f
 >     | isDeterministic f = renameStatesBy singleton f
->     | otherwise = powersetConstruction f
->                   (initials f)
->                   (\s -> intersection s (finals f) /= empty)
+>     | otherwise = powersetConstruction f (initials f) isFinal
+>     where isFinal = not . Set.null . intersection (finals f) .
+>                     unionAll . tmap (epsilonClosure f)
 
 
 The Powerset Graph
