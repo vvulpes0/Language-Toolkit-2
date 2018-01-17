@@ -83,16 +83,19 @@
 >                          (nq . show $ nodeLabel x) ++ "\"];"
 
 > dotify :: (Ord e, Ord n, Show e, Show n) => FSA n e -> String
-> dotify f = unlines $
->            ["digraph {",
->             "graph [rankdir=\"LR\"];",
->             "node  [fixedsize=\"false\", fontsize=\"12.0\"];",
->             "edge  [fontsize=\"12.0\", arrowsize=\"0.5\"];"] ++
->            dotifyInitials f     ++
->            dotifyStates f       ++
->            dotifyFinals f       ++
->            dotifyTransitions f  ++
->            ["}"]
+> dotify = dotifyWithName ""
+
+> dotifyWithName :: (Ord e, Ord n, Show e, Show n) => String -> FSA n e -> String
+> dotifyWithName name f =
+>     unlines $ ["digraph " ++ name ++ " {",
+>                "graph [rankdir=\"LR\"];",
+>                "node  [fixedsize=\"false\", fontsize=\"12.0\"];",
+>                "edge  [fontsize=\"12.0\", arrowsize=\"0.5\"];"] ++
+>     dotifyInitials f     ++
+>     dotifyStates f       ++
+>     dotifyFinals f       ++
+>     dotifyTransitions f  ++
+>     ["}"]
 
 > renameStatesFromSets :: (Ord e, Ord n, Show e, Show n) =>
 >                         FSA (Set n) e -> FSA String e
