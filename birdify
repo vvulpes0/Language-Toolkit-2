@@ -1,0 +1,5 @@
+#!/bin/sh
+sed -e '/\\begin{code}/,/\\end{code}/s/^/> /'  \
+    -e 's/^> \\begin{code}.*//'                \
+    -e 's/^> \\end{code}.*//'                  \
+    "$@"

@@ -166,6 +166,18 @@ wherever a transition occurred in $\delta$.
 > subsequenceClosure (FSA ssigma delta q_0 qf d)  =  FSA ssigma (delta `union` delta_prime) q_0 qf False
 >     where  delta_prime  =  tmap (\(Transition x a b) -> (Transition Epsilon a b)) delta
 
+%if false
+
+> spresidue :: (Enum n, Ord n, Ord e) => FSAt n e -> FSAt Integer e
+> spresidue f = renameStates . minimize . determinize $
+>               (complSpApprox f `union` f)
+>     where complSpApprox  =  renameStates . complement . subsequenceClosure
+>           renameStates' :: (Ord n, Ord e') => FSA n e' -> FSA Integer e'
+>           renameStates' f =  renameStates f
+>           f' = renameStates' f
+
+% endif
+
 Let $\Automaton{M}^\prime=\operatorname{subsequenceClosure} \Automaton{M}$,
 and let $u,v,w\in\Sigma^*$
 such that $uvw\in\Language{\Automaton{M}^\prime}$.

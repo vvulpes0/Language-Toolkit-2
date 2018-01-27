@@ -6,6 +6,7 @@
 > import ReadJeff
 > import Data.Set (Set)
 > import qualified Data.Set as Set
+> import Control.Parallel.Strategies
 
 > extendAlphabetTo :: (Ord a, Ord b) => Set (Symbol b) -> FSA a b ->
 >                   FSA (Maybe Integer, Maybe a) b
@@ -76,7 +77,32 @@ constraint.  So "satisfies" is universal, and "has" is existential.
 > isPT m = isomorphic m' (minimizeOver jEquivalence m')
 >     where m' = generateSyntacticMonoid m
 
+< spConstraints :: IO ()
+< spConstraints  =  mapM_ (\(a,b) ->
+<                          putStrLn a >>
+<                          mapM_ print (extractForbiddenSSQs b)) =<< readAll
+
 > spConstraints :: IO ()
-> spConstraints  =  mapM_ (\(a,b) ->
->                          putStrLn a >>
->                          mapM_ print (extractForbiddenSSQs b)) =<< readAll
+> spConstraints = do
+>                 taggedFSAs <- readAll
+>                 let fssqs = map (fmap extract) taggedFSAs
+>                 let pfssqs = fssqs `using` parListChunk 10 rdeepseq
+>                 mapM_ (\(a,(b,c)) ->
+>                        putStrLn ("# " ++ showName a) >>
+>                        putStrLn ("# alphabet: " ++
+>                                  showSymList (Set.toAscList b)) >>
+>                        mapM_ (putStrLn . showSymList) (sortBy comp $ Set.toList c) >>
+>                        putStrLn "") pfssqs
+>     where showSymList = concatMap showSym
+>           showSym Epsilon = ""
+>           showSym (Symbol a) = take 2 . (++ "  ") . filter (/= '"') . show $
+>                                transliterateString a
+>           showName [] = []
+>           showName ('_':xs) = ' ' : showName xs
+>           showName ('.':'f':'s':'a':xs) = []
+>           showName (x:xs) = x : showName xs
+>           extract f = (alphabet f, extractForbiddenSSQs f)
+>           comp xs ys
+>                | length xs < length ys = LT
+>                | length xs > length ys = GT
+>                | otherwise             = compare xs ys

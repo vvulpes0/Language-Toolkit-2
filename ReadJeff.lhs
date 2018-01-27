@@ -68,4 +68,41 @@ that, and what we think may have gone wrong:
 > readAndRelabelJeff :: String -> FSA Int String
 > readAndRelabelJeff = renameStates . readJeff
 
+Transliterating Jeff's FSAs into the form used by my compiler:
+
+> makeStress :: String -> String
+> makeStress str  =  case digits of 
+>                      "0" -> ""
+>                      "1" -> "`"
+>                      "2" -> "'"
+>                      _   -> str
+>     where digits = filter (isIn "0123456789") str
+
+> makeWeight :: String -> String
+> makeWeight str  =  case digits of
+>                      "0" -> "L"
+>                      "1" -> "H"
+>                      "2" -> "S"
+>                      "3" -> "X"
+>                      "4" -> "Y"
+>                      _   -> str
+>     where digits = filter (isIn "0123456789") str
+
+> mapEvenOdd :: (a -> b) -> (a -> b) -> [a] -> [b]
+> mapEvenOdd f g (a1:a2:xs)  =  f a1 : g a2 : mapEvenOdd f g xs
+> mapEvenOdd f _ (a1:[])     =  f a1 : []
+> mapEvenOdd _ _ []          =  []
+
+> transliterateString :: String -> String
+> transliterateString = concat . mapEvenOdd makeWeight makeStress . splitOn '.'
+
+> transliterateTransition :: (Ord n) => Transition n String -> Transition n String
+> transliterateTransition (Transition x q1 q2) =
+>     Transition (fmap transliterateString x) q1 q2
+
+> transliterate :: (Ord n) => FSA n String -> FSA n String
+> transliterate (FSA a t i f d) = FSA (tmap (fmap transliterateString) a)
+>                                 (tmap transliterateTransition t)
+>                                 i f d
+
 < main = interact ((++ "\n") . show . readAndRelabelJeff)

@@ -59,21 +59,9 @@
 > buildFromList :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> [[[Literal e]]] -> FSA n e
 > buildFromList alpha = build alpha . makeConstraintList
 
-> w0s0 :: Set (Symbol String)
-> w0s1 :: Set (Symbol String)
-> w0s2 :: Set (Symbol String)
-> w1s0 :: Set (Symbol String)
-> w1s1 :: Set (Symbol String)
-> w1s2 :: Set (Symbol String)
-> w2s0 :: Set (Symbol String)
-> w2s1 :: Set (Symbol String)
-> w2s2 :: Set (Symbol String)
-> w3s0 :: Set (Symbol String)
-> w3s1 :: Set (Symbol String)
-> w3s2 :: Set (Symbol String)
-> w4s0 :: Set (Symbol String)
-> w4s1 :: Set (Symbol String)
-> w4s2 :: Set (Symbol String)
+> w0s0, w0s1, w0s2, w1s0, w1s1, w1s2 :: Set (Symbol String)
+> w2s0, w2s1, w2s2, w3s0, w3s1, w3s2 :: Set (Symbol String)
+> w4s0, w4s1, w4s2, wxs0, wxs1, wxs2 :: Set (Symbol String)
 > w0s0 = singleton $ Symbol "L"
 > w0s1 = singleton $ Symbol "L`"
 > w0s2 = singleton $ Symbol "L'"
@@ -89,24 +77,20 @@
 > w4s0 = singleton $ Symbol "Y"
 > w4s1 = singleton $ Symbol "Y`"
 > w4s2 = singleton $ Symbol "Y'"
+> wxs0 = unionAll [w0s0, w1s0, w2s0, w3s0, w4s0]
+> wxs1 = unionAll [w0s1, w1s1, w2s1, w3s1, w4s1]
+> wxs2 = unionAll [w0s2, w1s2, w2s2, w3s2, w4s2]
 
-> w0 :: Set (Symbol String)
-> w1 :: Set (Symbol String)
-> w2 :: Set (Symbol String)
-> w3 :: Set (Symbol String)
-> w4 :: Set (Symbol String)
+> w0, w1, w2, w3, w4, wx, defaultAlphabet :: Set (Symbol String)
 > w0 = unionAll [w0s0, w0s1, w0s2]
 > w1 = unionAll [w1s0, w1s1, w1s2]
 > w2 = unionAll [w2s0, w2s1, w2s2]
 > w3 = unionAll [w3s0, w3s1, w3s2]
 > w4 = unionAll [w4s0, w4s1, w4s2]
 > wx = unionAll [w0, w1, w2, w3, w4]
+> defaultAlphabet = wx
 
-> w0plus :: Set (Symbol String)
-> w1plus :: Set (Symbol String)
-> w2plus :: Set (Symbol String)
-> w3plus :: Set (Symbol String)
-> w4plus :: Set (Symbol String)
+> w0plus, w1plus, w2plus, w3plus, w4plus, wxplus :: Set (Symbol String)
 > w0plus = unionAll [w0s1, w0s2]
 > w1plus = unionAll [w1s1, w1s2]
 > w2plus = unionAll [w2s1, w2s2]
@@ -114,11 +98,7 @@
 > w4plus = unionAll [w4s1, w4s2]
 > wxplus = unionAll [w0plus, w1plus, w2plus, w3plus, w4plus]
 
-> w0minus :: Set (Symbol String)
-> w1minus :: Set (Symbol String)
-> w2minus :: Set (Symbol String)
-> w3minus :: Set (Symbol String)
-> w4minus :: Set (Symbol String)
+> w0minus, w1minus, w2minus, w3minus, w4minus, wxminus :: Set (Symbol String)
 > w0minus = unionAll [w0s0, w0s1]
 > w1minus = unionAll [w1s0, w1s1]
 > w2minus = unionAll [w2s0, w2s1]
@@ -126,19 +106,7 @@
 > w4minus = unionAll [w4s0, w4s1]
 > wxminus = unionAll [w0minus, w1minus, w2minus, w3minus, w4minus]
 
-> wxs0 :: Set (Symbol String)
-> wxs1 :: Set (Symbol String)
-> wxs2 :: Set (Symbol String)
-> wxs0 = unionAll [w0s0, w1s0, w2s0, w3s0, w4s0]
-> wxs1 = unionAll [w0s1, w1s1, w2s1, w3s1, w4s1]
-> wxs2 = unionAll [w0s2, w1s2, w2s2, w3s2, w4s2]
-
-> wplus :: Set (Symbol String)
-> wpluss0 :: Set (Symbol String)
-> wpluss1 :: Set (Symbol String)
-> wpluss2 :: Set (Symbol String)
-> wplusplus :: Set (Symbol String)
-> wplusminus :: Set (Symbol String)
+> wplus, wpluss0, wpluss1, wpluss2, wplusplus, wplusminus :: Set (Symbol String)
 > wplus = wx `difference` w0
 > wpluss0 = wxs0 `difference` w0
 > wpluss1 = wxs1 `difference` w0

@@ -9,6 +9,8 @@
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 > import LogicClasses
+> import Control.DeepSeq
+> import Control.Parallel.Strategies
 
 Introduction
 ============
@@ -84,6 +86,36 @@ harder problem.
 >     difference = curry (renameStates . uncurry autDifference)
 >     empty = emptyLanguage
 >     singleton = (\a -> renameStates a `asTypeOf` a) . singletonLanguage
+
+> rEvenOdds :: [a] -> ([a],[a])
+> rEvenOdds = rEvenOdds' ([],[])
+>     where rEvenOdds' p      []        =  p
+>           rEvenOdds' (a,b)  (x:[])    =  (x:a, b)
+>           rEvenOdds' (a,b)  (x:y:xs)  =  rEvenOdds' (x:a, y:b) xs
+
+> flatIntersection :: (Enum n, Ord n, NFData n, Ord e, NFData e) =>
+>                     [FSA n e] -> FSA n e
+> flatIntersection [] = error "Cannot take a nullary intersection"
+> flatIntersection (x:[]) = x `using` rdeepseq
+> flatIntersection xs = s (intersection a b) `using` rdeepseq
+>     where a = flatIntersection a'
+>           b = flatIntersection b'
+>           s f = (renameStates . minimize) f `asTypeOf` f
+>           (a',b') = rEvenOdds xs
+
+> flatUnion :: (Enum n, Ord n, NFData n, Ord e, NFData e) =>
+>              [FSA n e] -> FSA n e
+> flatUnion [] = error "Cannot take a nullary union"
+> flatUnion (x:[]) = x `using` rdeepseq
+> flatUnion xs = s (union a b) `using` rdeepseq
+>     where a = flatIntersection a'
+>           b = flatIntersection b'
+>           s f = (renameStates . minimize) f `asTypeOf` f
+>           (a',b') = rEvenOdds xs
+
+> instance (NFData n, NFData e) => NFData (FSA n e) where
+>     rnf (FSA a t i f d) = rnf a `seq` rnf t `seq` rnf i `seq`
+>                           rnf f `seq` rnf d
 
 Here we define some accessor functions for the members of FSA, not
 because pattern matching against constructors is inherently wrong, but
@@ -169,6 +201,10 @@ input.
 >     fmap _ Epsilon     =  Epsilon
 >     fmap f (Symbol e)  =  Symbol (f e)
 
+> instance (NFData e) => NFData (Symbol e) where
+>     rnf Epsilon = ()
+>     rnf (Symbol e) = rnf e
+
 States
 ------
 
@@ -183,6 +219,9 @@ a single automaton is labelled with an element of the same type.
 
 > instance Functor State where
 >     fmap f (State a) = State (f a)
+
+> instance (NFData n) => NFData (State n) where
+>     rnf (State n) = rnf n
 
 Transitions
 -----------
@@ -204,6 +243,9 @@ transition's edge label, then it moves to the second state.
 
 > destination :: Transition n e -> State n
 > destination (Transition _ _ c) = c
+
+> instance (NFData n, NFData e) => NFData (Transition n e) where
+>     rnf (Transition x q1 q2) = rnf x `seq` rnf q1 `seq` rnf q2
 
 To determine whether an FSA accepts a string of Symbols, there must
 exist a mechanism to determine which State to enter upon consuming a
