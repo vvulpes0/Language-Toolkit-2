@@ -41,7 +41,9 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 ^^^^^ From Haskell documentation on Control.Concurrent ^^^^^
 
 > main :: IO ()
-> main = withFile "to_read" ReadMode $ \h -> do
+> main = do
+>   createDirectoryIfMissing True "Results"
+>   withFile "to_read" ReadMode $ \h -> do
 >          filePaths <- lines `fmap` hGetContents h
 >          tagged <- mapM
 >                    (\fp -> (,) (makeName fp) `fmap` readJeffFromFile fp)
@@ -59,19 +61,24 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >                         fsa <- readAndRelabelJeff `fmap` hGetContents h
 >                         return $!! fsa
 
+
 > extract :: (Ord n, Ord e) => FSA n e -> (Set (Symbol e), Set [Symbol e])
 > extract fsa = (alphabet fsa, extractForbiddenSSQs fsa)
 
-> findKFromFFs :: (Set [Symbol String],
+> findKFromFFs :: (a,
+>                  Set [Symbol String],
 >                  Set [Symbol String],
 >                  Set [Symbol String],
 >                  Set [Symbol String]) -> Integer
-> findKFromFFs (words, inis, frees, finals) = maximum [1, mw, mi, mr, mf]
+> findKFromFFs (_,words, inis, frees, finals) = maximum [1, mw, mi, mr, mf]
 >     where fm = Set.findMax . insert 0 . tmap size
->           mw = fm words + 2
->           mi = fm inis + 1
+>           tpa = tmap (prependFish . appendFish)
+>           tp = tmap prependFish
+>           ta = tmap appendFish
+>           mw = fm (tpa words)
+>           mi = fm (tp inis)
 >           mr = fm frees
->           mf = fm finals + 1
+>           mf = fm (ta finals)
 
 > slApproximation :: (Ord n) => FSA n String -> FSA Int String
 > slApproximation f = renameStates . minimize . buildFSA $
@@ -106,6 +113,23 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >               | length xs > length ys = GT
 >               | otherwise             = compare xs ys
 
+> formatSubstrings :: (a,
+>                      Set [Symbol String],
+>                      Set [Symbol String],
+>                      Set [Symbol String],
+>                      Set [Symbol String]) -> String
+> formatSubstrings (_,w,i,r,f) = formatSequences .
+>                                tmap (map (fmap untransliterateString)) $
+>                                unionAll [w', i', r', f']
+>     where w' = tmap (prependFish . appendFish) w
+>           i' = tmap prependFish i
+>           r' = r
+>           f' = tmap appendFish f
+
+> prependFish, appendFish :: [Symbol String] -> [Symbol String]
+> prependFish = (:) (Symbol "%|")
+> appendFish = flip (++) [Symbol "|%"]
+
 > formatSequence :: (Show e) => [Symbol e] -> String
 > formatSequence = concatMap formatSymbol
 
@@ -113,58 +137,57 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 
 > process :: String -> FSA Int String -> IO ()
 > process name fsa = do
->   let spsl0 = (normalize (intersection sp sl0)) `isomorphic` normalize fsa
->       spsl1 = (normalize (intersection sp sl1)) `isomorphic` normalize fsa
->       spsl2 = spl `isomorphic` normalize fsa
->   createDirectoryIfMissing True "Results"
->   writeJeff (basename ++ ".sp.fsa") sp
->   writeDot (basename ++ ".sp.dot") sp
->   writeJeff (basename ++ ".sp.res.fsa") spr
->   writeDot (basename ++ ".sp.res.dot") spr
->   writeJeff (basename ++ ".sl0.fsa") sl0
->   writeDot (basename ++ ".sl0.dot") sl0
->   writeJeff (basename ++ ".sl1.fsa") sl1
->   writeDot (basename ++ ".sl1.dot") sl1
->   if spl /= fsa
->   then do
->     ns <- findSmallestSetOfNonStrictFactors spl fsa
->     maybe (
->            writeFFChart basename name isSL alpha (w2, i2, r2, f2) fssqs Nothing
+>   let (u0,w0,i0,r0,f0) = forbiddenFactors . transliterate $ fsa
+>       sp = normalize (subsequenceClosure fsa)
+>       (u1,w1,i1,r1,f1) = forbiddenFactors . transliterate $ spresidue fsa
+>       ffs = (union u0 u1, union w0 w1, union i0 i1,
+>              union r0 r1, union f0 f1)
+>       sl = untransliterate $ buildFSA ffs
+>       fssqs = extractForbiddenSSQs fsa `difference`
+>               extractForbiddenSSQs sl
+>       strict = normalize $ sl `intersection` sp
+>       res = normalize $ strict `difference` fsa
+>       rfs = if slQ res /= 0 -- isSL res
+>             then keepUseful ffs fssqs . forbiddenFactors $
+>                  transliterate res
+>             else (u0, empty, empty, empty, empty)
+>       ccosl = normalize . union (singletonWithAlphabet alpha []) .
+>               untransliterate $ buildFSA rfs
+>       rssqs = if isSP res
+>               then keepPossible isSSQ fssqs $ difference
+>                    (extractForbiddenSSQs res)
+>                    (extractForbiddenSSQs ccosl)
+>               else empty
+>       cosl = if isNull (complement ccosl) -- no forbidden factors in res
+>              then totalWithAlphabet alpha
+>              else normalize $ complement ccosl
+>       cosp = if isSP res
+>              then normalize . complement $ subsequenceClosure res
+>              else totalWithAlphabet alpha
+>       costrict = normalize (intersection cosl cosp)
+>       scs = normalize $ flatIntersection [strict, cosl, cosp]
+>       output = writeFFChart basename name isSL alpha ffs fssqs rfs rssqs
+>   writeJeff (basename ++ ".fsa") (normalize fsa)
+>   writeDot (basename ++ ".dot") (normalize fsa)
+>   writeJeff (basename ++ ".strict.fsa") strict
+>   writeDot (basename ++ ".strict.dot") strict
+>   writeJeff (basename ++ ".strict-costrict.fsa") scs
+>   writeDot (basename ++ ".strict-costrict.dot") scs
+>   if scs == fsa
+>   then output (Just "")
+>   else do
+>     ns <- findSmallestSetOfNonStrictFactors scs fsa
+>     maybe (do
+>            putStrLn $ (show basename) ++ " is incomplete!"
+>            output Nothing
 >           ) (\a -> do
 >                putStrLn $ (show basename) ++ " needs " ++ a
->                f <- normalize `fmap` intersection spl `fmap` get a
->                let y = renameStates (complement f)
->                    ffs3@(_,w3,i3,r3,f3) = forbiddenFactors
->                                           (normalize $ union y fsa)
->                    sl3 = untransliterate $ buildFSA ffs3
->                    ffs4 = (union w2 w3, union i2 i3,
->                            union r2 r3, union f2 f3)
->                writeJeff (basename ++ ".sl3.dot") sl3
->                writeDot (basename ++ ".sl3.dot") sl3
->                writeFFChart basename name isSL alpha ffs4 fssqs (Just a)
+>                output (Just a)
 >             ) ns
->   else writeFFChart basename name isSL alpha (w2, i2, r2, f2) fssqs (Just "")
->     where sp = normalize $ subsequenceClosure fsa
->           fssqs = extractForbiddenSSQs fsa
->           spr = renameStates $ spresidue fsa
->           basename = filePathFromName name
->           ffs0@(u0,w0,i0,r0,f0) = forbiddenFactors (transliterate fsa)
->           sl0 = untransliterate $ buildFSA ffs0
->           isSL = slQ fsa /= 0
->           ffs1@(u1,w1,i1,r1,f1) = forbiddenFactors (transliterate spr)
->           sl1 = untransliterate $ buildFSA ffs1
->           ffs2@(u2,w2,i2,r2,f2) = (union u0 u1,
->                                    union w0 w1,
->                                    union i0 i1,
->                                    union r0 r1,
->                                    union f0 f1)
->           sl2 = untransliterate $ buildFSA ffs2
->           spl = normalize (intersection sp sl2)
->           get fp = withFile fp ReadMode $ \h -> do
->                      s <- hGetContents h
->                      return $!! c (readAndRelabelJeff s)
->           c = contractAlphabetTo alpha
->           alpha = alphabet fsa
+>   where
+>     basename = filePathFromName name
+>     isSL = slQ fsa /= 0
+>     alpha = alphabet fsa
 
 > findSmallestSetOfNonStrictFactors :: FSA Int String -> FSA Int String -> IO (Maybe String)
 > findSmallestSetOfNonStrictFactors approx orig =
@@ -174,15 +197,16 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >       if null xs
 >       then return Nothing
 >       else return (Just . fst $ head xs)
->     where f x
->               | x' == orig = True
->               | otherwise  = slQ (normalize $ union y orig) /= 0
->                 where x' = normalize $ intersection (snd x) approx
->                       y  = renameStates (complement x')
+>     where f x = let x' = normalize $ intersection (snd x) approx
+>                 in x' == orig
 >           get fp = withFile fp ReadMode $ \h -> do
 >                      s <- hGetContents h
 >                      return $!! (fp, c (readAndRelabelJeff s))
 >           c = contractAlphabetTo (alphabet orig)
+
+> transliterateSymbols :: (Functor f, Container (s b1) (f String), Collapsible s) =>
+>                         s (f String) -> s b1
+> transliterateSymbols = tmap (fmap transliterateString)
 
 > untransliterateSymbols :: (Functor f, Container (s b1) (f String), Collapsible s) =>
 >                           s (f String) -> s b1
@@ -200,14 +224,23 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 > writeFFChart :: FilePath -> String -> -- filepath, name
 >                 Bool -> -- is SL
 >                 Set (Symbol String) -> -- alphabet
->                 (Set [Symbol String],  -- forbidden words
+>                 (Set a, -- forbidden units
+>                  Set [Symbol String],  -- forbidden words
 >                  Set [Symbol String],  -- initial forbidden substrings
 >                  Set [Symbol String],  -- free forbidden substrings
 >                  Set [Symbol String]) -> -- final forbidden substrings
 >                 Set [Symbol String] -> -- forbidden subsequences
+>                 (Set a, -- required units
+>                  Set [Symbol String],  -- required words
+>                  Set [Symbol String],  -- initial required substrings
+>                  Set [Symbol String],  -- free required substrings
+>                  Set [Symbol String]) -> -- final required substrings
+>                 Set [Symbol String] -> -- required subsequences
 >                 Maybe String -> -- number of nonstrict subset
 >                 IO ()
-> writeFFChart fp name isSL alpha ffs@(w,i,r,f) fssqs ns =
+> writeFFChart fp name isSL alpha
+>              ffs@(_,fw,fi,fr,ff) fssqs
+>              rfs@(_,rw,ri,rr,rf) rssqs ns =
 >     withFile fp WriteMode $ \h -> do
 >       hPutStrLn h "[metadata]"
 >       hPutStrLn h ("name=" ++ show realName)
@@ -215,13 +248,17 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >       hPutStrLn h ("is_sl=" ++ if isSL then show "yes" else show "no")
 >       hPutStrLn h ("k_sl=" ++ show slK)
 >       hPutStrLn h ("k_sp=" ++ show spK)
+>       hPutStrLn h ("k_cosl=" ++ show coslK)
+>       hPutStrLn h ("k_cosp=" ++ show cospK)
 >       hPutStrLn h ""
->       hPutStrLn h "[forbidden words]" >> g h w
->       hPutStrLn h "[forbidden initial substrings]" >> g h i
->       hPutStrLn h "[forbidden free substrings]" >> g h r
->       hPutStrLn h "[forbidden final substrings]" >> g h f
+>       hPutStrLn h "[forbidden substrings]"
+>       hPutStrLn h (formatSubstrings ffs)
 >       hPutStrLn h "[forbidden subsequences]"
 >       hPutStrLn h (formatSequences fssqs)
+>       hPutStrLn h "[required substrings (at least one)]"
+>       hPutStrLn h (formatSubstrings rfs)
+>       hPutStrLn h "[required subsequences (at least one)]"
+>       hPutStrLn h (formatSequences rssqs)
 >       hPutStrLn h "[nonstrict constraints]"
 >       maybe (do
 >               hPutStrLn h ("complete=" ++ show "no")
@@ -235,24 +272,52 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >           g h = hPutStrLn h . formatSequences . tmap (map (fmap untransliterateString))
 >           slK = findKFromFFs ffs
 >           spK = (maximum . insert 0 . tmap size) fssqs
-
-> writeForbiddenAdjacencyFactors :: String ->
->                                   (Set [Symbol String],
->                                    Set [Symbol String],
->                                    Set [Symbol String],
->                                    Set [Symbol String]) ->
->                                   IO ()
-> writeForbiddenAdjacencyFactors name (w,i,r,f) =
->     withFile (filePathFromName name) AppendMode $ \h -> do
->       hPutStrLn h "[forbidden words]"
->       g h w
->       hPutStrLn h "[initial forbidden factors]"
->       g h i
->       hPutStrLn h "[free forbidden factors]"
->       g h r
->       hPutStrLn h "[final forbidden factors]"
->       g h f
->       hPutStrLn h ""
->     where g h = hPutStr h . formatSequences . tmap untransliterateSymbols
+>           coslK = findKFromFFs rfs
+>           cospK = (maximum . insert 0 . tmap size) rssqs
 
 > filePathFromName = (++) "Results/" . takeWhile (isIn "0123456789")
+
+
+
+> keepPossible :: (Ord e) => ([Symbol e] -> [Symbol e] -> Bool) ->
+>                 Set [Symbol e] -> Set [Symbol e] -> Set [Symbol e]
+> keepPossible f fssqs potential =
+>     keep (\a -> allS (not . flip f a) fssqs) potential
+
+> isPrefix, isSuffix :: Eq a => [a] -> [a] -> Bool
+> isPrefix x y
+>     | null $ drop (length x - 1) y = False
+>     | otherwise = and (zipWith (==) x y)
+> isSuffix x y = isPrefix (Prelude.reverse x) (Prelude.reverse y)
+
+> isSubstring :: Eq a => [a] -> [a] -> Bool
+> isSubstring x = any (isPrefix x) . takeWhile (not . null) . iterate (drop 1)
+
+> keepUseful :: (Set a, -- forbidden units
+>                  Set [Symbol String],  -- forbidden words
+>                  Set [Symbol String],  -- initial forbidden substrings
+>                  Set [Symbol String],  -- free forbidden substrings
+>                  Set [Symbol String]) -> -- final forbidden substrings
+>                 Set [Symbol String] -> -- forbidden subsequences
+>                 (Set a, -- potential required units
+>                  Set [Symbol String],  -- potential required words
+>                  Set [Symbol String],  -- potential initial required substrings
+>                  Set [Symbol String],  -- potential free required substrings
+>                  Set [Symbol String]) -> -- potential final required substrings
+>                 (Set a,
+>                  Set [Symbol String],
+>                  Set [Symbol String],
+>                  Set [Symbol String],
+>                  Set [Symbol String])
+> keepUseful ffs@(u,w,i,r,f) fssqs potential@(_,pw,pi,pr,pf) = (u,nw,ni,nr,nf)
+>     where fssqs' = tmap (map (fmap transliterateString)) fssqs
+>           k = keepPossible isSSQ fssqs'
+>           fpa = prependFish . appendFish
+>           fp  = prependFish
+>           fa  = appendFish
+>           ffs' = unionAll [tmap fpa w, tmap fp i, r, tmap fa f]
+>           x g = (\a b -> isSubstring a (g b))
+>           nw = k $ keepPossible (x fpa) ffs' pw
+>           ni = k $ keepPossible (x fp) ffs' pi
+>           nr = k $ keepPossible (x id) ffs' pr
+>           nf = k $ keepPossible (x fa) ffs' pf

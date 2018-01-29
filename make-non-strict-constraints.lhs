@@ -12,25 +12,13 @@
 > import System.IO
 
 > c89 :: FSA Integer String
-> c90 :: FSA Integer String
+> c9x :: FSA Integer String
 > c91 :: FSA Integer String
-> c92 :: FSA Integer String
-> c93 :: FSA Integer String
-> c94 :: FSA Integer String
-> c95 :: FSA Integer String
-> c96 :: FSA Integer String
-> c97 :: FSA Integer String
 > c145 :: FSA Integer String
 > c146 :: FSA Integer String
 > c89 = compileFromList' wx [[required (Substring [wxs2] False False)]]
-> c90 = compileFromList' wx [[forbidden (Substring [wpluss0] False False), forbidden (Substring [wpluss2] False True)]]
-> c91 = compileFromList' wx [[forbidden (Substring [wpluss1] False False), forbidden (Substring [wpluss2] False True)]]
-> c92 = compileFromList' wx [[forbidden (Substring [w2s0] False False), forbidden (Substring [wpluss2] False True)]]
-> c93 = compileFromList' wx [[forbidden (Substring [w2s0] True False), forbidden (Substring [wpluss2] False True)]]
-> c94 = compileFromList' wx [[forbidden (Substring [wpluss0] True False), forbidden (Substring [wpluss2] False True)]]
-> c95 = compileFromList' wx [[forbidden (Substring [wpluss0] True False), forbidden (Substring [wpluss2] False True)]]
-> c96 = compileFromList' wx [[forbidden (Substring [w2s0] True False), forbidden (Substring [wpluss2] False True)]]
-> c97 = compileFromList' wx [[required (Substring [wpluss2] False False), required (Substring [wxs2] False True)]]
+> c9x = compileFromList' wx [[forbidden (Substring [wpluss0] False False), forbidden (Substring [w1s2] False True)]]
+> c91 = compileFromList' wx [[forbidden (Substring [wpluss1] False False), forbidden (Substring [w1s2] False True)]]
 > c145 = desurfaceSecondary $ compileFromList' wx
 >        [[forbidden (Substring [w0plus, w0plus] False False)],
 >         [forbidden (Substring [w0s0,w0s0] False False)],
@@ -66,14 +54,8 @@
 >   let constraints = map prepare $
 >                     nonEmptySubsets
 >                     [("c89",c89),
->                      ("c90",c90),
+>                      ("c9x",c9x),
 >                      ("c91",c91),
->                      ("c92",c92),
->                      ("c93",c93),
->                      ("c94",c94),
->                      ("c95",c95),
->                      ("c96",c96),
->                      ("c97",c97),
 >                      ("c145",c145),
 >                      ("c146",c146)]
 >       pconstraints = constraints `using` parListChunk 1 rdeepseq

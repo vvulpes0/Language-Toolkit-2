@@ -10,7 +10,6 @@
 > import qualified Data.Set as Set
 > import LogicClasses
 > import Control.DeepSeq
-> import Control.Parallel.Strategies
 
 Introduction
 ============
@@ -77,7 +76,7 @@ harder problem.
 >           s  = size . keep ((/=) (State (Nothing, Nothing))) $ states c
 
 > instance (Ord e, Ord n) => Eq (FSA n e) where
->     (==) = isomorphic
+>     a == b = isomorphic (normalize a) (normalize b)
 
 > instance (Enum n, Ord n, Ord e) => Container (FSA n e) [Symbol e] where
 >     isIn = accepts
@@ -96,8 +95,8 @@ harder problem.
 > flatIntersection :: (Enum n, Ord n, NFData n, Ord e, NFData e) =>
 >                     [FSA n e] -> FSA n e
 > flatIntersection [] = error "Cannot take a nullary intersection"
-> flatIntersection (x:[]) = x `using` rdeepseq
-> flatIntersection xs = s (intersection a b) `using` rdeepseq
+> flatIntersection (x:[]) = rnf x `seq` x
+> flatIntersection xs = rnf a `seq` rnf b `seq` s (intersection a b)
 >     where a = flatIntersection a'
 >           b = flatIntersection b'
 >           s f = (renameStates . minimize) f `asTypeOf` f
@@ -106,8 +105,8 @@ harder problem.
 > flatUnion :: (Enum n, Ord n, NFData n, Ord e, NFData e) =>
 >              [FSA n e] -> FSA n e
 > flatUnion [] = error "Cannot take a nullary union"
-> flatUnion (x:[]) = x `using` rdeepseq
-> flatUnion xs = s (union a b) `using` rdeepseq
+> flatUnion (x:[]) = rnf x `seq` x
+> flatUnion xs = rnf a `seq` rnf b `seq` s (union a b)
 >     where a = flatIntersection a'
 >           b = flatIntersection b'
 >           s f = (renameStates . minimize) f `asTypeOf` f
