@@ -70,7 +70,9 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >                  Set [Symbol String],
 >                  Set [Symbol String],
 >                  Set [Symbol String]) -> Integer
-> findKFromFFs (_,words, inis, frees, finals) = maximum [1, mw, mi, mr, mf]
+> -- ignored alphabet in calculating k
+> -- to unignore, use ``maximum [1, mw, mi, mr, mf]'' instead
+> findKFromFFs (_,words, inis, frees, finals) = maximum [0, mw, mi, mr, mf]
 >     where fm = Set.findMax . insert 0 . tmap size
 >           tpa = tmap (prependFish . appendFish)
 >           tp = tmap prependFish
@@ -140,11 +142,14 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >   let (u0,w0,i0,r0,f0) = forbiddenFactors . transliterate $ fsa
 >       sp = normalize (subsequenceClosure fsa)
 >       (u1,w1,i1,r1,f1) = forbiddenFactors . transliterate $ spresidue fsa
->       ffs = (union u0 u1, union w0 w1, union i0 i1,
->              union r0 r1, union f0 f1)
+>       ffs@(u2,w2,i2,r2,f2) = (union u0 u1, union w0 w1, union i0 i1,
+>                               union r0 r1, union f0 f1)
 >       sl = untransliterate $ buildFSA ffs
 >       fssqs = extractForbiddenSSQs fsa `difference`
 >               extractForbiddenSSQs sl
+>       fssqs' = tmap (map (fmap transliterateString)) fssqs
+>       k = keepPossible isSSQ fssqs'
+>       ffs' = (u2, k w2, k i2, k r2, k f2)
 >       strict = normalize $ sl `intersection` sp
 >       res = normalize $ strict `difference` fsa
 >       rfs = if slQ res /= 0 -- isSL res
@@ -166,7 +171,7 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >              else totalWithAlphabet alpha
 >       costrict = normalize (intersection cosl cosp)
 >       scs = normalize $ flatIntersection [strict, cosl, cosp]
->       output = writeFFChart basename name isSL alpha ffs fssqs rfs rssqs
+>       output = writeFFChart basename name isSL alpha ffs' fssqs rfs rssqs
 >   writeJeff (basename ++ ".fsa") (normalize fsa)
 >   writeDot (basename ++ ".dot") (normalize fsa)
 >   writeJeff (basename ++ ".strict.fsa") strict

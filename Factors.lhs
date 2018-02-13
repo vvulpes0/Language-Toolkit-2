@@ -46,17 +46,21 @@
 >           fin            = singleton nextState
 > buildLiteral :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> Literal e -> FSA n e
 > buildLiteral alpha (Literal isPositive factor) = buildFactor alpha factor isPositive
-> buildDisjunction :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> Disjunction e -> FSA n e
-> buildDisjunction alpha (Disjunction literals) = unionAll . tmap (buildLiteral alpha) . Set.toList $ literals
-> buildConjunction :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> Conjunction e -> FSA n e
-> buildConjunction alpha (Conjunction disjunctions) = intersectAll . tmap (buildDisjunction alpha) . Set.toList $ disjunctions
-> build :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> Set (Conjunction e) -> FSA n e
-> build alpha conjunctions = intersectAll . tmap (buildConjunction alpha) . Set.toList $ conjunctions
+> buildDisjunction :: (Enum n, NFData n, Ord n, NFData e, Ord e) =>
+>                     Set (Symbol e) -> Disjunction e -> FSA n e
+> buildDisjunction alpha (Disjunction literals) = flatUnion . tmap (buildLiteral alpha) . Set.toList $ literals
+> buildConjunction :: (Enum n, NFData n, Ord n, NFData e, Ord e) =>
+>                     Set (Symbol e) -> Conjunction e -> FSA n e
+> buildConjunction alpha (Conjunction disjunctions) = flatIntersection . tmap (buildDisjunction alpha) . Set.toList $ disjunctions
+> build :: (Enum n, NFData n, Ord n, NFData e, Ord e) =>
+>          Set (Symbol e) -> Set (Conjunction e) -> FSA n e
+> build alpha conjunctions = flatIntersection . tmap (buildConjunction alpha) . Set.toList $ conjunctions
 > makeConstraint :: (Ord e) => [[Literal e]] -> Conjunction e
 > makeConstraint = Conjunction . Set.fromList . tmap (Disjunction . Set.fromList)
 > makeConstraintList :: (Ord e) => [[[Literal e]]] -> Set (Conjunction e)
 > makeConstraintList = Set.fromList . tmap makeConstraint
-> buildFromList :: (Enum n, Ord n, Ord e) => Set (Symbol e) -> [[[Literal e]]] -> FSA n e
+> buildFromList :: (Enum n, NFData n, Ord n, NFData e, Ord e) =>
+>                  Set (Symbol e) -> [[[Literal e]]] -> FSA n e
 > buildFromList alpha = build alpha . makeConstraintList
 
 > w0s0, w0s1, w0s2, w1s0, w1s1, w1s2 :: Set (Symbol String)

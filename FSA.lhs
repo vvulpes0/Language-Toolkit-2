@@ -4,12 +4,16 @@
 >   FlexibleInstances,
 >   MultiParamTypeClasses
 >   #-}
-> module FSA where
+> module FSA (
+>             module FSA,
+>             NFData
+>            ) where
 
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 > import LogicClasses
 > import Control.DeepSeq
+> import Control.Parallel
 
 Introduction
 ============
@@ -86,31 +90,22 @@ harder problem.
 >     empty = emptyLanguage
 >     singleton = (\a -> renameStates a `asTypeOf` a) . singletonLanguage
 
-> rEvenOdds :: [a] -> ([a],[a])
-> rEvenOdds = rEvenOdds' ([],[])
->     where rEvenOdds' p      []        =  p
->           rEvenOdds' (a,b)  (x:[])    =  (x:a, b)
->           rEvenOdds' (a,b)  (x:y:xs)  =  rEvenOdds' (x:a, y:b) xs
+> pfold :: (a -> a -> a) -> [a] -> a
+> pfold = fmap (. treeFromList) treeFold
 
 > flatIntersection :: (Enum n, Ord n, NFData n, Ord e, NFData e) =>
 >                     [FSA n e] -> FSA n e
 > flatIntersection [] = error "Cannot take a nullary intersection"
-> flatIntersection (x:[]) = rnf x `seq` x
-> flatIntersection xs = rnf a `seq` rnf b `seq` s (intersection a b)
->     where a = flatIntersection a'
->           b = flatIntersection b'
->           s f = (renameStates . minimize) f `asTypeOf` f
->           (a',b') = rEvenOdds xs
+> flatIntersection xs = pfold i xs
+>     where i a b = let x = renameStates . minimize $ autIntersection a b
+>                   in rnf x `seq` x
 
 > flatUnion :: (Enum n, Ord n, NFData n, Ord e, NFData e) =>
 >              [FSA n e] -> FSA n e
 > flatUnion [] = error "Cannot take a nullary union"
-> flatUnion (x:[]) = rnf x `seq` x
-> flatUnion xs = rnf a `seq` rnf b `seq` s (union a b)
->     where a = flatIntersection a'
->           b = flatIntersection b'
->           s f = (renameStates . minimize) f `asTypeOf` f
->           (a',b') = rEvenOdds xs
+> flatUnion xs = pfold u xs
+>     where u a b = let x = renameStates . minimize $ autUnion a b
+>                   in rnf x `seq` x
 
 > instance (NFData n, NFData e) => NFData (FSA n e) where
 >     rnf (FSA a t i f d) = rnf a `seq` rnf t `seq` rnf i `seq`
@@ -916,3 +911,39 @@ Mapping on tuples:
 
 > mapsnd :: (b -> c) -> (a, b) -> (a, c)
 > mapsnd f (a, b) = (a, f b)
+
+A parallel fold implementation based on a tree.  The accumulating
+function must be both associative and commutative, as the tree is
+built in such a way that order of elements is not preserved.
+
+> data Tree a = Leaf a | Tree (Tree a) (Tree a)
+>               deriving (Eq, Ord, Read, Show)
+> treeFromList :: [a] -> Tree a
+> treeFromList [] = error "No elements"
+> treeFromList (x:[]) = Leaf x
+> treeFromList xs = ls' `par` rs' `pseq` Tree ls' rs'
+>     where (ls, rs) = rEvenOdds xs
+>           (ls', rs') = (treeFromList ls, treeFromList rs)
+> listFromTree :: Tree a -> [a]
+> listFromTree (Leaf x) = [x]
+> listFromTree (Tree l r) = listFromTree l ++ listFromTree r
+
+> instance NFData a => NFData (Tree a) where
+>     rnf (Leaf a) = rnf a
+>     rnf (Tree l r) = rnf l `seq` rnf r
+
+> treeFold :: (a -> a -> a) -> Tree a -> a
+> treeFold _ (Leaf x) = x
+> treeFold mappend (Tree l r) = l' `par` r' `pseq` (l' `mappend` r')
+>     where l' = treeFold mappend l
+>           r' = treeFold mappend r
+
+Split a linked list into two smaller lists by taking the even and odd
+elements.  This does not require computing the list's length, thus it
+can be more efficient than splitting at the middle element.
+
+> rEvenOdds :: [a] -> ([a],[a])
+> rEvenOdds = rEvenOdds' ([],[])
+>     where rEvenOdds' p      []        =  p
+>           rEvenOdds' (a,b)  (x:[])    =  (x:a, b)
+>           rEvenOdds' (a,b)  (x:y:xs)  =  rEvenOdds' (x:a, y:b) xs
