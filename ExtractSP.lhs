@@ -87,7 +87,7 @@
 %if false
 
 > module ExtractSP where
-> import LogicClasses
+> import Containers
 > import FSA
 > import Data.Monoid
 > import Data.Set (Set)

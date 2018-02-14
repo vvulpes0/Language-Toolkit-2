@@ -1,6 +1,6 @@
 > module Main where
 
-> import LogicClasses
+> import Containers
 > import FSA
 > import Factors
 > import Data.Set (Set)

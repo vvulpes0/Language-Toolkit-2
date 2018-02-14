@@ -11,7 +11,7 @@
 
 > import Data.Set (Set)
 > import qualified Data.Set as Set
-> import LogicClasses
+> import Containers
 > import Control.DeepSeq
 > import Control.Parallel
 

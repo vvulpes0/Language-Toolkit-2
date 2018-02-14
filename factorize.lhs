@@ -1,9 +1,9 @@
 > module Main where
+> import Containers
 > import Exploratorium (obligatoriness, contractAlphabetTo)
 > import Exporters
 > import ExtractSP
 > import FSA
-> import LogicClasses
 > import ReadJeff
 > import SLfactors
 

@@ -1,7 +1,7 @@
 > module Traversals where
 
 > import FSA
-> import LogicClasses
+> import Containers
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 

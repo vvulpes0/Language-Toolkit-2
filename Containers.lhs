@@ -3,7 +3,7 @@
 >   FunctionalDependencies,
 >   MultiParamTypeClasses
 >   #-}
-> module LogicClasses where
+> module Containers where
 
 > import qualified Data.Set as Set
 
@@ -28,6 +28,10 @@ type and `C` be a container of elements of type `A`.  Then,
 >     empty :: c
 >     insert :: a -> c -> c
 >     singleton :: a -> c
+>     isSubsetOf :: (Eq c) => c -> c -> Bool
+>     isSubsetOf a b = intersection a b == b
+>     isSupersetOf :: (Eq c) => c -> c -> Bool
+>     isSupersetOf = flip isSubsetOf
 >
 >     isIn = flip contains
 >     isNotIn c = not . isIn c
@@ -144,3 +148,83 @@ A Set is like a list with no duplicates, so it should act similarly:
 >     difference = (Set.\\)
 >     empty = Set.empty
 >     insert = Set.insert
+
+
+A new Multiset type, able to contain duplicates but still have
+lookup-time logarithmic in the number of distinct elements.
+
+> newtype Multiset a = Multiset (Set.Set (a, Integer))
+>     deriving (Eq, Ord, Read, Show)
+
+> multiplicity :: (Ord a) => Multiset a -> a -> Integer
+> multiplicity (Multiset xs) x = foldr (+) 0 $ tmap snd hasX
+>     where hasX = keep ((== x) . fst) xs
+
+> instance Linearizable Multiset where
+>     choose (Multiset xs)
+>         | m == 1     =  (a, f as)
+>         | otherwise  =  (a, f ((a, pred m) : as))
+>         where ((a,m):as) = Set.toAscList xs
+>               f = Multiset . Set.fromDistinctAscList
+> instance Collapsible Multiset where
+>     size (Multiset xs) = fromIntegral . sum . map snd $ Set.toList xs
+>     collapse f x (Multiset xs) = collapse f x .
+>                                  concatMap (uncurry (flip replicate) .
+>                                             fmap fromIntegral) $
+>                                  Set.toAscList xs
+> instance Ord a => Container (Multiset a) a where
+>     isIn (Multiset xs) = isIn (Set.mapMonotonic fst xs)
+>     insert x (Multiset xs) = Multiset (insert newX noX)
+>         where hasX = keep ((== x) . fst) xs
+>               noX  = difference xs hasX
+>               newX = Set.fold add (x, 1) hasX
+>               add (a, c1) (b, c2) = (a, c1 + c2)
+>     empty = Multiset empty
+>     union (Multiset xs) (Multiset ys) =
+>         Multiset (Set.fromDistinctAscList zs)
+>         where xs' = Set.toAscList xs
+>               ys' = Set.toAscList ys
+>               zs  = unionSortedMultis xs' ys'
+>     intersection (Multiset xs) (Multiset ys) =
+>         Multiset (Set.fromDistinctAscList zs)
+>         where xs' = Set.toAscList xs
+>               ys' = Set.toAscList ys
+>               zs  = intersectSortedMultis xs' ys'
+>     difference (Multiset xs) (Multiset ys) =
+>         Multiset (Set.fromDistinctAscList zs)
+>         where xs' = Set.toAscList xs
+>               ys' = Set.toAscList ys
+>               zs  = differenceSortedMultis xs' ys'
+> instance Ord a => Monoid (Multiset a) where
+>     mempty = empty
+>     mappend = union
+
+> multisetFromList :: Ord a => [a] -> Multiset a
+> multisetFromList = foldr insert empty
+
+> unionSortedMultis :: Ord a => [(a, Integer)] -> [(a, Integer)] -> [(a, Integer)]
+> unionSortedMultis xs [] = xs
+> unionSortedMultis [] ys = ys
+> unionSortedMultis (x:xs) (y:ys)
+>     | fst x < fst y  =  x : unionSortedMultis xs (y:ys)
+>     | fst x > fst y  =  y : unionSortedMultis (x:xs) ys
+>     | otherwise      =  unionSortedMultis ((fst x, snd x + snd y) : xs) ys
+
+> intersectSortedMultis :: Ord a => [(a, Integer)] -> [(a, Integer)] -> [(a, Integer)]
+> intersectSortedMultis _ [] = []
+> intersectSortedMultis [] _ = []
+> intersectSortedMultis (x:xs) (y:ys)
+>     | fst x < fst y  =  intersectSortedMultis xs (y:ys)
+>     | fst x > fst y  =  intersectSortedMultis (x:xs) ys
+>     | otherwise      =  (fst x, min (snd x) (snd y)) :
+>                         intersectSortedMultis xs ys
+
+> differenceSortedMultis :: Ord a => [(a, Integer)] -> [(a, Integer)] -> [(a, Integer)]
+> differenceSortedMultis xs [] = xs
+> differenceSortedMultis [] _  = []
+> differenceSortedMultis (x:xs) (y:ys)
+>     | fst x < fst y   =  x : differenceSortedMultis xs (y:ys)
+>     | fst x > fst y   =  differenceSortedMultis (x:xs) ys
+>     | snd x <= snd y  =  differenceSortedMultis xs ys
+>     | otherwise       =  (fst x, snd x - snd y) :
+>                          differenceSortedMultis xs ys

@@ -1,6 +1,6 @@
 > module Exploratorium where
 
-> import LogicClasses
+> import Containers
 > import FSA
 > import ExtractSP
 > import ReadJeff

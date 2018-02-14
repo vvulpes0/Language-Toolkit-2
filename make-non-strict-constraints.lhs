@@ -5,7 +5,7 @@
 > import ExtractSP (sortBy, comparing, evens, odds)
 > import Factors
 > import FSA
-> import LogicClasses
+> import Containers
 
 > import Control.DeepSeq
 > import Control.Parallel.Strategies

@@ -28,7 +28,7 @@
 > import FSA
 > import Traversals
 > import Factors
-> import LogicClasses
+> import Containers
 > -- import StressExamples
 
 > import qualified Data.Set as Set

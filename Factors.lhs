@@ -1,6 +1,6 @@
 > module Factors where
 
-> import LogicClasses
+> import Containers
 > import FSA
 > import Data.Set (Set)
 > import qualified Data.Set as Set
