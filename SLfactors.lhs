@@ -54,10 +54,15 @@
 >     where
 >       (thisp,restps) = choose ps
 >       exts = (extensions sm thisp)
->       someSingle  = any ((1 ==) . Set.size . nodeLabel . endstate) exts
->       live = Set.filter ((1 <) . Set.size . nodeLabel . endstate) exts
->       cycle = any (\q -> (Set.member (endstate q) (stateset thisp)))
->                   live
+>       someSingle  = any
+>                     (maybe False
+>                      ((1 ==) . Set.size . nodeLabel) . endstate)
+>                     exts
+>       live = Set.filter
+>              (maybe False
+>               ((1 <) . Set.size . nodeLabel) . endstate)
+>              exts
+>       cycle = any (maybe False (isIn (stateMultiset thisp)) . endstate) live
 
 
 psgQ is the label of the initial state of the PSG, i.e., the stateset of
@@ -243,7 +248,7 @@ k is only significant if it is 0
 >       stateQ = psgQ psg
 >       initialFront
 >           | (Set.member stateEmpty (states psg))
->               =  [(Path [] stateEmpty (Set.singleton stateEmpty) 0)]
+>               =  [(Path [] (Just stateEmpty) (singleton stateEmpty) 0)]
 >           | otherwise = []
 >       stateEmpty = (State (Set.empty))
 
@@ -277,7 +282,7 @@ k is only significant if it is 0
 >       psgR = (trimRevPSG psg)
 >       stateQ = psgQ psg
 >       initialFront =  
->           [(Path [] s (Set.singleton s) 0) |
+>           [(Path [] (Just s) (singleton s) 0) |
 >               s <- Set.toList (Set.difference (states psgR) (initials psgR)),
 >                    s /= stateEmpty ]
 >       stateEmpty = (State (Set.empty))
@@ -343,7 +348,7 @@ This k is not that k
 > passK goals (p:ps) front ffs 
 >     | List.elem  (labels p) ffs                -- extends known ff
 >         = passK goals ps front ffs
->     | Set.member (endstate p) goals            -- new ff
+>     | maybe False (isIn goals) (endstate p)    -- new ff
 >         = passK goals ps
 >            (filter
 >               ((\x -> List.notElem x ((labels p):ffs)) . labels)

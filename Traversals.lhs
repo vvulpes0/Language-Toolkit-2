@@ -1,4 +1,3 @@
-
 > module Traversals where
 > 
 > import FSA
@@ -14,10 +13,10 @@ A Path is
 * the length of the path (depth of the terminal state)
 
 
-> data Path n e = Path [Symbol e] (State n) (Multiset (State n)) Int
+> data Path n e = Path [Symbol e] (Maybe (State n)) (Multiset (State n)) Int
 >               deriving (Eq, Show)
 > 
-> endstate :: Path n e -> State n
+> endstate :: Path n e -> Maybe (State n)
 > endstate (Path _ s _ _ ) = s
 > 
 > stateMultiset :: Path n e -> Multiset (State n)
@@ -46,7 +45,15 @@ In order to have a Multiset of Path, Path must be Ord:
 >                  (endstate p1, labels p1, depth p1)
 >              (e2, l2, d2) =
 >                  (endstate p2, labels p2, depth p2)
-> 
+
+> instance (Ord n) => Monoid (Path n e) where
+>     mempty = Path [] Nothing empty 0
+>     mappend (Path xs1 q1 qs1 d1) (Path xs2 q2 qs2 d2)
+>         = Path
+>           (xs1 ++ xs2)
+>           (maybe id (const . Just) q1 q2)
+>           (qs1 `union` qs2)
+>           (d1 + d2)
 
 The extensions of a path p are paths extending p by a single edge
 
@@ -56,14 +63,14 @@ The extensions of a path p are paths extending p by a single edge
 > extend fsa p = tmap (\t ->
 >                      Path
 >                      (edgeLabel t : labels p)
->                      (destination t)
+>                      (Just (destination t))
 >                      (insert (destination t) (stateMultiset p))
 >                      (depth p + 1))
 > 
 > extensions :: (Ord e, Ord n) =>
 >               FSA n e -> Path n e -> Set (Path n e)
 > extensions fsa p = extend fsa p $
->                    keep ((== endstate p) . source) (transitions fsa)
+>                    keep ((== endstate p) . Just . source) (transitions fsa)
 > 
 
 The non-trivial extensions of a path are extensions other than self-loops
@@ -73,8 +80,8 @@ The non-trivial extensions of a path are extensions other than self-loops
 >                 FSA n e -> Path n e -> Set (Path n e)
 > ntExtensions fsa p = extend fsa p
 >                      (keep (\t ->
->                             (source t == endstate p) &&
->                             (destination t /= endstate p)) $
+>                             (Just (source t) == endstate p) &&
+>                             (Just (destination t) /= endstate p)) $
 >                       transitions fsa)
 > 
 
@@ -85,7 +92,7 @@ Acyclic extensions of a path are extensions other than back-edges
 >                            FSA n e -> Path n e -> Set (Path n e)
 > acyclicExtensions fsa p = extend fsa p
 >                           (keep (\t ->
->                                  (source t == endstate p) &&
+>                                  (Just (source t) == endstate p) &&
 >                                  (doesNotContain (destination t)
 >                                   (stateMultiset p))) $
 >                            transitions fsa)
@@ -103,7 +110,7 @@ visited have multiplicity 0.
 >                            FSA n e -> Integer -> Path n e -> Set (Path n e)
 > boundedCycExtensions fsa b p = extend fsa p
 >                                (keep (\t ->
->                                       (source t == endstate p) &&
+>                                       (Just (source t) == endstate p) &&
 >                                       (b < (multiplicity 
 >                                             (stateMultiset p)
 >                                             (destination t)))) $
@@ -126,7 +133,7 @@ the powerset graph in finding free forbidden factors.
 > augAcExtensions fsa q p = extend fsa p
 >                           (keep (\t ->
 >                                  (q t) ||
->                                  ((source t == endstate p) &&
+>                                  ((Just (source t) == endstate p) &&
 >                                   (doesNotContain (destination t)
 >                                    (stateMultiset p)))) $
 >                            transitions fsa)
@@ -137,7 +144,7 @@ Initial open list for traversal from initial states
 
 > initialsPaths :: (Ord e, Ord n) => FSA n e -> Set (Path n e)
 > initialsPaths = tmap iPath . initials
->     where iPath s = Path [] s (singleton s) 0
+>     where iPath s = Path [] (Just s) (singleton s) 0
 > 
 > truth :: a -> b -> Bool
 > truth = const (const True)
@@ -215,7 +222,7 @@ acceptsDFS fsa bound
 > acceptsDFS fsa bound = tmap (displaySyms . word) $
 >                        traversalQDFS accepting
 >                        fsa bound (initialsPaths fsa) empty
->     where accepting fsa p = contains (endstate p) $ finals fsa
+>     where accepting fsa p = contains (endstate p) . tmap Just $ finals fsa
 > 
 
 rejectsDFS fsa bound
@@ -238,7 +245,7 @@ rejectingPaths fsa bound
 > rejectingPaths :: (Ord e, Ord n) => FSA n e -> Int -> Set (Path n e)
 > rejectingPaths fsa bound = traversalQDFS rejecting
 >                            fsa bound (initialsPaths fsa) empty
->     where rejecting fsa p = doesNotContain (endstate p) $ finals fsa
+>     where rejecting fsa p = doesNotContain (endstate p) . tmap Just $ finals fsa
 
 
 Jim thinks this does not work correctly, at least with non-total FSAs.
@@ -255,7 +262,7 @@ He is not doing anything about that now.
 >                           (union ps exts) addLive
 >     where (p, ps) = choose open
 >           exts = extensions fsa p
->           rejecting = doesNotContain (endstate p) $ finals fsa
+>           rejecting = doesNotContain (endstate p) . tmap Just $ finals fsa
 >           addDead
 >               | rejecting  = insert
 >                              (Path
