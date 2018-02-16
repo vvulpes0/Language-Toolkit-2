@@ -28,8 +28,9 @@
 >                                   file (optOutput opts)
 >     where printUsage = putStr $ usageInfo usageHeader options
 >           file       = case files of
->                          []     ->  Nothing
->                          (x:_)  ->  Just x
+>                          []      ->  Nothing
+>                          ("-":_) -> Nothing
+>                          (x:_)   ->  Just x
 
 > printDot :: Bool -> Maybe FilePath -> Maybe FilePath -> IO ()
 > printDot trp infile outfile
@@ -44,7 +45,7 @@
 > output file s = maybe ($ stdout) (\f -> withFile f WriteMode) file $ \h ->
 >                 hPutStr h s >> hFlush h
 
-> usageHeader = "Usage: dotify [OPTION...] file"
+> usageHeader = "Usage: dotify [OPTION...] [file]"
 
 > printVersion :: IO ()
 > printVersion = putStrLn "Version 1.0"
@@ -62,7 +63,7 @@
 >       (NoArg (\opts -> opts { optShowUsage = True }))
 >       "show this help",
 >       Option ['o'] []
->       (ReqArg (\f opts -> opts { optOutput = Just f }) "FILE")
+>       (ReqArg (\f opts -> opts { optOutput = if f == "-" then Nothing else Just f }) "FILE")
 >       "output FILE",
 >       Option ['t'] []
 >       (NoArg (\opts -> opts { optTransliterate = True }))
