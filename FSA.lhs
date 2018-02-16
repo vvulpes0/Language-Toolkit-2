@@ -864,6 +864,29 @@ state is considered accepting in the syntactic monoid.
 >           set_dest d t  = Transition (edgeLabel t) (source t) d
 
 
+Alphabet Manipulation
+=====================
+
+> extendAlphabetTo :: (Ord a, Ord b) => Set (Symbol b) -> FSA a b ->
+>                   FSA (Maybe Integer, Maybe a) b
+> extendAlphabetTo syms = autUnion (emptyWithAlphabet syms)
+
+> contractAlphabetTo :: (Ord a, Ord b) => Set (Symbol b) -> FSA a b ->
+>                       FSA a b
+> contractAlphabetTo syms fsa = trimUnreachables $
+>                               FSA syms trans
+>                               (initials fsa)
+>                               (finals fsa)
+>                               (isDeterministic fsa)
+>     where trans = keep
+>                   (isIn (insert Epsilon syms) . edgeLabel) $
+>                   transitions fsa
+
+> forceAlphabetTo :: (Ord a, Ord b) => Set (Symbol b) -> FSA a b ->
+>                    FSA (Maybe Integer, Maybe a) b
+> forceAlphabetTo syms = contractAlphabetTo syms . extendAlphabetTo syms
+
+
 Miscellaneous Functions
 =======================
 

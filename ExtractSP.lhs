@@ -2,15 +2,10 @@
 
 %include polycode.fmt
 
-%format (alphabet a) = ssigma "_" a
-%format combineMap a b = "\bigcup\limits_{\mathclap{" i "\in " b "}}\left(" a "\;" i "\right)"
-%format `compose` = 
 %format delta = "\delta"
 %format delta_prime = delta "^\prime"
-%format `difference` = "-"
 %format empty = "\varnothing"
 %format Epsilon = "\varepsilon"
-%format frontierZero = frontier "_0"
 %format (FSA a b c d e) = "\Tup{Q," a "," b "," c "," d "}"
 %format FSAt = "\textit{FSA}"
 %format isSSQ = "(\sqsubseteq)"
@@ -20,22 +15,11 @@
 %format `isNotSSQ` = "\not\sqsubseteq"
 %format `isomorphic` = "\cong"
 %format keep = filter
-%format `mappend` = "\mathbin{\lozenge}"
-%format mempty    = "\mathord{\mathbf{e}}"
 %format mergeBy f = merge "_{" f "}"
 %format minimizeOver r = minimize "_{" r "}"
-%format nerode = "\mathrel{\equiv^N}"
-%format nextFrontier = frontier "_{" n "+ 1}"
-%format normalizeNoTrim =
-%format notNull = (/= empty)
-%format null (a) = a == empty
-%format p1 = "p_1"
-%format p2 = "p_2"
 %format qf = "F"
 %format q_0 = "q_0"
 %format (Set (a)) = "\{" a "\}"
-%format Set.null = (= empty)
-%format (singleton a) = "\{" a "\}"
 %format size (a) = "\left\|" a "\right\|"
 %format sortBy f = sort "_{" f "}"
 %format ssigma = "\Sigma"
@@ -89,19 +73,13 @@
 > module ExtractSP where
 > import Containers
 > import FSA
-> import Data.Monoid
+> import Traversals
+> import Data.List (sortBy)
+> import Data.Ord (comparing)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
 > type FSAt = FSA
-
-> normalizeNoTrim :: (Ord n, Ord e) => FSAt n e -> FSAt Integer e
-> normalizeNoTrim f = renameStates . minimize . trimUnreachables $ f
-
-> notNull = not . null
-
-> compose = (.)
-> infixr 9 `compose`
 
 %endif
 
@@ -253,93 +231,27 @@ will give us the strictly piecewise constraints on
 $\Language{\Automaton{M}}$.
 
 > extractForbiddenSSQs :: (Ord n, Ord e) => FSAt n e -> Set [Symbol e]
-> extractForbiddenSSQs = collectMinimalFSSQs . normalizeNoTrim `compose` subsequenceClosure
+> extractForbiddenSSQs = collectMinimalFSSQs
 
 Since $\Automaton{M}^\prime$ is $\SP$,
 it suffices to simply traverse $\Automaton{M}^\prime$,
 finding all minimal (in terms of subsequence) paths
 from $q_0$ to the fail-state ($\holyzero$).
-To start, we will need a notion of a @Path@:
-
-> data Path n e = Path [State n] [Symbol e] (Set (State n)) deriving (Eq, Ord, Read, Show)
-
-> statePath   :: Path n e -> [State n]
-> symbolPath  :: Path n e -> [Symbol e]
-> seenStates  :: Path n e -> Set (State n)
-> statePath   (Path qs _ _)  =  qs
-> symbolPath  (Path _ xs _)  =  xs
-> seenStates  (Path _ _ ss)  =  ss
-
-It will also help to have a means of creating simple paths,
-as well as a way to combine them.
-We create a simple constructor function @path@,
-and take advantage of the fact that paths act as a monoid
-under extension.
-
-> path :: (Ord n, Ord e) => State n -> Symbol e -> Path n e
-> path q x = Path [q] [x] (singleton q)
-
-> instance (Ord n, Ord e) => Monoid (Path n e) where
->     mempty           =  Path   mempty mempty empty
->     p1 `mappend` p2  =  Path  (statePath p1 ++ statePath p2)
->                               (symbolPath p1 ++ symbolPath p2)
->                               (seenStates p1 `union` seenStates p2)
-
-In the simplest terms, we want to search a graph from bottom to top,
-visiting a given state no more than once in a given path.  Since in
-theory we could trim a path upon reaching an already-seen forbidden
-subsequence, we want a breadth-first traversal:
-
-> breadthFirstSearch :: (Ord n, Ord e) => FSAt n e -> Set (Path n e)
-> breadthFirstSearch f  =  snd (until (Set.null . fst) next start)
->     where  next (a, b)  =  let nf = nextFrontier f a
->                            in (nf, b `union` nf)
->            start        =  (frontierZero f, frontierZero f)
-
-We will work our way down, from the high level to the concrete:
-
-> nextFrontier :: (Ord n, Ord e) => FSAt n e -> Set (Path n e) -> Set (Path n e)
-> nextFrontier f ps  =  combineMap (flip (extendPathsUp f) ps) (alphabet f)
-
-%if false
-
-> combineMap :: (Container (s c) b, Container c a, Collapsible s) =>
->               (a1 -> b) -> s a1 -> c
-> combineMap f xs  = unionAll (tmap f xs)
-
-%endif
-
-> extendPathsUp :: (Ord n, Ord e) => FSAt n e -> Symbol e -> Set (Path n e) -> Set (Path n e)
-> extendPathsUp f x ps  =  combineMap (extendPathUp f x) ps
-
-> extendPathUp :: (Ord n, Ord e) => FSAt n e -> Symbol e -> Path n e -> Set (Path n e)
-> extendPathUp f x p
->     | null (statePath p)  =  empty
->     | otherwise           =  tmap (\r -> r `mappend` p) ps
->     where  q   =  chooseOne (statePath p)
->            ss  =  keep (isNotIn (seenStates p))  .
->                   tmap source                    .
->                   keep ((== x) . edgeLabel)      .
->                   keep ((== q) . destination)    $
->                   transitions f
->            ps  =  tmap (\s -> path s x) ss
-
-> frontierZero :: (Ord n, Ord e) => FSAt n e -> Set (Path n e)
-> frontierZero  =  tmap f . zeroStates
->     where  f p  =  Path [p] mempty empty
-
-> zeroStates :: (Ord n, Ord e) => FSAt n e -> Set (State n)
-> zeroStates f  =  states f `difference` (states . trimFailStates) f
-
-This gives us everything we need to actually construct a set of
-forbidden subsequences from an automaton:
+A cyclic path is necessarily non-minimal,
+so it suffices to check only the acyclic paths.
+Since every state in an $\SP$ automaton is accepting
+save for a possible unique non-accepting sink,
+we can merely check paths in the complement.
+Since this complement has exactly one accepting state,
+and exactly one initial state,
+we can also use the acyclic paths of its reversal,
+which prevents having to reverse every extracted string.
 
 > collectFSSQs :: (Ord n, Ord e) => FSAt n e -> Set [Symbol e]
-> collectFSSQs f  =  tmap symbolPath                        .
->                    keep (isIn i . chooseOne . statePath)  .
->                    keep (notNull . statePath)             $
->                    breadthFirstSearch f
->     where  i  = initials f
+> collectFSSQs f = tmap labels .
+>                  keep (maybe False (isIn (finals f')) . endstate) $
+>                  acyclicPaths f'
+>     where f' = normalize . FSA.reverse . complement $ subsequenceClosure f
 
 Further, we can derive a minimal set of forbidden subsequences by
 filtering out elements that are generated by others.  Formally, if
@@ -369,45 +281,5 @@ whether a stringset is $\SP$:
 
 > isSP :: (Ord n, Ord e) => FSAt n e -> Bool
 > isSP f = normalize f `isomorphic` normalize (subsequenceClosure f)
-
-\clearpage
-\section{Appendix --- merge sort}
-
-To perform a merge sort, we must be able to split a list
-into two smaller lists.  Taking the even and odd elements seems the
-best approach when working with a lazy linked-list structure.
-
-> evens :: [a] -> [a]
-> evens []        = []
-> evens (x:[])    = [x]
-> evens (x:y:ys)  = x : evens ys
-
-> odds :: [a] -> [a]
-> odds []         = []
-> odds (x:xs)     = evens xs
-
-Then, to merge two already-sorted lists, progress through the two
-lists linearly, at each step placing the smallest visible element.
-
-> mergeBy :: (a -> a -> Ordering) -> [a] -> [a] -> [a]
-> mergeBy _  x       []  = x
-> mergeBy _  []      y   = y
-> mergeBy f  (x:xs)  (y:ys)
->     | f x y /= GT  =  x : mergeBy f xs (y:ys)
->     | otherwise    =  y : mergeBy f (x:xs) ys
-
-To sort using this method, repeatedly split until all lists are singleton,
-then merge the results.
-
-> sortBy :: (a -> a -> Ordering) -> [a] -> [a]
-> sortBy _  []      =  []
-> sortBy _  (x:[])  =  [x]
-> sortBy f  xs      =  mergeBy f (sortBy f (evens xs)) (sortBy f (odds xs))
-
-Since we want to be able to say @sortBy (comparing size)@, a reasonable way
-to define @comparing@ is:
-
-> comparing :: (Ord b) => (a -> b) -> a -> a -> Ordering
-> comparing f x y  = compare (f x) (f y)
 
 \end{document}

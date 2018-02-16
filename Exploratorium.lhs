@@ -4,28 +4,10 @@
 > import FSA
 > import ExtractSP
 > import ReadJeff
+> import Data.List (sortBy)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 > import Control.Parallel.Strategies
-
-> extendAlphabetTo :: (Ord a, Ord b) => Set (Symbol b) -> FSA a b ->
->                   FSA (Maybe Integer, Maybe a) b
-> extendAlphabetTo syms = autUnion (emptyWithAlphabet syms)
-
-> contractAlphabetTo :: (Ord a, Ord b) => Set (Symbol b) -> FSA a b ->
->                       FSA a b
-> contractAlphabetTo syms fsa = trimUnreachables $
->                               FSA syms trans
->                               (initials fsa)
->                               (finals fsa)
->                               (isDeterministic fsa)
->     where trans = keep
->                   (isIn (insert Epsilon syms) . edgeLabel) $
->                   transitions fsa
-
-> forceAlphabetTo :: (Ord a, Ord b) => Set (Symbol b) -> FSA a b ->
->                    FSA (Maybe Integer, Maybe a) b
-> forceAlphabetTo syms = contractAlphabetTo syms . extendAlphabetTo syms
 
 My wording here may not be the best, but for right now, I'm going to
 say that a language "satisfies" a constraint if every word in the

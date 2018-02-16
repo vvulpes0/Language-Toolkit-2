@@ -32,7 +32,7 @@ BEGIN {
 	print
 }
 END {
-	if (inCode==1) {
+	if (inCode==1 || sawEndCode==1) {
 		print "\\end{code}"
 	}
 }

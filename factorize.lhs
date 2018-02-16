@@ -1,6 +1,5 @@
 > module Main where
 > import Containers
-> import Exploratorium (obligatoriness, contractAlphabetTo)
 > import Exporters
 > import ExtractSP
 > import FSA
@@ -9,6 +8,7 @@
 
 > import Control.Concurrent
 > import Control.DeepSeq
+> import Data.List (sortBy)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 > import System.Directory
