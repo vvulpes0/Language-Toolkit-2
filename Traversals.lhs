@@ -292,8 +292,6 @@ acceptsDFS fsa bound
 >                        traversalQDFS accepting
 >                        fsa bound (initialsPaths fsa) empty
 >     where accepting fsa p = contains (endstate p) . tmap Just $ finals fsa
-> 
-> 
 
 rejectsDFS fsa bound
 = all rejected strings of length <= bound
@@ -307,8 +305,6 @@ rejectsDFS fsa bound
 > rejectsDFS fsa bound = tmap (displaySyms . word) $
 >                        traversalRejects
 >                        fsa bound (initialsPaths fsa) empty
-> 
-> 
 
 rejectingPaths fsa bound
 = all rejecting Paths of length <= bound
@@ -319,7 +315,6 @@ rejectingPaths fsa bound
 > rejectingPaths fsa bound = traversalQDFS rejecting
 >                            fsa bound (initialsPaths fsa) empty
 >     where rejecting fsa p = doesNotContain (endstate p) . tmap Just $ finals fsa
-> 
 
 
 Jim thinks this does not work correctly, at least with non-total FSAs.

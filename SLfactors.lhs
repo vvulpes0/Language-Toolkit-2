@@ -25,23 +25,19 @@
 
 
 > module SLfactors where
-> 
+
 > import FSA
 > import Traversals
 > import Factors
 > import Containers
-> -- import StressExamples
 > 
 > import qualified Data.Set as Set
 > import qualified Data.List as List
 > import qualified Data.Map as Map
-> 
-
-
 
 > slQ :: (Ord e, Ord n) => FSA n e -> Integer
 > slQ fsa = slPSGQ (generatePowerSetGraph fsa)
-> 
+
 > -- Assumes states are (Set.Set n)
 > -- in improved-semantics states are now (Set.Set Int) ?????
 > slPSGQ :: (Ord e, Ord n) => FSA (Set.Set n) e -> Integer
@@ -66,17 +62,12 @@
 >               ((1 <) . Set.size . nodeLabel) . endstate)
 >              exts
 >       cycle = any (maybe False (isIn (stateMultiset thisp)) . endstate) live
-> 
-
 
 psgQ is the label of the initial state of the PSG, i.e., the stateset of
   the original DFA
 
-
 > psgQ :: (Ord a, Ord b) => FSA (Set.Set b) a -> State (Set.Set b)
 > psgQ = Set.findMin . initials
-> 
-
 
 {---------------------------------------------------------------------------}
    Forbidden Factors
@@ -123,7 +114,7 @@ psgQ is the label of the initial state of the PSG, i.e., the stateset of
 >        fWs = fWords fsa (max 0 (k-2)) iFFs frFFs fiFFs
 >        frFFs = freeFFsPSG psg k
 >        fiFFs = finalFFsPSG psg (max 0 (k-1))
-> 
+
 > forbiddenFactors:: (Ord b) => FSA b String
 >                                -> ( (Set.Set (Symbol String)),  -- unitFFs
 >                                     (Set.Set [Symbol String]),  -- fWords
@@ -157,7 +148,7 @@ most, \epsilon will be gathered.
 >                                           (Set.Set [Symbol e]),  -- freeFFs
 >                                           (Set.Set [Symbol e]) ) -- finalFFs
 > forbiddenFactorsWithAlphabetWithK = forbiddenFactorsWithAlphabetWithBound
-> 
+
 > forbiddenFactorsWithAlphabetWithBound :: (Ord e, Ord n) =>
 >                                         Set.Set(Symbol e) -- alphabet
 >                                      -> Integer -- bound on iterations of cycles
@@ -180,7 +171,7 @@ most, \epsilon will be gathered.
 >        fWs = fWords fsa (wrdBound bnd fsa) iFFs frFFs fiFFs
 >        frFFs = freeFFsPSG psg bnd
 >        fiFFs = finalFFsPSG psg bnd
-> 
+
 > forbiddenFactorsWithK :: (Ord b) =>
 >                                   Integer -- k
 >                                -> FSA b String
@@ -190,7 +181,7 @@ most, \epsilon will be gathered.
 >                                     (Set.Set [Symbol String]),  -- freeFFs
 >                                     (Set.Set [Symbol String]) ) -- finalFFs
 > forbiddenFactorsWithK = forbiddenFactorsWithBound
-> 
+
 > forbiddenFactorsWithBound :: (Ord b) =>
 >                                   Integer -- bound
 >                                -> FSA b String
@@ -201,7 +192,7 @@ most, \epsilon will be gathered.
 >                                     (Set.Set [Symbol String]) ) -- finalFFs
 > forbiddenFactorsWithBound = 
 >     forbiddenFactorsWithAlphabetWithBound defaultAlphabet
-> 
+
 
    Forbidden Units
    For FSAs constructed from sources such as Jeff's fsa, these will generally 
@@ -233,11 +224,10 @@ is in the edgeset of the
 >                           (((psgQ psg) ==).source)
 >                           (transitions psg)
 >           oneFFs = Set.filter(((State Set.empty) ==).destination) initialTrans
-> 
+
 > unitFFs :: (Ord a, Ord b) => (FSA (Set.Set b) a) -- psGraph
 >                                -> Set.Set (Symbol a)
 > unitFFs psg = unitFFsWithAlphabet (alphabet psg) psg
-> 
 
 
    Forbidden words
@@ -254,7 +244,7 @@ is in the edgeset of the
 
 
 > fWords :: (Ord a, Ord b) => FSA b a
->                             -> Integer                 -- bound
+>                             -> Integer             -- bound
 >                             -> Set.Set([Symbol a]) -- initialFFs
 >                             -> Set.Set([Symbol a]) -- freeFFs
 >                             -> Set.Set([Symbol a]) -- finalFFs
@@ -262,11 +252,11 @@ is in the edgeset of the
 > fWords fsa bound iFFs frFFs fiFFs =
 >     Set.fromList
 >            (filter
->             (\wrd -> ((any (\x -> (List.isSuffixOf x wrd)) (Set.toList fiFFs))
->                       ||
->                       (any (\x -> (List.isInfixOf x wrd)) (Set.toList frFFs))
->                       ||
->                       (any (\x -> (List.isPrefixOf x wrd)) (Set.toList iFFs))) )
+>             (\wrd -> not ((any (\x -> (List.isSuffixOf x wrd)) (Set.toList fiFFs))
+>                           ||
+>                           (any (\x -> (List.isInfixOf x wrd)) (Set.toList frFFs))
+>                           ||
+>                           (any (\x -> (List.isPrefixOf x wrd)) (Set.toList iFFs))) )
 >             (map ((Prelude.reverse) . labels)
 >                      (Set.toList (rejectingPaths fsa bnd)) ) )
 >            where bnd =
@@ -277,7 +267,7 @@ is in the edgeset of the
 >                      | (Set.null l) = 0
 >                      | otherwise = 
 >                          toInteger ((maximum . map length) (Set.toList l))
-> 
+
 
             -- No longer strip epsilon
             -- (\wrd -> not ((null wrd) 
@@ -292,10 +282,10 @@ k is only significant if it is 0
 > initialFFs fsa k = 
 >     Set.map List.reverse (finalFFs rFSA k)
 >         where rFSA = (FSA.normalize (FSA.reverse fsa))
-> 
+
 > freeFFs :: (Ord a, Ord b) => (FSA b a) -> Integer -> Set.Set [Symbol a]
 > freeFFs fsa k = freeFFsPSG (generatePowerSetGraph fsa) k
-> 
+
 > -- k is only significant if it is 0
 > freeFFsPSG :: (Ord a, Ord b) => (FSA (Set.Set b) a) -> Integer ->
 >                                  Set.Set [Symbol a]
@@ -309,7 +299,7 @@ k is only significant if it is 0
 >               =  [(Path [] (Just stateEmpty) (singleton stateEmpty) 0)]
 >           | otherwise = []
 >       stateEmpty = (State (Set.empty))
-> 
+
 
 finalFFs
  graph: reversed powerset graph
@@ -329,7 +319,7 @@ k is only significant if it is 0
 >                                -> Integer                 -- k
 >                                -> Set.Set [Symbol a]
 > finalFFs fsa k = finalFFsPSG (generatePowerSetGraph fsa) k
-> 
+
 > finalFFsPSG :: (Ord a, Ord b) =>
 >                   (FSA (Set.Set b) a)
 >                       -> Integer                 -- k
@@ -346,7 +336,6 @@ k is only significant if it is 0
 >               s <- Set.toList (Set.difference (states psgR) (initials psgR)),
 >                    s /= stateEmpty ]
 >       stateEmpty = (State (Set.empty))
-> 
 
 
 trimRevPSGPSG psg is reverse of
@@ -364,7 +353,7 @@ trimRevPSGPSG psg is reverse of
 >                               && (source t) /= (State (Set.empty)) )
 >                              (transitions psg) )
 >                  (initials psg) (finals psg) (isDeterministic psg)
-> 
+
 
  Breadth-first traversal of graph
   Returns list of strings labeling paths from initial frontier to a goal
@@ -376,7 +365,7 @@ ow follow singleton cycles which, since k>0, will be the only cycles
 
 
 > gatherFFs :: (Ord a, Ord b) => FSA (Set.Set b) a -- graph (psGraph based)
->                   -> Integer                         -- bound
+>                   -> Integer                     -- bound
 >                   -> Set.Set (State (Set.Set b)) -- set of goal states
 >                   -> [Path (Set.Set b) a]        -- frontier
 >                   -> [[Symbol a]]                -- FFs so far
@@ -395,7 +384,7 @@ ow follow singleton cycles which, since k>0, will be the only cycles
 >           | otherwise = Set.toList (boundedCycleExtensions psg bound p)
 >           -- | ((depth p) >= bound) = Set.toList (acyclicExtensions psg p)
 >           -- | otherwise = Set.toList (extensions psg p)
-> 
+
 
 passK scans extensions of kth frontier for length k FFs 
  paths with label of a known k-FF are dropped
@@ -423,7 +412,7 @@ This k is not that k
 >               front)
 >            ((labels p):ffs)
 >     | otherwise = passK goals ps (p:front) ffs -- in frontier k+1
-> 
+
 
 verification 
 This is using forbiddenFactors, hence assumes FSA String b
@@ -452,7 +441,6 @@ buildFSAs FFs -> tuple of lists of FSAs for each FF
 >               (Set.toList frfs)
 >       fias =  map (f . finalLocal True alphs . g)
 >               (Set.toList fifs)
-> 
 
 
 build FSA from FSAs
@@ -467,7 +455,6 @@ build FSA from FSAs
 > combineFSAs (alphs,was,ias,fras,fias) =
 >     flatIntersection
 >     (totalWithAlphabet alphs : concat [was, ias, fras, fias])
-> 
 
 
 build FSA from forbidden factors
@@ -495,7 +482,7 @@ This really needs to be as strict as possible, which I hope it isn't
 >               (Set.toList frfs)
 >       fias =  map (f . finalLocal True alphs . g)
 >               (Set.toList fifs)
-> 
+
 > symmetricDifference :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e ->
 >                  FSA (Maybe n1, Maybe n2) e
 > symmetricDifference f1 f2 = FSA bigalpha trans init fin det
@@ -517,7 +504,7 @@ This really needs to be as strict as possible, which I hope it isn't
 >           trans = combineTransitions f1 f2
 >           sts = union (tmap source trans) (tmap destination trans)
 >           det = isDeterministic f1 && isDeterministic f2
-> 
+
 
 residue FFs -> FSA -> FSA
 residue FSA is FSA that recognizes the set overgenerated by the FFs
@@ -535,7 +522,7 @@ Logically this can't happen, but "Undergenerate" is much less embarassing
 >     where
 >       under = minimize  (autDifference fsa ffsa)
 >       over = minimize  (autDifference ffsa fsa)
-> 
+
 > residueFromFFs :: (Integral c, Ord b) =>
 >                  ((Set.Set (Symbol String)),  -- unitFFs
 >                   (Set.Set [Symbol String]),  -- fWords
@@ -551,87 +538,5 @@ Logically this can't happen, but "Undergenerate" is much less embarassing
 >       ffsa = buildFSA fFactors
 >       under = minimize  (autDifference fsa ffsa)
 >       over = minimize  (autDifference ffsa fsa)
-> 
-
-
-\end{document}
-{- below here is unused -}
-validate ::  Ord b => 
-                  ((Set.Set (Symbol String)),  -- unitFFs
-                   (Set.Set [Symbol String]),  -- fWords
-                   (Set.Set [Symbol String]),  -- initialFFs
-                   (Set.Set [Symbol String]),  -- freeFFs
-                   (Set.Set [Symbol String]) ) -- finalFFs
-                  -> FSA b String -> Bool
-validate fFactors fsa = 
-    isNull (residue fFactors fsa)
-
-validateWithExtensions :: Ord b =>
-                               FSA String Int -> FSA String b -> String
-validateWithExtensions fsaFF fsa 
-    | checkFF fsaFF fsa = "True"
-    | checkFF (autIntersection fsaFF culminativity) fsa = "+C"
-    | checkFF (autIntersection fsaFF obligatoriness) fsa = "+O"
-    | checkFF (autIntersection fsaFF singleStress) fsa = "+C+O"
-    | otherwise = "False"
-    where
-      checkFF ff f = isNull (symmetricDifference ff f)
-                     
-primaryStress :: Set.Set (Symbol String)
-primaryStress = Set.fromList [l2, h2, s2]
-                
-secondaryStress :: Set.Set (Symbol String)
-secondaryStress = Set.fromList [l1, h1, s1]
-                
-noStress :: Set.Set (Symbol String)
-noStress = Set.fromList [l0, h0, s0]
-
--- culminativity and obligatoriness
-culminativity :: FSA Int String
-culminativity = FSA defaultAlphabet trans (Set.singleton (State 0))
-                     (Set.fromList [State 0, State 1]) True
-    where
-      notPrimary = (Set.difference defaultAlphabet primaryStress)
-      trans = unionAll (Set.fromList [noStress, oneStress, gtOneStress])
-      noStress = Set.union (Set.map (\s -> Transition s (State 0) (State 1))
-                                    primaryStress)
-                           (Set.map (\s -> Transition s (State 0) (State 0))
-                                    notPrimary)
-      oneStress = Set.union (Set.map (\s -> Transition s (State 1) (State 2))
-                                     primaryStress)
-                            (Set.map (\s -> Transition s (State 1) (State 1))
-                                     notPrimary)
-      gtOneStress = Set.map (\s -> Transition s (State 2) (State 2))
-                            defaultAlphabet
-
-obligatoriness :: FSA Int String
-obligatoriness = FSA (alphabet culminativity)
-                     (transitions culminativity)
-                     (initials culminativity)
-                     (Set.fromList [State 1, State 2])
-                     True
-
-singleStress :: FSA Int String
-singleStress = FSA (alphabet culminativity)
-                     (transitions culminativity)
-                     (initials culminativity)
-                     (Set.singleton (State 1))
-                     True
-                     
-noPrimaryBeforeHSecondary :: FSA Int String
-noPrimaryBeforeHSecondary = FSA defaultAlphabet trans (Set.singleton (State 0))
-                     (Set.fromList [State 0, State 1]) True
-    where
-      notPrimary = (Set.difference defaultAlphabet primaryStress)
-      trans = unionAll (Set.fromList [noPrimary, somePrimary, fail])
-      noPrimary = Set.union (Set.map (\s -> Transition s (State 0) (State 1))
-                                     primaryStress)
-                            (Set.map (\s -> Transition s (State 0) (State 0))
-                                    notPrimary)
-      somePrimary = Set.insert (Transition h1 (State 1) (State 2)) 
-                            (Set.map (\s -> Transition s (State 1) (State 1))
-                                     (Set.delete h1 defaultAlphabet))
-      fail = Set.map (\s -> Transition s (State 2) (State 2)) defaultAlphabet
-%\end{code}
 
 \end{document}
