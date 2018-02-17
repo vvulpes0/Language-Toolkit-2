@@ -445,7 +445,7 @@ buildFSAs FFs -> tuple of lists of FSAs for each FF
 >       f x = (renameStates . minimize . complement) x `asTypeOf` x
 >       g   = map singleton
 >       was = map (f . singletonWithAlphabet alphs)
->             ([]:(Set.toList fws)) -- forbid epsilon
+>             (Set.toList fws) -- no longer adds epsilon
 >       ias =  map (f . initialLocal True alphs . g)
 >              (Set.toList ifs)
 >       fras =  map (f . local True alphs . g)
