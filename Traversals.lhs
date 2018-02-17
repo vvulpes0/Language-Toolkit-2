@@ -1,3 +1,4 @@
+
 > module Traversals where
 > 
 > import FSA
@@ -5,15 +6,22 @@
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 > 
+> 
 
 A Path is
 * a sequence of labels in inverse order of edges in the path
 * the terminal state of the path
-* the set of states along the path
+ --- This is a Maybe (State n) allowing for an adjoined identity (empty path) 
+     making Path a monoid wrt concatenation (append).
+* the multiset of states along the path
+ --- this allows us to determine how many times a state has been entered on 
+     the path, which is exactly the number of times a cycle starting and     
+     ending at that state has been traversed.
 * the length of the path (depth of the terminal state)
 
 
-> data Path n e = Path [Symbol e] (Maybe (State n)) (Multiset (State n)) Int
+
+> data Path n e = Path [Symbol e] (Maybe (State n)) (Multiset (State n)) Integer
 >               deriving (Eq, Show)
 > 
 > endstate :: Path n e -> Maybe (State n)
@@ -28,11 +36,13 @@ A Path is
 > word :: Path n e -> [Symbol e]
 > word = Prelude.reverse . labels
 > 
-> depth :: Path n e -> Int
+> depth :: Path n e -> Integer
 > depth (Path _ _ _ d) = d
+> 
 > 
 
 In order to have a Multiset of Path, Path must be Ord:
+
 
 
 > instance (Ord e, Ord n) => Ord (Path n e) where
@@ -45,7 +55,7 @@ In order to have a Multiset of Path, Path must be Ord:
 >                  (endstate p1, labels p1, depth p1)
 >              (e2, l2, d2) =
 >                  (endstate p2, labels p2, depth p2)
-
+> 
 > instance (Ord n) => Monoid (Path n e) where
 >     mempty = Path [] Nothing empty 0
 >     mappend (Path xs1 q1 qs1 d1) (Path xs2 q2 qs2 d2)
@@ -54,8 +64,10 @@ In order to have a Multiset of Path, Path must be Ord:
 >           (maybe id (const . Just) q1 q2)
 >           (qs1 `union` qs2)
 >           (d1 + d2)
+> 
 
 The extensions of a path p are paths extending p by a single edge
+
 
 
 > extend :: (Ord e, Ord n) =>
@@ -72,8 +84,10 @@ The extensions of a path p are paths extending p by a single edge
 > extensions fsa p = extend fsa p $
 >                    keep ((== endstate p) . Just . source) (transitions fsa)
 > 
+> 
 
 The non-trivial extensions of a path are extensions other than self-loops
+
 
 
 > ntExtensions :: (Ord e, Ord n) =>
@@ -84,8 +98,10 @@ The non-trivial extensions of a path are extensions other than self-loops
 >                             (Just (destination t) /= endstate p)) $
 >                       transitions fsa)
 > 
+> 
 
 Acyclic extensions of a path are extensions other than back-edges
+
 
 
 > acyclicExtensions       :: (Ord e, Ord n) =>
@@ -97,6 +113,7 @@ Acyclic extensions of a path are extensions other than back-edges
 >                                   (stateMultiset p))) $
 >                            transitions fsa)
 > 
+> 
 
 
 boundedCycExtensions are extensions other than back-edges to a state that 
@@ -106,15 +123,17 @@ the multiplicity of the state is $\leq$ bound; states that have not been
 visited have multiplicity 0.
 
 
-> boundedCycExtensions       :: (Ord e, Ord n) =>
+
+> boundedCycleExtensions       :: (Ord e, Ord n) =>
 >                            FSA n e -> Integer -> Path n e -> Set (Path n e)
-> boundedCycExtensions fsa b p = extend fsa p
+> boundedCycleExtensions fsa b p = extend fsa p
 >                                (keep (\t ->
 >                                       (Just (source t) == endstate p) &&
->                                       (b < (multiplicity 
+>                                       (b >= (multiplicity 
 >                                             (stateMultiset p)
 >                                             (destination t)))) $
 >                                 transitions fsa)
+> 
 
 
 
@@ -123,6 +142,7 @@ those that follow transitions that satisfy the predicate of the second
 argument.  This is primarily for finding extensions that are acyclic
 except for self-edges on singleton states, as is needed in traversing
 the powerset graph in finding free forbidden factors.
+
 
 
 > augAcExtensions :: (Ord e, Ord n) =>
@@ -138,8 +158,10 @@ the powerset graph in finding free forbidden factors.
 >                                    (stateMultiset p)))) $
 >                            transitions fsa)
 > 
+> 
 
 Initial open list for traversal from initial states
+
 
 
 > initialsPaths :: (Ord e, Ord n) => FSA n e -> Set (Path n e)
@@ -148,6 +170,7 @@ Initial open list for traversal from initial states
 > 
 > truth :: a -> b -> Bool
 > truth = const (const True)
+> 
 > 
 
 traversalQDFS:
@@ -158,10 +181,11 @@ traversalQDFS:
 * Paths are not added to the open list unless their depth is <= bound
 
 
+
 > traversalQDFS :: (Ord e, Ord n) =>
 >                  (FSA n e -> Path n e -> Bool) ->
 >                  FSA n e ->
->                  Int ->
+>                  Integer ->
 >                  Set (Path n e) ->
 >                  Set (Path n e) ->
 >                  Set (Path n e)
@@ -176,24 +200,36 @@ traversalQDFS:
 >               | qf fsa p   = insert p closed
 >               | otherwise  = closed
 > 
+> 
 
 traversalDFS fsa bound open closed
 = closed plus all (possibly trivial) extensions of paths in open
   that are of length <= bound
 
 
-> traversalDFS :: (Ord e, Ord n) => FSA n e -> Int ->
+
+> traversalDFS :: (Ord e, Ord n) => FSA n e -> Integer ->
 >                 Set (Path n e) -> Set (Path n e) -> Set (Path n e)
 > traversalDFS = traversalQDFS truth
+> 
 > 
 
 traversal fsa bound
 initialsPaths plus all their extensions that are of length <= bound
 
 
-> traversal :: (Ord e, Ord n) => FSA n e -> Int -> Set (Path n e)
+
+> traversal :: (Ord e, Ord n) => FSA n e -> Integer -> Set (Path n e)
 > traversal fsa bound = traversalDFS fsa bound (initialsPaths fsa) empty
-> 
+
+
+acyclicPaths
+all paths from initialPaths that are acyclic
+
+acyclicPathsQ
+all paths from the initial open list that are acyclic / and are restricted to
+nodes that satisfy the given predicate
+
 > acyclicPathsQ :: (Ord e, Ord n) =>
 >                  (FSA n e -> Path n e -> Bool) ->  -- predicate
 >                  FSA n e ->                        -- graph
@@ -212,17 +248,51 @@ initialsPaths plus all their extensions that are of length <= bound
 > 
 > acyclicPaths :: (Ord e, Ord n) => FSA n e -> Set (Path n e)
 > acyclicPaths fsa = acyclicPathsQ truth fsa (initialsPaths fsa) empty
+
+
+boundedCyclePaths
+initialsPaths plus all paths that take no cycle more than bound times
+
+boundedCyclePathsQ
+all paths that take no cycle more than bound times/and are restricted to nodes
+that satisfy the given predicate
+
+
+> boundedCyclePathsQ :: (Ord e, Ord n) =>
+>                  (FSA n e -> Path n e -> Bool) ->  -- predicate
+>                  FSA n e ->                        -- graph
+>                  Integer ->                        -- Bound
+>                  Set (Path n e) ->                 -- open
+>                  Set (Path n e) ->                 -- closed
+>                  Set (Path n e)
+> boundedCyclePathsQ qf fsa bnd open closed
+>     | open == empty  = closed
+>     | otherwise      = boundedCyclePathsQ qf fsa bnd
+>                        (union ps $ boundedCycleExtensions fsa bnd p)
+>                        addIf
+>     where (p, ps) = choose open
+>           addIf
+>               | qf fsa p   = insert p closed
+>               | otherwise  = closed
 > 
+> boundedCyclePaths :: (Ord e, Ord n) => FSA n e -> Integer -> Set (Path n e)
+> boundedCyclePaths fsa bnd = 
+>     boundedCyclePathsQ truth fsa bnd (initialsPaths fsa) empty
+> 
+
+
 
 acceptsDFS fsa bound
 = all accepted strings of length <= bound
 
 
-> acceptsDFS :: Ord n => FSA n String -> Int -> Set String
+
+> acceptsDFS :: Ord n => FSA n String -> Integer -> Set String
 > acceptsDFS fsa bound = tmap (displaySyms . word) $
 >                        traversalQDFS accepting
 >                        fsa bound (initialsPaths fsa) empty
 >     where accepting fsa p = contains (endstate p) . tmap Just $ finals fsa
+> 
 > 
 
 rejectsDFS fsa bound
@@ -232,26 +302,31 @@ rejectsDFS fsa bound
   no outedges but is final
 
 
-> rejectsDFS :: Ord n => FSA n String -> Int -> Set String
+
+> rejectsDFS :: Ord n => FSA n String -> Integer -> Set String
 > rejectsDFS fsa bound = tmap (displaySyms . word) $
 >                        traversalRejects
 >                        fsa bound (initialsPaths fsa) empty
+> 
 > 
 
 rejectingPaths fsa bound
 = all rejecting Paths of length <= bound
 
 
-> rejectingPaths :: (Ord e, Ord n) => FSA n e -> Int -> Set (Path n e)
+
+> rejectingPaths :: (Ord e, Ord n) => FSA n e -> Integer -> Set (Path n e)
 > rejectingPaths fsa bound = traversalQDFS rejecting
 >                            fsa bound (initialsPaths fsa) empty
 >     where rejecting fsa p = doesNotContain (endstate p) . tmap Just $ finals fsa
+> 
 
 
 Jim thinks this does not work correctly, at least with non-total FSAs.
 He is not doing anything about that now.
 
-> traversalRejects :: Ord n => FSA n String -> Int ->
+
+> traversalRejects :: Ord n => FSA n String -> Integer ->
 >                     Set (Path n String) -> Set (Path n String) ->
 >                     Set (Path n String)
 > traversalRejects fsa bound open closed
@@ -282,9 +357,11 @@ He is not doing anything about that now.
 >               | rejecting = insert p closed
 >               | otherwise = closed
 > 
+> 
 
 displaySyms and friends are here for now, but not for long
 JR: For longer than either you or I thought.  Still here.  Still now.
+
 
 > stripQuotes :: String -> String
 > stripQuotes = keep (/= '"')
