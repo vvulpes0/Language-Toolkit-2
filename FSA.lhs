@@ -4,6 +4,17 @@
 >   FlexibleInstances,
 >   MultiParamTypeClasses
 >   #-}
+> {-|
+> Module    : FSA
+> Copyright : (c) 2014-2018 Dakotah Lambert
+> License   : BSD-style, see LICENSE
+> 
+> The purpose of this module is to define an interface to a generic,
+> reusable impementation of finite-state automata (FSAs).  The primary
+> motivation for this is to allow for efficient analysis of stringsets
+> in a linguistic context, although the nature of the project should 
+> allow more general use.
+> -}
 > module FSA (
 >             module FSA,
 >             NFData
@@ -14,15 +25,6 @@
 > import Containers
 > import Control.DeepSeq
 > import Control.Parallel
-
-Introduction
-============
-
-The purpose of this module is to define an interface to a generic,
-reusable implementation of finite-state automata (FSAs).  The primary
-motivation for this is to allow for an efficient analysis yielding
-provable results regarding sub-regular languages, although the nature
-of the project should allow more general use.
 
 In this case, finite-state automata are represented mathematically as
 directional graphs with edges labelled by formal symbols.

@@ -1,4 +1,13 @@
-> module ReadJeff where
+> {-# OPTIONS_HADDOCK show-extensions #-}
+> {-|
+> Module : ReadJeff
+> Copyright : (c) 2016-2018 Dakotah Lambert
+> -}
+> module ReadJeff (
+>                  readJeff,
+>                  transliterate,
+>                  transliterateString
+>                 ) where
 
 > import FSA
 > import Containers
@@ -26,6 +35,12 @@ To start, we'll define a function to split a string on a delimiter
 
 Then use that to parse a string in Jeff format and generate an FSA
 
+> -- |Import an automaton from its representation in Jeff's format.
+> -- The resulting 'Int' node labels may have nothing to do with the
+> -- node labels in the source.
+> readJeff :: String -> FSA Int String
+> readJeff = renameStates . readJeffWithoutRelabeling
+
 > readJeffStateList :: [String] -> Set (State String)
 > readJeffStateList [] = empty
 > readJeffStateList (x:xs)
@@ -46,8 +61,8 @@ Then use that to parse a string in Jeff format and generate an FSA
 >                        (State (xs!!0)) (State (xs!!1))
 >     where xs = splitOn ',' s
 
-> readJeff :: String -> FSA String String
-> readJeff s 
+> readJeffWithoutRelabeling :: String -> FSA String String
+> readJeffWithoutRelabeling s 
 >     | length initialParse /= 3  = parseFail "FSA" s "Not a Jeff"
 >     | otherwise                 = FSA alphabet trans inits fins False
 >     where initialParse  = (tmap (keep (not . null) . splitOn '\n')
@@ -64,9 +79,6 @@ that, and what we think may have gone wrong:
 > parseFail target input reason = error message
 >     where message = ("Failed to parse " ++ target ++ ": " ++
 >                      show input ++ ".  " ++ reason ++ ".")
-
-> readAndRelabelJeff :: String -> FSA Int String
-> readAndRelabelJeff = renameStates . readJeff
 
 Transliterating Jeff's FSAs into the form used by my compiler:
 
@@ -93,6 +105,8 @@ Transliterating Jeff's FSAs into the form used by my compiler:
 > mapEvenOdd f _ (a1:[])     =  f a1 : []
 > mapEvenOdd _ _ []          =  []
 
+> -- |See 'transliterate'.  This function operates directly on the
+> -- representation of the edge label.
 > transliterateString :: String -> String
 > transliterateString = concat . mapEvenOdd makeWeight makeStress . splitOn '.'
 
@@ -100,6 +114,12 @@ Transliterating Jeff's FSAs into the form used by my compiler:
 > transliterateTransition (Transition x q1 q2) =
 >     Transition (fmap transliterateString x) q1 q2
 
+> -- |Automata in Jeff's format use edge labels of the form
+> -- &#x201c;w0.s1&#x201d;.
+> -- This function converts the edge labels of an automaton from this
+> -- form to the
+> -- &#x201c;L\`&#x201d;
+> -- form that we tend to use.
 > transliterate :: (Ord n) => FSA n String -> FSA n String
 > transliterate (FSA a t i f d) = FSA (tmap (fmap transliterateString) a)
 >                                 (tmap transliterateTransition t)

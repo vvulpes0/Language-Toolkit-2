@@ -58,7 +58,7 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 
 > readJeffFromFile :: FilePath -> IO (FSA Int String)
 > readJeffFromFile fp = withFile fp ReadMode $ \h -> do
->                         fsa <- readAndRelabelJeff `fmap` hGetContents h
+>                         fsa <- readJeff `fmap` hGetContents h
 >                         return $!! fsa
 
 
@@ -94,7 +94,8 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 
 > formatFP :: String -> String
 > formatFP [] = []
-> formatFP xs = formatFP' . last $ splitOn '/' xs
+> formatFP xs = formatFP' . last . takeWhile (not . null) $
+>               iterate (drop 1 . snd . break (== '/')) xs
 >     where formatFP' ('.':'f':'s':'a':xs) = []
 >           formatFP' ('_':xs) = ' ':formatFP' xs
 >           formatFP' (x:xs)   = x:formatFP' xs
@@ -206,7 +207,7 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >                 in x' == orig
 >           get fp = withFile fp ReadMode $ \h -> do
 >                      s <- hGetContents h
->                      return $!! (fp, c (readAndRelabelJeff s))
+>                      return $!! (fp, c (readJeff s))
 >           c = contractAlphabetTo (alphabet orig)
 
 > transliterateSymbols :: (Functor f, Container (s b1) (f String), Collapsible s) =>
