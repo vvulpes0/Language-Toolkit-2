@@ -189,8 +189,8 @@ properties of each typeclass to build map and filter, here called
 > {-# RULES
 > "keep/[]" keep = filter
 > "keep/Set" keep = Set.filter
-> "keep/compose" forall (f :: a -> Bool) (g :: a -> Bool).
->       keep f . keep g = keep (\x -> f x && g x)
+> "keep/compose" forall (f :: a -> Bool) (g :: a -> Bool) xs.
+>       keep f (keep g xs) = keep (\x -> f x && g x) xs
 >   #-}
 
 > -- |Build a 'Container' from the elements of a 'Collapsible'.
@@ -254,9 +254,15 @@ lookup-time logarithmic in the number of distinct elements.
 
 > -- |Analogous to 'isIn', returning the number of occurrences of an
 > -- element in a 'Multiset'.
+> -- Time complexity is \(O(log n)\),
+> -- where \(n\) is the number of distinct elements in the 'Multiset'.
 > multiplicity :: (Ord a) => Multiset a -> a -> Integer
-> multiplicity (Multiset xs) x = foldr (+) 0 $ tmap snd hasX
->     where hasX = keep ((== x) . fst) xs
+> multiplicity (Multiset xs) x = maybe 0 (f . fst)  .
+>                                Set.minView . snd  $
+>                                Set.split (x, 0) xs
+>     where f (y, m)
+>               | y == x     =  m
+>               | otherwise  =  0
 
 > -- |A specialization of 'fromCollapsible'
 > -- with time complexity \(O(n)\),
