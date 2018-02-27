@@ -177,8 +177,6 @@ properties of each typeclass to build map and filter, here called
 > "tmap/[]"  tmap = map
 > "tmap/Set" forall (x :: Ord a => Set a) (f :: Ord b => x -> b) .
 >        tmap f x = Set.map f x
-> "tmap/compose" forall (f :: b -> c) (g :: a -> b).
->        tmap f . tmap g = tmap (f . g)
 >   #-}
 
 > -- |Retain only those elements that satisfy a predicate.
