@@ -62,14 +62,14 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >                         return $!! fsa
 
 
-> extract :: (Ord n, Ord e) => FSA n e -> (Set (Symbol e), Set [Symbol e])
+> extract :: (Ord n, Ord e) => FSA n e -> (Set e, Set [e])
 > extract fsa = (alphabet fsa, extractForbiddenSSQs fsa)
 
 > findKFromFFs :: (a,
->                  Set [Symbol String],
->                  Set [Symbol String],
->                  Set [Symbol String],
->                  Set [Symbol String]) -> Integer
+>                  Set [String],
+>                  Set [String],
+>                  Set [String],
+>                  Set [String]) -> Integer
 > -- ignored alphabet in calculating k
 > -- to unignore, use ``maximum [1, mw, mi, mr, mf]'' instead
 > findKFromFFs (_,words, inis, frees, finals) = maximum [0, mw, mi, mr, mf]
@@ -86,7 +86,7 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 > slApproximation f = renameStates . minimize . buildFSA $
 >                     forbiddenFactors f
 
-> format :: FilePath -> Set (Symbol String) -> Set [Symbol String] -> String
+> format :: FilePath -> Set (String) -> Set [String] -> String
 > format fp alpha fssqs = unlines
 >                             ["# " ++ formatFP fp,
 >                              "# " ++ formatAlphabet alpha,
@@ -101,15 +101,14 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >           formatFP' (x:xs)   = x:formatFP' xs
 >           formatFP' []       = []
 
-> formatAlphabet :: (Show e) => Set (Symbol e) -> String
+> formatAlphabet :: (Show e) => Set e -> String
 > formatAlphabet = concatMap formatSymbol . Set.toAscList
 
-> formatSymbol :: (Show e) => Symbol e -> String
-> formatSymbol Epsilon = []
-> formatSymbol (Symbol e) = take 2 . (++ "  ") . filter (/= '"') .
->                           transliterateString $ show e
+> formatSymbol :: (Show e) => e -> String
+> formatSymbol = take 2 . (++ "  ") . filter (/= '"') .
+>                transliterateString . show
 
-> formatSequences :: (Ord e, Show e) => Set [Symbol e] -> String
+> formatSequences :: (Ord e, Show e) => Set [e] -> String
 > formatSequences = unlines . map formatSequence . sortBy comp . Set.toList
 >     where comp xs ys
 >               | length xs < length ys = LT
@@ -117,23 +116,23 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >               | otherwise             = compare xs ys
 
 > formatSubstrings :: (a,
->                      Set [Symbol String],
->                      Set [Symbol String],
->                      Set [Symbol String],
->                      Set [Symbol String]) -> String
+>                      Set [String],
+>                      Set [String],
+>                      Set [String],
+>                      Set [String]) -> String
 > formatSubstrings (_,w,i,r,f) = formatSequences .
->                                tmap (map (fmap untransliterateString)) $
+>                                tmap (map untransliterateString) $
 >                                unionAll [w', i', r', f']
 >     where w' = tmap (prependFish . appendFish) w
 >           i' = tmap prependFish i
 >           r' = r
 >           f' = tmap appendFish f
 
-> prependFish, appendFish :: [Symbol String] -> [Symbol String]
-> prependFish = (:) (Symbol "%|")
-> appendFish = flip (++) [Symbol "|%"]
+> prependFish, appendFish :: [String] -> [String]
+> prependFish = (:) ("%|")
+> appendFish = flip (++) ["|%"]
 
-> formatSequence :: (Show e) => [Symbol e] -> String
+> formatSequence :: (Show e) => [e] -> String
 > formatSequence = concatMap formatSymbol
 
 
@@ -148,7 +147,7 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >       sl = untransliterate $ buildFSA ffs
 >       fssqs = extractForbiddenSSQs fsa `difference`
 >               extractForbiddenSSQs sl
->       fssqs' = tmap (map (fmap transliterateString)) fssqs
+>       fssqs' = tmap (map transliterateString) fssqs
 >       k = keepPossible isSSQ fssqs'
 >       ffs' = (u2, k w2, k i2, k r2, k f2)
 >       strict = normalize $ sl `intersection` sp
@@ -210,14 +209,6 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >                      return $!! (fp, c (readJeff s))
 >           c = contractAlphabetTo (alphabet orig)
 
-> transliterateSymbols :: (Functor f, Container (s b1) (f String), Collapsible s) =>
->                         s (f String) -> s b1
-> transliterateSymbols = tmap (fmap transliterateString)
-
-> untransliterateSymbols :: (Functor f, Container (s b1) (f String), Collapsible s) =>
->                           s (f String) -> s b1
-> untransliterateSymbols = tmap (fmap untransliterateString)
-
 > writeJeff :: FilePath -> FSA Int String -> IO ()
 > writeJeff fp fsa = withFile fp WriteMode $ \h -> do
 >                      hPutStr h (exportJeff fsa)
@@ -229,19 +220,19 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 
 > writeFFChart :: FilePath -> String -> -- filepath, name
 >                 Bool -> -- is SL
->                 Set (Symbol String) -> -- alphabet
+>                 Set String -> -- alphabet
 >                 (Set a, -- forbidden units
->                  Set [Symbol String],  -- forbidden words
->                  Set [Symbol String],  -- initial forbidden substrings
->                  Set [Symbol String],  -- free forbidden substrings
->                  Set [Symbol String]) -> -- final forbidden substrings
->                 Set [Symbol String] -> -- forbidden subsequences
+>                  Set [String],  -- forbidden words
+>                  Set [String],  -- initial forbidden substrings
+>                  Set [String],  -- free forbidden substrings
+>                  Set [String]) -> -- final forbidden substrings
+>                 Set [String] -> -- forbidden subsequences
 >                 (Set a, -- required units
->                  Set [Symbol String],  -- required words
->                  Set [Symbol String],  -- initial required substrings
->                  Set [Symbol String],  -- free required substrings
->                  Set [Symbol String]) -> -- final required substrings
->                 Set [Symbol String] -> -- required subsequences
+>                  Set [String],  -- required words
+>                  Set [String],  -- initial required substrings
+>                  Set [String],  -- free required substrings
+>                  Set [String]) -> -- final required substrings
+>                 Set [String] -> -- required subsequences
 >                 Maybe String -> -- number of nonstrict subset
 >                 IO ()
 > writeFFChart fp name isSL alpha
@@ -285,8 +276,8 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 
 
 
-> keepPossible :: (Ord e) => ([Symbol e] -> [Symbol e] -> Bool) ->
->                 Set [Symbol e] -> Set [Symbol e] -> Set [Symbol e]
+> keepPossible :: (Ord e) => ([e] -> [e] -> Bool) ->
+>                 Set [e] -> Set [e] -> Set [e]
 > keepPossible f fssqs potential =
 >     keep (\a -> allS (not . flip f a) fssqs) potential
 
@@ -300,23 +291,23 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 > isSubstring x = any (isPrefix x) . takeWhile (not . null) . iterate (drop 1)
 
 > keepUseful :: (Set a, -- forbidden units
->                  Set [Symbol String],  -- forbidden words
->                  Set [Symbol String],  -- initial forbidden substrings
->                  Set [Symbol String],  -- free forbidden substrings
->                  Set [Symbol String]) -> -- final forbidden substrings
->                 Set [Symbol String] -> -- forbidden subsequences
+>                  Set [String],  -- forbidden words
+>                  Set [String],  -- initial forbidden substrings
+>                  Set [String],  -- free forbidden substrings
+>                  Set [String]) -> -- final forbidden substrings
+>                 Set [String] -> -- forbidden subsequences
 >                 (Set a, -- potential required units
->                  Set [Symbol String],  -- potential required words
->                  Set [Symbol String],  -- potential initial required substrings
->                  Set [Symbol String],  -- potential free required substrings
->                  Set [Symbol String]) -> -- potential final required substrings
+>                  Set [String],  -- potential required words
+>                  Set [String],  -- potential initial required substrings
+>                  Set [String],  -- potential free required substrings
+>                  Set [String]) -> -- potential final required substrings
 >                 (Set a,
->                  Set [Symbol String],
->                  Set [Symbol String],
->                  Set [Symbol String],
->                  Set [Symbol String])
+>                  Set [String],
+>                  Set [String],
+>                  Set [String],
+>                  Set [String])
 > keepUseful ffs@(u,w,i,r,f) fssqs potential@(_,pw,pi,pr,pf) = (u,nw,ni,nr,nf)
->     where fssqs' = tmap (map (fmap transliterateString)) fssqs
+>     where fssqs' = tmap (map transliterateString) fssqs
 >           k = keepPossible isSSQ fssqs'
 >           fpa = prependFish . appendFish
 >           fp  = prependFish

@@ -51,13 +51,13 @@
 > 
 > burstnl = burstWith '\n'
 > 
-> getBound ::  IO Int
+> getBound ::  IO Integer
 > getBound = getArgs >>= return.read.head
 > 
-> getFSA :: IO (FSA String String)
+> getFSA :: IO (FSA Int String)
 > getFSA = getContents >>= return.readJeff.transLit
 > 
-> getFSAbyName :: String -> IO (FSA String String)
+> getFSAbyName :: String -> IO (FSA Int String)
 > getFSAbyName path = readFile path >>= return.readJeff.transLit
 > 
 > shorterOrLessThan :: String -> String -> Ordering

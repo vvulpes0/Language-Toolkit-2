@@ -31,20 +31,21 @@
 > import Factors
 > import Containers
 > 
+> import Data.Set (Set)
 > import qualified Data.Set as Set
 > import qualified Data.List as List
 > import qualified Data.Map as Map
 
 > slQ :: (Ord e, Ord n) => FSA n e -> Integer
-> slQ fsa = slPSGQ (generatePowerSetGraph fsa)
+> slQ fsa = slPSGQ (powersetGraph fsa)
 
-> -- Assumes states are (Set.Set n)
-> -- in improved-semantics states are now (Set.Set Int) ?????
-> slPSGQ :: (Ord e, Ord n) => FSA (Set.Set n) e -> Integer
+> -- Assumes states are (Set n)
+> -- in improved-semantics states are now (Set Int) ?????
+> slPSGQ :: (Ord e, Ord n) => FSA (Set n) e -> Integer
 > slPSGQ sm = slTraversal sm (initialsPaths sm) 0
 > 
 > slTraversal :: (Ord e, Ord n) => 
->                   FSA (Set.Set n) e -> Set.Set(Path (Set.Set n) e) -> Integer -> Integer
+>                   FSA (Set n) e -> Set(Path (Set n) e) -> Integer -> Integer
 > slTraversal sm ps k
 >     | (Set.null ps) = k + 1
 >     | cycle = 0
@@ -66,7 +67,7 @@
 psgQ is the label of the initial state of the PSG, i.e., the stateset of
   the original DFA
 
-> psgQ :: (Ord a, Ord b) => FSA (Set.Set b) a -> State (Set.Set b)
+> psgQ :: (Ord a, Ord b) => FSA (Set b) a -> State (Set b)
 > psgQ = Set.findMin . initials
 
 {---------------------------------------------------------------------------}
@@ -98,16 +99,16 @@ psgQ is the label of the initial state of the PSG, i.e., the stateset of
 
 
 > forbiddenFactorsWithAlphabet:: (Ord e, Ord n) =>
->                              Set.Set(Symbol e) -- alphabet
+>                              Set e -- alphabet
 >                                      -> FSA n e
->                                      -> ( (Set.Set (Symbol e)),  -- unitFFs
->                                           (Set.Set [Symbol e]),  -- fwords
->                                           (Set.Set [Symbol e]),  -- initialFFs
->                                           (Set.Set [Symbol e]),  -- freeFFs
->                                           (Set.Set [Symbol e]) ) -- finalFFs
+>                                      -> ( (Set e),  -- unitFFs
+>                                           (Set [e]),  -- fwords
+>                                           (Set [e]),  -- initialFFs
+>                                           (Set [e]),  -- freeFFs
+>                                           (Set [e]) ) -- finalFFs
 > forbiddenFactorsWithAlphabet alph fsa = (uFFs, fWs, iFFs, frFFs, fiFFs)
 >     where
->        psg = generatePowerSetGraph fsa
+>        psg = powersetGraph fsa
 >        k = slPSGQ psg
 >        uFFs = unitFFsWithAlphabet alph psg
 >        iFFs = initialFFs fsa (max 0 (k-1))
@@ -116,16 +117,15 @@ psgQ is the label of the initial state of the PSG, i.e., the stateset of
 >        fiFFs = finalFFsPSG psg (max 0 (k-1))
 
 > forbiddenFactors:: (Ord b) => FSA b String
->                                -> ( (Set.Set (Symbol String)),  -- unitFFs
->                                     (Set.Set [Symbol String]),  -- fWords
->                                     (Set.Set [Symbol String]),  -- initialFFs
->                                     (Set.Set [Symbol String]),  -- freeFFs
->                                     (Set.Set [Symbol String]) ) -- finalFFs
+>                                -> ( (Set (String)),  -- unitFFs
+>                                     (Set [String]),  -- fWords
+>                                     (Set [String]),  -- initialFFs
+>                                     (Set [String]),  -- freeFFs
+>                                     (Set [String]) ) -- finalFFs
 > forbiddenFactors fsa = forbiddenFactorsWithAlphabet defaultAlphabet fsa
 
 
 Bounded search for forbidden factors.
-forbiddenFactors...WithK is here for temporary backward compatibility
 
 In gathering initial, free and final forbidden factors cycles in the psGraph
 are taken up to bound many times.  If bound is negative then cycles are taken
@@ -138,30 +138,19 @@ is negative, it is computed to be slQ-2.  If either bound or slQ-2 is less than
 most, \epsilon will be gathered.
 
 
-> forbiddenFactorsWithAlphabetWithK :: (Ord e, Ord n) =>
->                                         Set.Set(Symbol e) -- alphabet
->                                      -> Integer -- bound on iterations of cycles
->                                      -> FSA n e
->                                      -> ( (Set.Set (Symbol e)),  -- unitFFs
->                                           (Set.Set [Symbol e]),  -- fwords
->                                           (Set.Set [Symbol e]),  -- initialFFs
->                                           (Set.Set [Symbol e]),  -- freeFFs
->                                           (Set.Set [Symbol e]) ) -- finalFFs
-> forbiddenFactorsWithAlphabetWithK = forbiddenFactorsWithAlphabetWithBound
-
 > forbiddenFactorsWithAlphabetWithBound :: (Ord e, Ord n) =>
->                                         Set.Set(Symbol e) -- alphabet
+>                                         Set e -- alphabet
 >                                      -> Integer -- bound on iterations of cycles
 >                                      -> FSA n e
->                                      -> ( (Set.Set (Symbol e)),  -- unitFFs
->                                           (Set.Set [Symbol e]),  -- fwords
->                                           (Set.Set [Symbol e]),  -- initialFFs
->                                           (Set.Set [Symbol e]),  -- freeFFs
->                                           (Set.Set [Symbol e]) ) -- finalFFs
+>                                      -> ( (Set e),  -- unitFFs
+>                                           (Set [e]),  -- fwords
+>                                           (Set [e]),  -- initialFFs
+>                                           (Set [e]),  -- freeFFs
+>                                           (Set [e]) ) -- finalFFs
 > forbiddenFactorsWithAlphabetWithBound alph bnd fsa = 
 >     (uFFs, fWs, iFFs, frFFs, fiFFs)
 >     where
->        psg = generatePowerSetGraph fsa
+>        psg = powersetGraph fsa
 >        uFFs = unitFFsWithAlphabet alph psg
 >        iFFs = initialFFs fsa bnd
 >        wrdBound :: (Ord e, Ord n) => Integer -> FSA n e -> Integer
@@ -172,24 +161,14 @@ most, \epsilon will be gathered.
 >        frFFs = freeFFsPSG psg bnd
 >        fiFFs = finalFFsPSG psg bnd
 
-> forbiddenFactorsWithK :: (Ord b) =>
->                                   Integer -- k
->                                -> FSA b String
->                                -> ( (Set.Set (Symbol String)),  -- unitFFs
->                                     (Set.Set [Symbol String]),  -- fWords
->                                     (Set.Set [Symbol String]),  -- initialFFs
->                                     (Set.Set [Symbol String]),  -- freeFFs
->                                     (Set.Set [Symbol String]) ) -- finalFFs
-> forbiddenFactorsWithK = forbiddenFactorsWithBound
-
 > forbiddenFactorsWithBound :: (Ord b) =>
 >                                   Integer -- bound
 >                                -> FSA b String
->                                -> ( (Set.Set (Symbol String)),  -- unitFFs
->                                     (Set.Set [Symbol String]),  -- fWords
->                                     (Set.Set [Symbol String]),  -- initialFFs
->                                     (Set.Set [Symbol String]),  -- freeFFs
->                                     (Set.Set [Symbol String]) ) -- finalFFs
+>                                -> ( (Set String),  -- unitFFs
+>                                     (Set [String]),  -- fWords
+>                                     (Set [String]),  -- initialFFs
+>                                     (Set [String]),  -- freeFFs
+>                                     (Set [String]) ) -- finalFFs
 > forbiddenFactorsWithBound = 
 >     forbiddenFactorsWithAlphabetWithBound defaultAlphabet
 
@@ -213,20 +192,20 @@ the best way to do that is to include $\sigma$ where $\tup{\sigma, Q, \emptyset}
 is in the edgeset of the 
 
 
-> unitFFsWithAlphabet :: (Ord a, Ord b) => Set.Set (Symbol a) -- alphabet
->                                -> (FSA(Set.Set b) a ) -- psGraph
->                                -> Set.Set (Symbol a)
+> unitFFsWithAlphabet :: (Ord a, Ord b) => Set a -- alphabet
+>                                -> (FSA (Set b) a ) -- psGraph
+>                                -> Set a
 > unitFFsWithAlphabet alphs psg =
->     Set.union (Set.difference alphs (Set.map edgeLabel initialTrans))
->               (Set.map edgeLabel oneFFs)
+>     union (alphs `difference` unsymbols (tmap edgeLabel initialTrans))
+>           (unsymbols (tmap edgeLabel oneFFs))
 >         where
 >           initialTrans = Set.filter
 >                           (((psgQ psg) ==).source)
 >                           (transitions psg)
 >           oneFFs = Set.filter(((State Set.empty) ==).destination) initialTrans
 
-> unitFFs :: (Ord a, Ord b) => (FSA (Set.Set b) a) -- psGraph
->                                -> Set.Set (Symbol a)
+> unitFFs :: (Ord a, Ord b) => (FSA (Set b) a) -- psGraph
+>                                -> Set a
 > unitFFs psg = unitFFsWithAlphabet (alphabet psg) psg
 
 
@@ -245,10 +224,10 @@ is in the edgeset of the
 
 > fWords :: (Ord a, Ord b) => FSA b a
 >                             -> Integer             -- bound
->                             -> Set.Set([Symbol a]) -- initialFFs
->                             -> Set.Set([Symbol a]) -- freeFFs
->                             -> Set.Set([Symbol a]) -- finalFFs
->                             -> Set.Set([Symbol a])
+>                             -> Set([a]) -- initialFFs
+>                             -> Set([a]) -- freeFFs
+>                             -> Set([a]) -- finalFFs
+>                             -> Set([a])
 > fWords fsa bound iFFs frFFs fiFFs =
 >     Set.fromList
 >            (filter
@@ -257,12 +236,12 @@ is in the edgeset of the
 >                           (any (\x -> (List.isInfixOf x wrd)) (Set.toList frFFs))
 >                           ||
 >                           (any (\x -> (List.isPrefixOf x wrd)) (Set.toList iFFs))) )
->             (map ((Prelude.reverse) . labels)
+>             (map ((Prelude.reverse) . unsymbols . labels)
 >                      (Set.toList (rejectingPaths fsa bnd)) ) )
 >            where bnd =
 >                    (max (1+(supermax (Set.union iFFs fiFFs))) (supermax frFFs))
 >                    - 2
->                  supermax :: Set.Set [a] -> Integer
+>                  supermax :: Set [a] -> Integer
 >                  supermax l
 >                      | (Set.null l) = 0
 >                      | otherwise = 
@@ -278,17 +257,17 @@ k is only significant if it is 0
 
 > initialFFs :: (Ord a, Ord b) => FSA b a
 >                                 -> Integer                 -- k
->                                 -> Set.Set [Symbol a]
+>                                 -> Set [a]
 > initialFFs fsa k = 
 >     Set.map List.reverse (finalFFs rFSA k)
 >         where rFSA = (FSA.normalize (FSA.reverse fsa))
 
-> freeFFs :: (Ord a, Ord b) => (FSA b a) -> Integer -> Set.Set [Symbol a]
-> freeFFs fsa k = freeFFsPSG (generatePowerSetGraph fsa) k
+> freeFFs :: (Ord a, Ord b) => (FSA b a) -> Integer -> Set [a]
+> freeFFs fsa k = freeFFsPSG (powersetGraph fsa) k
 
 > -- k is only significant if it is 0
-> freeFFsPSG :: (Ord a, Ord b) => (FSA (Set.Set b) a) -> Integer ->
->                                  Set.Set [Symbol a]
+> freeFFsPSG :: (Ord a, Ord b) => (FSA (Set b) a) -> Integer ->
+>                                  Set [a]
 > freeFFsPSG psg k
 >     = Set.fromList (gatherFFs psgR k (Set.singleton stateQ) initialFront [])
 >     where 
@@ -317,13 +296,13 @@ k is only significant if it is 0
 
 > finalFFs :: (Ord a, Ord b) => (FSA b a)
 >                                -> Integer                 -- k
->                                -> Set.Set [Symbol a]
-> finalFFs fsa k = finalFFsPSG (generatePowerSetGraph fsa) k
+>                                -> Set [a]
+> finalFFs fsa k = finalFFsPSG (powersetGraph fsa) k
 
 > finalFFsPSG :: (Ord a, Ord b) =>
->                   (FSA (Set.Set b) a)
+>                   (FSA (Set b) a)
 >                       -> Integer                 -- k
->                       -> Set.Set [Symbol a]
+>                       -> Set [a]
 > finalFFsPSG psg k --fFFs
 >     = Set.fromList (gatherFFs psgR k
 >                                   (Set.singleton stateQ) -- goal
@@ -343,7 +322,7 @@ trimRevPSGPSG psg is reverse of
    note that such edges are necessarily self-edges
 
 
-> trimRevPSG :: (Ord a, Ord b) => FSA (Set.Set b) a -> FSA (Set.Set b) a
+> trimRevPSG :: (Ord a, Ord b) => FSA (Set b) a -> FSA (Set b) a
 > trimRevPSG psg = FSA.reverse psgr
 >     where
 >       psgr = FSA (alphabet psg)
@@ -364,12 +343,12 @@ if k is 0 then do not follow any cycles
 ow follow singleton cycles which, since k>0, will be the only cycles
 
 
-> gatherFFs :: (Ord a, Ord b) => FSA (Set.Set b) a -- graph (psGraph based)
->                   -> Integer                     -- bound
->                   -> Set.Set (State (Set.Set b)) -- set of goal states
->                   -> [Path (Set.Set b) a]        -- frontier
->                   -> [[Symbol a]]                -- FFs so far
->                   -> [[Symbol a]]                -- FFs
+> gatherFFs :: (Ord a, Ord b) => FSA (Set b) a -- graph (psGraph based)
+>                   -> Integer                 -- bound
+>                   -> Set (State (Set b))     -- set of goal states
+>                   -> [Path (Set b) a]        -- frontier
+>                   -> [[a]]                   -- FFs so far
+>                   -> [[a]]                   -- FFs
 > gatherFFs psg bound goal [] ffs = ffs
 > gatherFFs psg bound goal front ffs 
 >     = gatherFFs psg bound goal nextFront (nextFFs ++ ffs)
@@ -395,22 +374,22 @@ Returns (front k+1, k-FFs)
 This k is not that k
 
 
-> passK :: (Ord a, Ord b) => Set.Set(State b)      -- goal states
+> passK :: (Ord a, Ord b) => Set (State b)      -- goal states
 >                               -> [Path b a]      -- extensions of front k
 >                               -> [Path b a]      -- front k+1 so far
->                               -> [[Symbol a]]    -- k-FFs so far
->                               -> ([Path b a], [[Symbol a]])
+>                               -> [[a]]    -- k-FFs so far
+>                               -> ([Path b a], [[a]])
 >                                                  -- (front, k-FFs)
 > passK goals [] front ffs = (front, ffs)
 > passK goals (p:ps) front ffs 
->     | List.elem  (labels p) ffs                -- extends known ff
+>     | List.elem  (unsymbols $ labels p) ffs      -- extends known ff
 >         = passK goals ps front ffs
 >     | maybe False (isIn goals) (endstate p)    -- new ff
 >         = passK goals ps
 >            (filter
->               ((\x -> List.notElem x ((labels p):ffs)) . labels)
+>               ((\x -> List.notElem x ((unsymbols $ labels p):ffs)) . unsymbols . labels)
 >               front)
->            ((labels p):ffs)
+>            ((unsymbols $ labels p):ffs)
 >     | otherwise = passK goals ps (p:front) ffs -- in frontier k+1
 
 
@@ -422,7 +401,7 @@ buildFSAs FFs -> tuple of lists of FSAs for each FF
 
 
 > buildFSAs :: FSA Int String
->                                -> ( Set.Set(Symbol String),    -- alphabet
+>                                -> ( Set String,    -- alphabet
 >                                     [FSA Int String],  -- words
 >                                     [FSA Int String],  -- initials
 >                                     [FSA Int String],  -- free
@@ -446,7 +425,7 @@ buildFSAs FFs -> tuple of lists of FSAs for each FF
 build FSA from FSAs
 
 
-> combineFSAs :: (Set.Set(Symbol String),    -- alphabet
+> combineFSAs :: (Set String,    -- alphabet
 >                 [FSA Int String],  -- words
 >                 [FSA Int String],  -- initials
 >                 [FSA Int String],  -- free
@@ -462,12 +441,12 @@ Since this uses renameStates the State type of the result will be Int
 This really needs to be as strict as possible, which I hope it isn't
 
 
-> buildFSA :: ( (Set.Set (Symbol String)),  -- unitFFs
->               (Set.Set [Symbol String]),  -- fWords
->               (Set.Set [Symbol String]),  -- initialFFs
->               (Set.Set [Symbol String]),  -- freeFFs
->               (Set.Set [Symbol String]) ) -- finalFFs
->             -> FSA Int String 
+> buildFSA :: ( (Set String),  -- unitFFs
+>               (Set [String]),  -- fWords
+>               (Set [String]),  -- initialFFs
+>               (Set [String]),  -- freeFFs
+>               (Set [String]) ) -- finalFFs
+>             -> FSA Int String
 > buildFSA (ufs, fws, ifs, frfs, fifs) =
 >     combineFSAs (alphs,was,ias,fras,fias) -- renameStates (minimize fia)
 >     where
@@ -482,28 +461,6 @@ This really needs to be as strict as possible, which I hope it isn't
 >               (Set.toList frfs)
 >       fias =  map (f . finalLocal True alphs . g)
 >               (Set.toList fifs)
-
-> symmetricDifference :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e ->
->                  FSA (Maybe n1, Maybe n2) e
-> symmetricDifference f1 f2 = FSA bigalpha trans init fin det
->     where bigalpha = combineAlphabets f1 f2
->           cs = tmap (\(x, y) -> combine x y)
->           init = cs $ makeJustPairs (initials f1) (initials f2)
->           fin1 = finals f1
->           fin2 = finals f2
->           fin1WithNonFin2 = makeJustPairs fin1
->                             (difference (states f2) (finals f2))
->           fin2WithNonFin1 = makeJustPairs (difference (states f1) (finals f1))
->                             fin2
->           fin1WithN = tmap (flip (,) (State Nothing) . fmap Just) fin1
->           fin2WithN = tmap ((,) (State Nothing) . fmap Just) fin2
->           fin = (intersection sts
->                  (cs
->                   (unionAll [fin1WithNonFin2, fin1WithN,
->                              fin2WithNonFin1, fin2WithN])))
->           trans = combineTransitions f1 f2
->           sts = union (tmap source trans) (tmap destination trans)
->           det = isDeterministic f1 && isDeterministic f2
 
 
 residue FFs -> FSA -> FSA
@@ -520,15 +477,17 @@ Logically this can't happen, but "Undergenerate" is much less embarassing
 >     | (not . isNull) under = error "Undergenerate"
 >     | otherwise = renameStates over
 >     where
->       under = minimize  (autDifference fsa ffsa)
->       over = minimize  (autDifference ffsa fsa)
+>       under = minimize  (difference (makeInt fsa) (makeInt ffsa))
+>       over = minimize  (difference (makeInt ffsa) (makeInt fsa))
+>       makeInt :: (Ord n, Ord e) => FSA n e -> FSA Int e
+>       makeInt = renameStates
 
 > residueFromFFs :: (Integral c, Ord b) =>
->                  ((Set.Set (Symbol String)),  -- unitFFs
->                   (Set.Set [Symbol String]),  -- fWords
->                   (Set.Set [Symbol String]),  -- initialFFs
->                   (Set.Set [Symbol String]),  -- freeFFs
->                   (Set.Set [Symbol String]) ) -- finalFFs
+>                  ((Set String),  -- unitFFs
+>                   (Set [String]),  -- fWords
+>                   (Set [String]),  -- initialFFs
+>                   (Set [String]),  -- freeFFs
+>                   (Set [String]) ) -- finalFFs
 >                    -> FSA b String
 >                    -> FSA c String 
 > residueFromFFs fFactors fsa 
@@ -536,7 +495,9 @@ Logically this can't happen, but "Undergenerate" is much less embarassing
 >     | otherwise = renameStates over
 >     where
 >       ffsa = buildFSA fFactors
->       under = minimize  (autDifference fsa ffsa)
->       over = minimize  (autDifference ffsa fsa)
+>       under = minimize  (difference (makeInt fsa) (makeInt ffsa))
+>       over = minimize  (difference (makeInt ffsa) (makeInt fsa))
+>       makeInt :: (Ord n, Ord e) => FSA n e -> FSA Int e
+>       makeInt = renameStates
 
 \end{document}

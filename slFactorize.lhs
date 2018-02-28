@@ -85,8 +85,8 @@ Get name of pattern from first argument for dotifyWithName
 
 Get FSA in multiline format, as in STII fsasJeff
 
-> getFSA :: IO (FSA String String)
-> getFSA = getContents >>= return.readJeff.transLit 
+> getFSA :: IO (FSA Int String)
+> getFSA = getContents >>= return.readJeff.transLit
 
 Write fsa as show show of Haskell datatype (as per Dakotah's usage)
  to name.fsa.hs and its dot format to name.fsa.dot
@@ -111,7 +111,7 @@ Q: Why does generatePowerSetGraph fix elt type of stateset as Int?
 >       writeFile (name++".psg.hs") (show psg)
 >       writeFile (name++".psg.dot") (dotifyWithName (deFang name) (encodeStates psg))
 >       return psg
->           where psg = generatePowerSetGraph fsa
+>           where psg = powersetGraph fsa
 > 
 > writeFactors :: (Ord b, Show b, Integral c, Enum b) =>
 >                      String -> (FSA b String) -> IO (FSA c String)

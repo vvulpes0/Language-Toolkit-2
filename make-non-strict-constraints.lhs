@@ -2,7 +2,7 @@
 
 > import ConstraintCompiler
 > import Exporters
-> import ExtractSP (sortBy, comparing, evens, odds)
+
 > import Factors
 > import FSA
 > import Containers
@@ -11,11 +11,7 @@
 > import Control.Parallel.Strategies
 > import System.IO
 
-> c89 :: FSA Integer String
-> c9x :: FSA Integer String
-> c91 :: FSA Integer String
-> c145 :: FSA Integer String
-> c146 :: FSA Integer String
+> c89, c9x, c91, c145, c146 :: FSA Integer String
 > c89 = compileFromList' wx [[required (Substring [wxs2] False False)]]
 > c9x = compileFromList' wx [[forbidden (Substring [wpluss0] False False), forbidden (Substring [w1s2] False True)]]
 > c91 = compileFromList' wx [[forbidden (Substring [wpluss1] False False), forbidden (Substring [w1s2] False True)]]
@@ -32,8 +28,10 @@
 > desurfaceSecondary :: (Enum n1, Ord n, Ord n1) => FSA n String -> FSA n1 String
 > desurfaceSecondary (FSA alpha trans init fin _) = renameStates . minimize . determinize $ (fmap (.tmap convert) FSA) alpha trans init fin False
 >     where convert (Transition x s d)
->               | x == chooseOne w0s1  =  Transition (chooseOne w0s0) s d
->               | otherwise            =  Transition x s d
+>               | x == lsecondary  =  Transition lunstressed s d
+>               | otherwise        =  Transition x s d
+>           lsecondary  = Symbol (chooseOne w0s1)
+>           lunstressed = Symbol (chooseOne w0s0)
 
 > nonEmptySubsets :: (Ord n, NFData e, Ord e) =>
 >                    [(String, FSA n e)] -> [(String, FSA Int e)]

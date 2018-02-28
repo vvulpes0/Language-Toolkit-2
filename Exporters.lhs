@@ -38,6 +38,17 @@
 >     | otherwise     = show x ++ ", " ++ commaSeparateList xs'
 >     where (x, xs') = choose xs
 
+> -- |Return value is in the range \([0 .. n]\),
+> -- where \(n\) is the size of the input.
+> -- A value of \(n\) indicates that the element was
+> -- not in the input.
+> shortLabelIn :: (Collapsible s, Eq n) => s n -> n -> Int
+> shortLabelIn xs x
+>     | size xs == 0 = 0
+>     | a == x       = 0
+>     | otherwise    = 1 + shortLabelIn as x
+>     where (a, as) = choose xs
+
 > dotifyTransitionSet :: (Collapsible c, Eq e, Show e) =>
 >                        c (Symbol e, Int, Int) -> String
 > dotifyTransitionSet ts
@@ -57,8 +68,8 @@
 >                             tmap (remakeTransition)) $
 >                       transitionClasses f
 >     where remakeTransition tr  = (edgeLabel tr,
->                                   findIndexInSet (source tr) sts,
->                                   findIndexInSet (destination tr) sts)
+>                                   shortLabelIn sts (source tr),
+>                                   shortLabelIn sts (destination tr))
 >           sts                  = states f
 
 > dotifyInitial :: Int -> [String]
@@ -73,19 +84,19 @@
 > dotifyInitials :: (Ord e, Ord n, Show n) => FSA n e -> [String]
 > dotifyInitials f = unionAll .
 >                    tmap (dotifyInitial .
->                          flip findIndexInSet (states f)) $
+>                          shortLabelIn (states f)) $
 >                    initials f
 
 > dotifyFinals :: (Ord e, Ord n, Show n) => FSA n e -> [String]
 > dotifyFinals f = unionAll .
 >                  tmap (dotifyFinal .
->                        flip findIndexInSet (states f)) $
+>                        shortLabelIn (states f)) $
 >                  finals f
 
 > dotifyStates :: (Ord e, Ord n, Show n) => FSA n e -> [String]
 > dotifyStates f = collapse (:) [] $ tmap makeLabel sts
 >     where sts          = states f
->           idOf         = flip findIndexInSet sts
+>           idOf         = shortLabelIn sts
 >           makeLabel x  = show (idOf x) ++ " [label=\"" ++
 >                          (nq . show $ nodeLabel x) ++ "\"];"
 
@@ -106,18 +117,8 @@
 
 > renameStatesFromSets :: (Ord e, Ord n, Show e, Show n) =>
 >                         FSA (Set n) e -> FSA String e
-> renameStatesFromSets f = FSA
->                          (alphabet f)
->                          (tmap remakeTransition $ transitions f)
->                          (tmap remakeState $ initials f)
->                          (tmap remakeState $ finals f)
->                          (isDeterministic f)
->     where remakeState         = State . (++ "}") . ('{':) .
->                                 commaSeparateList . nodeLabel
->           remakeTransition t  = Transition
->                                 (edgeLabel t)
->                                 (remakeState $ source t)
->                                 (remakeState $ destination t)
+> renameStatesFromSets = renameStatesBy
+>                        ((++ "}") . ('{' :) . commaSeparateList)
 
 > exportJeff :: (Ord e, Ord n, Show e) => FSA n e -> String
 > exportJeff f = unlines (inits : trans ++ [fins])
@@ -142,13 +143,13 @@
 >           el Epsilon    = "\x03B5"
 
 > untransliterate :: (Ord n) => FSA n String -> FSA n String
-> untransliterate f = FSA (tmap (fmap untransliterateString) (alphabet f))
+> untransliterate f = FSA (tmap untransliterateString (alphabet f))
 >                     (tmap untransliterateTransition (transitions f))
 >                     (initials f) (finals f) (isDeterministic f)
 
 > untransliterateTransition :: Transition n String -> Transition n String
 > untransliterateTransition t = Transition
->                               (untransliterateString `fmap` edgeLabel t)
+>                               (untransliterateString <$> edgeLabel t)
 >                               (source t)
 >                               (destination t)
 

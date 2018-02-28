@@ -254,7 +254,7 @@ lookup-time logarithmic in the number of distinct elements.
 
 > -- |Analogous to 'isIn', returning the number of occurrences of an
 > -- element in a 'Multiset'.
-> -- Time complexity is \(O(log n)\),
+> -- Time complexity is \(O(\log{n})\),
 > -- where \(n\) is the number of distinct elements in the 'Multiset'.
 > multiplicity :: (Ord a) => Multiset a -> a -> Integer
 > multiplicity (Multiset xs) x = maybe 0 (f . fst)  .

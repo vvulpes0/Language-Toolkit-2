@@ -35,11 +35,14 @@
 > printDot :: Bool -> Maybe FilePath -> Maybe FilePath -> IO ()
 > printDot trp infile outfile
 >     = maybe ($ stdin) (\f -> withFile f ReadMode) infile $ \h ->
->       output outfile =<<
->       dotify `fmap`
->       (if trp then transliterate else id) `fmap`
->       readJeff `fmap`
+>       output outfile  =<<
+>       dotify          <$>
+>       transform       <$>
+>       readJeff        <$>
 >       hGetContents h
+>     where transform = if trp
+>                       then transliterate
+>                       else id
 
 > output :: Maybe FilePath -> String -> IO ()
 > output file s = maybe ($ stdout) (\f -> withFile f WriteMode) file $ \h ->

@@ -67,7 +67,7 @@ Then use that to parse a string in Jeff format and generate an FSA
 >     | otherwise                 = FSA alphabet trans inits fins False
 >     where initialParse  = (tmap (keep (not . null) . splitOn '\n')
 >                           . splitOn '!') s
->           alphabet      = tmap edgeLabel trans
+>           alphabet      = unsymbols $ tmap edgeLabel trans
 >           trans         = readJeffTransitionList $ initialParse!!1
 >           inits         = readJeffStateList $ initialParse!!0
 >           fins          = readJeffStateList $ initialParse!!2
@@ -121,7 +121,7 @@ Transliterating Jeff's FSAs into the form used by my compiler:
 > -- &#x201c;L\`&#x201d;
 > -- form that we tend to use.
 > transliterate :: (Ord n) => FSA n String -> FSA n String
-> transliterate (FSA a t i f d) = FSA (tmap (fmap transliterateString) a)
+> transliterate (FSA a t i f d) = FSA (tmap transliterateString a)
 >                                 (tmap transliterateTransition t)
 >                                 i f d
 
