@@ -8,6 +8,8 @@
 > import System.IO (Handle, IOMode(ReadMode, WriteMode),
 >                   hFlush, hGetContents, hPutStr, stdin, stdout, withFile)
 
+> import Data.Functor ((<$>))
+
 > data Options = Options
 >     { optShowVersion   :: Bool
 >     , optShowUsage     :: Bool
