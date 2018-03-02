@@ -1,17 +1,66 @@
-> module Factors where
+> module Factors ( -- *Constructions
+>                  required
+>                , forbidden
+>                , buildLiteral
+>                , build
+>                , makeConstraint
+>                  -- *Logical Expressions
+>                , Factor(..)
+>                , Literal(..)
+>                , Disjunction(..)
+>                , Conjunction(..)
+>                  -- *Symbols
+>                  -- |@w/n/s/x/@ is a syllable whose weight is level \(n\)
+>                  -- and whose stress is level \(s\).
+>                  -- Stress ranges from 0-2,
+>                  -- while weight is in theory not limited.
+>                  -- Here, only weights up to level 4 are defined.
+>                  -- For both weight and stress,
+>                  -- \"plus\" means \"greater than zero\".
+>                  -- For stress, \"minus\" means \"less than two\".
+>                  -- Arbitrary weight is indicated by using @x@ for \(n\).
+>                  -- Arbitrary stress is indicated by omission of @s/x/@.
+>                , defaultAlphabet
+>                , w0s0, w0s1, w0s2, w0plus, w0minus, w0
+>                , w1s0, w1s1, w1s2, w1plus, w1minus, w1
+>                , w2s0, w2s1, w2s2, w2plus, w2minus, w2
+>                , w3s0, w3s1, w3s2, w3plus, w3minus, w3
+>                , w4s0, w4s1, w4s2, w4plus, w4minus, w4
+>                , wpluss0, wpluss1, wpluss2, wplusminus, wplus
+>                , wxs0, wxs1, wxs2, wxplus, wxminus, wx
+>                ) where
 
-> import Containers
 > import FSA
+
+> import Control.DeepSeq (NFData)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
-> data Factor e       =  Substring [Set e] Bool Bool | Subsequence [Set e] deriving (Eq, Ord, Read, Show)
+> -- |A substring or subsequence, from which to build constraints.
+> data Factor e
+>     = Substring {
+>         substring :: [Set e] -- ^The sequence of symbol types,
+>                              -- e.g. @[wxs0, wxs0]@
+>                              -- for two consecutive unstressed syllables.
+>       , headAnchored :: Bool -- ^Anchored to the head of the word?
+>       , tailAnchored :: Bool -- ^Anchored to the tail of the word?
+>       }
+>     | Subsequence [Set e]
+>     deriving (Eq, Ord, Read, Show)
+> -- |A constraint.
 > data Literal e      =  Literal Bool (Factor e) deriving (Eq, Ord, Read, Show)
+> -- |Multiple constraints, joined by @OR@.
 > data Disjunction e  =  Disjunction (Set (Literal e)) deriving (Eq, Ord, Read, Show)
+> -- |Multiple disjunctions, joined by @AND@.
 > data Conjunction e  =  Conjunction (Set (Disjunction e)) deriving (Eq, Ord, Read, Show) -- Primitive Constraint
 
+> -- |The factor is required to appear in every string.
+> -- Note that a conjunctive constraint of
+> -- (@required (Substring x True True)@)
+> -- restricts the stringset to at most one word.
 > required :: Factor e -> Literal e
 > required = Literal True
+> -- | The factor is not allowed to appear in any word.
 > forbidden :: Factor e -> Literal e
 > forbidden = Literal False
 
@@ -42,6 +91,7 @@
 >           fin'           = Set.fromList $ tmap (State . snd) tagged
 >           nextState      = succ . maximum $ tmap snd tagged
 >           fin            = singleton (State nextState)
+> -- |Build an 'FSA' representing a single constraint.
 > buildLiteral :: (Enum n, Ord n, Ord e) => Set e -> Literal e -> FSA n e
 > buildLiteral alpha (Literal isPositive factor) = buildFactor alpha factor isPositive
 > buildDisjunction :: (Enum n, NFData n, Ord n, NFData e, Ord e) =>
@@ -50,9 +100,13 @@
 > buildConjunction :: (Enum n, NFData n, Ord n, NFData e, Ord e) =>
 >                     Set e -> Conjunction e -> FSA n e
 > buildConjunction alpha (Conjunction disjunctions) = flatIntersection . tmap (buildDisjunction alpha) . Set.toList $ disjunctions
+> -- |Build an 'FSA' representing the conjunction of a set of
+> -- constraints provided in conjunctive normal form.
 > build :: (Enum n, NFData n, Ord n, NFData e, Ord e) =>
 >          Set e -> Set (Conjunction e) -> FSA n e
 > build alpha conjunctions = flatIntersection . tmap (buildConjunction alpha) . Set.toList $ conjunctions
+> -- |Combine inner lists by 'Disjunction',
+> -- and form a 'Conjunction' of the results.
 > makeConstraint :: (Ord e) => [[Literal e]] -> Conjunction e
 > makeConstraint = Conjunction . Set.fromList . tmap (Disjunction . Set.fromList)
 > makeConstraintList :: (Ord e) => [[[Literal e]]] -> Set (Conjunction e)
@@ -90,6 +144,7 @@
 > w3 = unionAll [w3s0, w3s1, w3s2]
 > w4 = unionAll [w4s0, w4s1, w4s2]
 > wx = unionAll [w0, w1, w2, w3, w4]
+> -- |Equivalent to 'wx'.
 > defaultAlphabet = wx
 
 > w0plus, w1plus, w2plus, w3plus, w4plus, wxplus :: Set String

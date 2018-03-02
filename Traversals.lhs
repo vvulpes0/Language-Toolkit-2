@@ -1,7 +1,21 @@
-> module Traversals where
+> {-# OPTIONS_HADDOCK show-extensions #-}
+> {-|
+> Module    : Traversals
+> Copyright : (c) 2017-2018 Jim Rogers and Dakotah Lambert
+> License   : BSD-style, see LICENSE
+> 
+> Find paths through an automaton.
+> -}
+> module Traversals ( Path(..)
+>                   , word
+>                   , initialsPaths
+>                   , rejectingPaths
+>                   , acyclicPaths
+>                   , extensions
+>                   , boundedCycleExtensions
+>                   ) where
 
 > import FSA
-> import Containers
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
@@ -16,23 +30,21 @@ A Path is
      ending at that state has been traversed.
 * the length of the path (depth of the terminal state)
 
-> data Path n e = Path [Symbol e] (Maybe (State n)) (Multiset (State n)) Integer
+> -- |A path through an 'FSA'.
+> data Path n e = Path { -- |Edge labels are gathered in reverse order,
+>                        -- so 'labels' is a reversed string.
+>                        labels        :: [Symbol e]
+>                        -- |Current 'State', if any.
+>                      , endstate      :: (Maybe (State n))
+>                        -- |States seen so far, with multiplicity.
+>                      , stateMultiset :: (Multiset (State n))
+>                        -- |The number of edges taken so far.
+>                      , depth         :: Integer
+>                      }
 >               deriving (Eq, Show)
-
-> endstate :: Path n e -> Maybe (State n)
-> endstate (Path _ s _ _ ) = s
-
-> stateMultiset :: Path n e -> Multiset (State n)
-> stateMultiset (Path _ _ ms _) = ms
-
-> labels :: Path n e -> [Symbol e]
-> labels (Path ls _ _ _) = ls
-
+> -- |The reversal of the 'labels' of the 'Path'.
 > word :: Path n e -> [Symbol e]
 > word = Prelude.reverse . labels
-
-> depth :: Path n e -> Integer
-> depth (Path _ _ _ d) = d
 
 In order to have a Multiset of Path, Path must be Ord:
 
@@ -72,6 +84,7 @@ The extensions of a path p are paths extending p by a single edge
 >                      (insert (destination t) (stateMultiset p))
 >                      (depth p + 1))
 
+> -- |Paths extending a given path by a single edge.
 > extensions :: (Ord e, Ord n) =>
 >               FSA n e -> Path n e -> Set (Path n e)
 > extensions fsa p = extend fsa p $
@@ -107,6 +120,8 @@ follow cycles at most bound times.  Note that the qualification is that
 the multiplicity of the state is $\leq$ bound; states that have not been
 visited have multiplicity 0.
 
+> -- |Extensions other than back-edges to a state that has been visited
+> -- more than a given number of times.
 > boundedCycleExtensions       :: (Ord e, Ord n) =>
 >                            FSA n e -> Integer -> Path n e -> Set (Path n e)
 > boundedCycleExtensions fsa b p = extend fsa p
@@ -139,8 +154,7 @@ the powerset graph in finding free forbidden factors.
 >                            transitions fsa)
 
 
-Initial open list for traversal from initial states
-
+> -- |Initial open list for traversal from initial states.
 > initialsPaths :: (Ord e, Ord n) => FSA n e -> Set (Path n e)
 > initialsPaths = tmap iPath . initials
 >     where iPath s = Path [] (Just s) (singleton s) 0
@@ -190,9 +204,6 @@ initialsPaths plus all their extensions that are of length <= bound
 > traversal fsa bound = traversalDFS fsa bound (initialsPaths fsa) empty
 
 
-acyclicPaths
-all paths from initialPaths that are acyclic
-
 acyclicPathsQ
 all paths from the initial open list that are acyclic / and are restricted to
 nodes that satisfy the given predicate
@@ -213,6 +224,8 @@ nodes that satisfy the given predicate
 >               | qf fsa p   = insert p closed
 >               | otherwise  = closed
 
+> -- |All paths from 'initialsPaths'
+> -- that do not contain cycles.
 > acyclicPaths :: (Ord e, Ord n) => FSA n e -> Set (Path n e)
 > acyclicPaths fsa = acyclicPathsQ truth fsa (initialsPaths fsa) empty
 
@@ -271,6 +284,8 @@ rejectsDFS fsa bound
 rejectingPaths fsa bound
 = all rejecting Paths of length <= bound
 
+> -- |All paths of length less than or equal to a given bound
+> -- that do not end in an accepting state.
 > rejectingPaths :: (Ord e, Ord n) => FSA n e -> Integer -> Set (Path n e)
 > rejectingPaths fsa bound = traversalQDFS rejecting
 >                            fsa bound (initialsPaths fsa) empty

@@ -8,7 +8,7 @@
 > {-|
 > Module      : Containers
 > Copyright   : (c) 2016-2018 Dakotah Lambert
-> LICENSE     : BSD-style, see file LICENSE
+> License     : BSD-style, see LICENSE
 > 
 > Containers: a uniform way to work with entities that may
 > contain other entities.
@@ -63,14 +63,25 @@ are defined to allow such polymorphism.
 >     isNotIn :: c -> a -> Bool
 >     contains :: a -> c -> Bool
 >     doesNotContain :: a -> c -> Bool
+>     -- |@(union a b)@ returns a collection of elements that
+>     -- are in one of @a@ or @b@, or both.
 >     union :: c -> c -> c
+>     -- |@(intersection a b)@ returns a collection of elements that
+>     -- are in both @a@ and @b@.
 >     intersection :: c -> c -> c
+>     -- |@(difference a b)@ returns a collection of elements that
+>     -- are in @a@ but not in @b@.
 >     difference :: c -> c -> c
+>     -- |@(symmetricDifference a b)@ returns a collection of elements
+>     -- that are in one of @a@ or @b@, but not both.
+>     symmetricDifference :: c -> c -> c
 >     empty :: c
 >     insert :: a -> c -> c
 >     singleton :: a -> c
+>     -- |@(isSubsetOf y x)@ tells whether @x@ is a subset of @y@.
 >     isSubsetOf :: (Eq c) => c -> c -> Bool
 >     isSubsetOf a b = intersection a b == b
+>     -- |@(isSupersetOf y x)@ tells whether @x@ is a superset of @y@.
 >     isSupersetOf :: (Eq c) => c -> c -> Bool
 >     isSupersetOf = flip isSubsetOf
 >
@@ -80,6 +91,7 @@ are defined to allow such polymorphism.
 >     doesNotContain = flip isNotIn
 >     insert a c = union (singleton a) c
 >     singleton a = insert a empty
+>     symmetricDifference a b = union (difference a b) (difference b a)
 >     {-# MINIMAL
 >       (contains | isIn),
 >       union,

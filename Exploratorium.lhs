@@ -1,9 +1,8 @@
 > module Exploratorium where
 
-> import Containers
 > import FSA
 > import ExtractSP
-> import ReadJeff
+> import Porters
 > import Data.List (sortBy)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
@@ -15,7 +14,7 @@ language satisfies the constraint, and a language "has" a constraint
 if there exists some word in the language that satisfies the
 constraint.  So "satisfies" is universal, and "has" is existential.
 
-> makeInt :: (Ord n, Ord e) => FSA n e -> FSA Int e
+> makeInt :: (Ord n, Ord e) => FSA n e -> FSA Integer e
 > makeInt = renameStates
 
 > satisfies :: (Ord n1, Ord n2, Ord e) =>
@@ -40,10 +39,10 @@ constraint.  So "satisfies" is universal, and "has" is existential.
 > filesToRead :: IO [FilePath]
 > filesToRead = fmap lines $ readFile "to_read"
 
-> readAndTag :: FilePath -> IO (FilePath, FSA Int String)
-> readAndTag file = fmap ((,) file . readJeff) $ readFile file
+> readAndTag :: FilePath -> IO (FilePath, FSA Integer String)
+> readAndTag file = fmap ((,) file . from Jeff) $ readFile file
 
-> readAll :: IO [(FilePath, FSA Int String)]
+> readAll :: IO [(FilePath, FSA Integer String)]
 > readAll = sequence . map readAndTag =<< filesToRead
 
 > lacking :: (Eq x, Ord a1, Ord a2, Ord b) =>
@@ -54,7 +53,7 @@ constraint.  So "satisfies" is universal, and "has" is existential.
 >           FSA a1 b -> [(x, FSA a2 b)] -> [x]
 > having constraint = tmap fst . filter (has constraint . snd)
 
-> languages :: (t1 -> [(FilePath, FSA Int String)] -> [String]) -> t1 -> IO ()
+> languages :: (t1 -> [(FilePath, FSA Integer String)] -> [String]) -> t1 -> IO ()
 > languages f c = mapM_ putStrLn =<< fmap (f c) readAll
 
 > checkPT :: IO [FilePath]

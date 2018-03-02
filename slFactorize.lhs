@@ -60,23 +60,24 @@ slFactorize Name < fsa (in Jeff's format)
 \end{itemize}
 
 > module Main (main) where
-> 
-> import SLfactors
+
+> import ExtractSL
 > import Factors
-> import Exporters
 > import Mungers
 > import FSA
-> import ReadJeff
-> 
+> import Dot (exportDotWithName)
+> import Porters
+
+> import Data.Set (Set)
 > import qualified Data.Set as Set
-> 
+
 > import System.Environment as Env
-> 
+
 > import GHC.IO.Handle
 > import System.IO
 
 
-Get name of pattern from first argument for dotifyWithName  
+Get name of pattern from first argument for exportDotWithName
 
 > getName ::  IO String
 > getName = getArgs >>= return.aName
@@ -85,8 +86,8 @@ Get name of pattern from first argument for dotifyWithName
 
 Get FSA in multiline format, as in STII fsasJeff
 
-> getFSA :: IO (FSA Int String)
-> getFSA = getContents >>= return.readJeff.transLit
+> getFSA :: IO (FSA Integer String)
+> getFSA = getContents >>= return . from Jeff . transLit
 
 Write fsa as show show of Haskell datatype (as per Dakotah's usage)
  to name.fsa.hs and its dot format to name.fsa.dot
@@ -97,7 +98,7 @@ Returns fsa wrapped in IO
 > writeFSA name ext fsa =
 >     do
 >       writeFile (name++"."++ext++".hs") (show fsa)
->       writeFile (name++"."++ext++".dot") (dotifyWithName (deFang name) fsa)
+>       writeFile (name++"."++ext++".dot") (exportDotWithName (deFang name) fsa)
 >       return fsa
 
 Convert to PSG and write as show show and its dot as with fsa\\
@@ -105,11 +106,11 @@ Returns the PSG wrapped in IO\\
 Q: Why does generatePowerSetGraph fix elt type of stateset as Int?
 
 > writePSG :: (Ord a, Show a, Ord b, Show b) => 
->                      String -> (FSA b a) -> IO (FSA (Set.Set Int) a)
+>                      String -> (FSA b a) -> IO (FSA (Set Integer) a)
 > writePSG name fsa =
 >     do
 >       writeFile (name++".psg.hs") (show psg)
->       writeFile (name++".psg.dot") (dotifyWithName (deFang name) (encodeStates psg))
+>       writeFile (name++".psg.dot") (exportDotWithName (deFang name) (encodeStates psg))
 >       return psg
 >           where psg = powersetGraph fsa
 > 
@@ -124,7 +125,7 @@ Q: Why does generatePowerSetGraph fix elt type of stateset as Int?
 >       putStr ((show (Set.size free)) ++ ", ") 
 >       putStr ((show (Set.size finals)) ++ ", ")
 >       writeFSA name ("SL") slFSA
->       return (residue slFSA fsa)
+>       return (renameStates $ residue slFSA fsa)
 >         where
 >           ffs = forbiddenFactors fsa
 >           (units,words,inits,free,finals) = ffs
@@ -142,7 +143,7 @@ Q: Why does generatePowerSetGraph fix elt type of stateset as Int?
 >          fsa <- getFSA
 >          writeFSA name "fsa" (mungeToInt fsa)
 >          psg <- writePSG name (mungeToInt fsa)
->          putStr (name ++ ", " ++ (show (slPSGQ psg)) ++ ", ")
+>          putStr (name ++ ", " ++ (show (slQ fsa)) ++ ", ")
 >          putStr ((show (Set.size(states (mungeToInt fsa)))) ++ ", ")
 >          putStr (show (Set.size(states psg)) ++ ", ")
 >          res <- writeFactors name (mungeToInt fsa)

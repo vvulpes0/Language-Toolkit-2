@@ -1,11 +1,10 @@
 > module Main where
 
 > import ConstraintCompiler
-> import Exporters
+> import Porters
 
 > import Factors
 > import FSA
-> import Containers
 
 > import Control.DeepSeq
 > import Control.Parallel.Strategies
@@ -58,7 +57,7 @@
 >                      ("c146",c146)]
 >       pconstraints = constraints `using` parListChunk 1 rdeepseq
 >   mapM_ (uncurry write) pconstraints
->       where prepare (a, b) = (a, exportJeff $ untransliterate b)
+>       where prepare (a, b) = (a, to Jeff $ untransliterate b)
 
 > write :: FilePath -> String -> IO ()
 > write fp str = withFile fp WriteMode $ \h -> do

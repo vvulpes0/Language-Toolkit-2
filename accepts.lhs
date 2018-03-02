@@ -31,11 +31,10 @@
 >     
 > import FSA
 > 
-> import ReadJeff
+> import Porters
 > 
 > -- import SLfactors
 > import Factors
-> import Exporters
 > import Mungers
 > import Traversals
 >     
@@ -52,13 +51,13 @@
 > burstnl = burstWith '\n'
 > 
 > getBound ::  IO Integer
-> getBound = getArgs >>= return.read.head
+> getBound = getArgs >>= return . read . head
 > 
-> getFSA :: IO (FSA Int String)
-> getFSA = getContents >>= return.readJeff.transLit
+> getFSA :: IO (FSA Integer String)
+> getFSA = getContents >>= return . from Jeff . transLit
 > 
-> getFSAbyName :: String -> IO (FSA Int String)
-> getFSAbyName path = readFile path >>= return.readJeff.transLit
+> getFSAbyName :: String -> IO (FSA Integer String)
+> getFSAbyName path = readFile path >>= return . from Jeff . transLit
 > 
 > shorterOrLessThan :: String -> String -> Ordering
 > shorterOrLessThan l r

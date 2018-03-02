@@ -23,19 +23,47 @@
  Functions for retrieving forbidden factors from automata for SLk
   stringsets. 
 
-
-> module SLfactors where
+> {-# OPTIONS_HADDOCK show-extensions #-}
+> {-|
+> Module    : ExtractSL
+> Copyright : (c) 2017-2018 Jim Rogers and Dakotah Lambert
+> License   : BSD-style, see LICENSE
+> 
+> Find forbidden substrings of an automaton.
+> -}
+> module ExtractSL ( ForbiddenSubstrings
+>                    -- *Extracting forbidden substrings
+>                  , forbiddenFactors
+>                  , forbiddenFactorsWithAlphabet
+>                  , forbiddenFactorsWithBound
+>                  , forbiddenFactorsWithAlphabetWithBound
+>                    -- *Building automata
+>                  , buildFSA
+>                    -- *Determining SL
+>                  , isSL
+>                  , slQ
+>                  ) where
 
 > import FSA
 > import Traversals
 > import Factors
-> import Containers
 > 
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 > import qualified Data.List as List
 > import qualified Data.Map as Map
 
+> -- |Returns @True@ iff the stringset represented by the given 'FSA'
+> -- is Strictly Local, that is,
+> -- if it satisfies Suffix-Substition Closure for
+> -- some specific window size \(k\).
+> isSL :: (Ord e, Ord n) => FSA n e -> Bool
+> isSL = (> 0) . slQ
+
+> -- |Returns the smallest window size for which
+> -- the stringset represented by the given 'FSA'
+> -- satisfies Suffix-Substitution Closure,
+> -- or @0@ if there is no such \(k\).
 > slQ :: (Ord e, Ord n) => FSA n e -> Integer
 > slQ fsa = slPSGQ (powersetGraph fsa)
 
@@ -97,15 +125,26 @@ psgQ is the label of the initial state of the PSG, i.e., the stateset of
     defined in Factors.hs, which is of type Set(String), its applicable only 
     to FSA String b.
 
+> -- |A convenience-type for declaring collections of  forbidden substrings.
+> type ForbiddenSubstrings e = ( ForbiddenUnits e
+>                              , ForbiddenWords e
+>                              , ForbiddenInitialSubstrings e
+>                              , ForbiddenFreeSubstrings e
+>                              , ForbiddenFinalSubstrings e
+>                              )
+> type ForbiddenUnits e = Set e
+> type ForbiddenWords e = Set [e]
+> type ForbiddenInitialSubstrings e = Set [e]
+> type ForbiddenFreeSubstrings e = Set [e]
+> type ForbiddenFinalSubstrings e = Set [e]
 
+> -- |The forbidden substrings of the given 'FSA',
+> -- the alphabet of which must be a subset of the
+> -- provided alphabet.
 > forbiddenFactorsWithAlphabet:: (Ord e, Ord n) =>
->                              Set e -- alphabet
->                                      -> FSA n e
->                                      -> ( (Set e),  -- unitFFs
->                                           (Set [e]),  -- fwords
->                                           (Set [e]),  -- initialFFs
->                                           (Set [e]),  -- freeFFs
->                                           (Set [e]) ) -- finalFFs
+>                                Set e
+>                             -> FSA n e
+>                             -> ForbiddenSubstrings e
 > forbiddenFactorsWithAlphabet alph fsa = (uFFs, fWs, iFFs, frFFs, fiFFs)
 >     where
 >        psg = powersetGraph fsa
@@ -116,12 +155,9 @@ psgQ is the label of the initial state of the PSG, i.e., the stateset of
 >        frFFs = freeFFsPSG psg k
 >        fiFFs = finalFFsPSG psg (max 0 (k-1))
 
-> forbiddenFactors:: (Ord b) => FSA b String
->                                -> ( (Set (String)),  -- unitFFs
->                                     (Set [String]),  -- fWords
->                                     (Set [String]),  -- initialFFs
->                                     (Set [String]),  -- freeFFs
->                                     (Set [String]) ) -- finalFFs
+> -- |The forbidden substrings of the given 'FSA', provided that its
+> -- alphabet is a subset of our default alphabet.
+> forbiddenFactors:: (Ord n) => FSA n String -> ForbiddenSubstrings String
 > forbiddenFactors fsa = forbiddenFactorsWithAlphabet defaultAlphabet fsa
 
 
@@ -138,15 +174,15 @@ is negative, it is computed to be slQ-2.  If either bound or slQ-2 is less than
 most, \epsilon will be gathered.
 
 
+> -- |The forbidden substrings of the given 'FSA',
+> -- the alphabet of which must be a subset of the
+> -- provided alphabet.  Takes only boundedly many
+> -- iterations of each cycle in the powerset graph.
 > forbiddenFactorsWithAlphabetWithBound :: (Ord e, Ord n) =>
->                                         Set e -- alphabet
+>                                         Set e   -- alphabet
 >                                      -> Integer -- bound on iterations of cycles
 >                                      -> FSA n e
->                                      -> ( (Set e),  -- unitFFs
->                                           (Set [e]),  -- fwords
->                                           (Set [e]),  -- initialFFs
->                                           (Set [e]),  -- freeFFs
->                                           (Set [e]) ) -- finalFFs
+>                                      -> ForbiddenSubstrings e
 > forbiddenFactorsWithAlphabetWithBound alph bnd fsa = 
 >     (uFFs, fWs, iFFs, frFFs, fiFFs)
 >     where
@@ -161,14 +197,14 @@ most, \epsilon will be gathered.
 >        frFFs = freeFFsPSG psg bnd
 >        fiFFs = finalFFsPSG psg bnd
 
-> forbiddenFactorsWithBound :: (Ord b) =>
+> -- |The forbidden substrings of the given 'FSA',
+> -- the alphabet of which must be a subset of our
+> -- default alphabet.  Takes only boundedly many
+> -- iterations of each cycle in the powerset graph.
+> forbiddenFactorsWithBound :: (Ord n) =>
 >                                   Integer -- bound
->                                -> FSA b String
->                                -> ( (Set String),  -- unitFFs
->                                     (Set [String]),  -- fWords
->                                     (Set [String]),  -- initialFFs
->                                     (Set [String]),  -- freeFFs
->                                     (Set [String]) ) -- finalFFs
+>                                -> FSA n String
+>                                -> ForbiddenSubstrings String
 > forbiddenFactorsWithBound = 
 >     forbiddenFactorsWithAlphabetWithBound defaultAlphabet
 
@@ -194,7 +230,7 @@ is in the edgeset of the
 
 > unitFFsWithAlphabet :: (Ord a, Ord b) => Set a -- alphabet
 >                                -> (FSA (Set b) a ) -- psGraph
->                                -> Set a
+>                                -> ForbiddenUnits a
 > unitFFsWithAlphabet alphs psg =
 >     union (alphs `difference` unsymbols (tmap edgeLabel initialTrans))
 >           (unsymbols (tmap edgeLabel oneFFs))
@@ -205,7 +241,7 @@ is in the edgeset of the
 >           oneFFs = Set.filter(((State Set.empty) ==).destination) initialTrans
 
 > unitFFs :: (Ord a, Ord b) => (FSA (Set b) a) -- psGraph
->                                -> Set a
+>                                -> ForbiddenUnits a
 > unitFFs psg = unitFFsWithAlphabet (alphabet psg) psg
 
 
@@ -224,10 +260,10 @@ is in the edgeset of the
 
 > fWords :: (Ord a, Ord b) => FSA b a
 >                             -> Integer             -- bound
->                             -> Set([a]) -- initialFFs
->                             -> Set([a]) -- freeFFs
->                             -> Set([a]) -- finalFFs
->                             -> Set([a])
+>                             -> ForbiddenInitialSubstrings a
+>                             -> ForbiddenFreeSubstrings a
+>                             -> ForbiddenFinalSubstrings a
+>                             -> ForbiddenWords a
 > fWords fsa bound iFFs frFFs fiFFs =
 >     Set.fromList
 >            (filter
@@ -257,17 +293,18 @@ k is only significant if it is 0
 
 > initialFFs :: (Ord a, Ord b) => FSA b a
 >                                 -> Integer                 -- k
->                                 -> Set [a]
+>                                 -> ForbiddenInitialSubstrings a
 > initialFFs fsa k = 
 >     Set.map List.reverse (finalFFs rFSA k)
 >         where rFSA = (FSA.normalize (FSA.reverse fsa))
 
-> freeFFs :: (Ord a, Ord b) => (FSA b a) -> Integer -> Set [a]
+> freeFFs :: (Ord a, Ord b) =>
+>            (FSA b a) -> Integer -> ForbiddenFreeSubstrings a
 > freeFFs fsa k = freeFFsPSG (powersetGraph fsa) k
 
 > -- k is only significant if it is 0
 > freeFFsPSG :: (Ord a, Ord b) => (FSA (Set b) a) -> Integer ->
->                                  Set [a]
+>                                  ForbiddenFreeSubstrings a
 > freeFFsPSG psg k
 >     = Set.fromList (gatherFFs psgR k (Set.singleton stateQ) initialFront [])
 >     where 
@@ -296,13 +333,13 @@ k is only significant if it is 0
 
 > finalFFs :: (Ord a, Ord b) => (FSA b a)
 >                                -> Integer                 -- k
->                                -> Set [a]
+>                                -> ForbiddenFinalSubstrings a
 > finalFFs fsa k = finalFFsPSG (powersetGraph fsa) k
 
 > finalFFsPSG :: (Ord a, Ord b) =>
 >                   (FSA (Set b) a)
 >                       -> Integer                 -- k
->                       -> Set [a]
+>                       -> ForbiddenFinalSubstrings a
 > finalFFsPSG psg k --fFFs
 >     = Set.fromList (gatherFFs psgR k
 >                                   (Set.singleton stateQ) -- goal
@@ -317,7 +354,7 @@ k is only significant if it is 0
 >       stateEmpty = (State (Set.empty))
 
 
-trimRevPSGPSG psg is reverse of
+trimRevPSG psg is reverse of
    (psg with in-edges to Q and out-edges from $\emptyset$ removed)
    note that such edges are necessarily self-edges
 
@@ -361,8 +398,9 @@ ow follow singleton cycles which, since k>0, will be the only cycles
 >       acceptableExtensions p
 >           | (bound < 0) = Set.toList (extensions psg p)
 >           | otherwise = Set.toList (boundedCycleExtensions psg bound p)
->           -- | ((depth p) >= bound) = Set.toList (acyclicExtensions psg p)
->           -- | otherwise = Set.toList (extensions psg p)
+
+had         | ((depth p) >= bound) = Set.toList (acyclicExtensions psg p)
+had         | otherwise = Set.toList (extensions psg p)
 
 
 passK scans extensions of kth frontier for length k FFs 
@@ -399,68 +437,61 @@ This is using forbiddenFactors, hence assumes FSA String b
 
 buildFSAs FFs -> tuple of lists of FSAs for each FF
 
+> buildFSAs :: FSA Integer String -> ( Set String,
+>                                      [FSA Integer String],
+>                                      [FSA Integer String],
+>                                      [FSA Integer String],
+>                                      [FSA Integer String])
+> buildFSAs = buildFSAsFromFFs . forbiddenFactors
 
-> buildFSAs :: FSA Int String
->                                -> ( Set String,    -- alphabet
->                                     [FSA Int String],  -- words
->                                     [FSA Int String],  -- initials
->                                     [FSA Int String],  -- free
->                                     [FSA Int String] ) -- finals
-> buildFSAs fsa = (alphs, was, ias, fras, fias)
+
+> buildFSAsFromFFs :: ForbiddenSubstrings String
+>                 -> ( Set String,    -- alphabet
+>                      [FSA Integer String],  -- words
+>                      [FSA Integer String],  -- initials
+>                      [FSA Integer String],  -- free
+>                      [FSA Integer String] ) -- finals
+> buildFSAsFromFFs (ufs,fws,ifs,frfs,fifs) = (alphs, was, ias, fras, fias)
 >     where
->       (ufs, fws, ifs, frfs, fifs) = forbiddenFactors fsa
 >       alphs = Set.difference defaultAlphabet ufs
 >       f x = (renameStates . minimize . complement) x `asTypeOf` x
 >       g   = map singleton
->       was = map (f . singletonWithAlphabet alphs)
->             (Set.toList fws) -- no longer adds epsilon
->       ias =  map (f . initialLocal True alphs . g)
->              (Set.toList ifs)
->       fras =  map (f . local True alphs . g)
->               (Set.toList frfs)
->       fias =  map (f . finalLocal True alphs . g)
->               (Set.toList fifs)
+>       was = map (buildLiteral alphs . forbidden .
+>                  (\x -> Substring x True True) . g)
+>             (Set.toList fws)
+>       ias = map (buildLiteral alphs . forbidden .
+>                  (\x -> Substring x True False) . g)
+>             (Set.toList ifs)
+>       fras = map (buildLiteral alphs . forbidden .
+>                   (\x -> Substring x False False) . g)
+>              (Set.toList frfs)
+>       fias = map (buildLiteral alphs . forbidden .
+>                   (\x -> Substring x False True) . g)
+>              (Set.toList fifs)
 
 
 build FSA from FSAs
 
 
 > combineFSAs :: (Set String,    -- alphabet
->                 [FSA Int String],  -- words
->                 [FSA Int String],  -- initials
->                 [FSA Int String],  -- free
->                 [FSA Int String] ) -- finals
->                 -> FSA Int String
+>                 [FSA Integer String],  -- words
+>                 [FSA Integer String],  -- initials
+>                 [FSA Integer String],  -- free
+>                 [FSA Integer String] ) -- finals
+>                 -> FSA Integer String
 > combineFSAs (alphs,was,ias,fras,fias) =
 >     flatIntersection
 >     (totalWithAlphabet alphs : concat [was, ias, fras, fias])
 
 
 build FSA from forbidden factors
-Since this uses renameStates the State type of the result will be Int
+Since this uses renameStates the State type of the result will be Integer
 This really needs to be as strict as possible, which I hope it isn't
 
-
-> buildFSA :: ( (Set String),  -- unitFFs
->               (Set [String]),  -- fWords
->               (Set [String]),  -- initialFFs
->               (Set [String]),  -- freeFFs
->               (Set [String]) ) -- finalFFs
->             -> FSA Int String
-> buildFSA (ufs, fws, ifs, frfs, fifs) =
->     combineFSAs (alphs,was,ias,fras,fias) -- renameStates (minimize fia)
->     where
->       alphs = Set.difference defaultAlphabet ufs
->       f x = (renameStates . minimize . complement) x `asTypeOf` x
->       g   = map singleton
->       was = map (f . singletonWithAlphabet alphs)
->             (Set.toList fws) -- no longer adds epsilon
->       ias =  map (f . initialLocal True alphs . g)
->              (Set.toList ifs)
->       fras =  map (f . local True alphs . g)
->               (Set.toList frfs)
->       fias =  map (f . finalLocal True alphs . g)
->               (Set.toList fifs)
+> -- |Create an 'FSA' satisfying the conditions imposed by the
+> -- given sets of forbidden substrings.
+> buildFSA :: ForbiddenSubstrings String -> FSA Integer String
+> buildFSA = combineFSAs . buildFSAsFromFFs
 
 
 residue FFs -> FSA -> FSA
@@ -470,7 +501,7 @@ This throws the error "Undergenerate" if the opposite difference is
 Logically this can't happen, but "Undergenerate" is much less embarassing
   than "This can't happen"
 
-
+> {-
 > residue :: (Integral c, Ord b, Ord d) => 
 >                   FSA d String -> FSA b String -> FSA c String
 > residue ffsa fsa 
@@ -479,17 +510,13 @@ Logically this can't happen, but "Undergenerate" is much less embarassing
 >     where
 >       under = minimize  (difference (makeInt fsa) (makeInt ffsa))
 >       over = minimize  (difference (makeInt ffsa) (makeInt fsa))
->       makeInt :: (Ord n, Ord e) => FSA n e -> FSA Int e
+>       makeInt :: (Ord n, Ord e) => FSA n e -> FSA Integer e
 >       makeInt = renameStates
 
 > residueFromFFs :: (Integral c, Ord b) =>
->                  ((Set String),  -- unitFFs
->                   (Set [String]),  -- fWords
->                   (Set [String]),  -- initialFFs
->                   (Set [String]),  -- freeFFs
->                   (Set [String]) ) -- finalFFs
->                    -> FSA b String
->                    -> FSA c String 
+>                   ForbiddenSubstrings String
+>                -> FSA b String
+>                -> FSA c String 
 > residueFromFFs fFactors fsa 
 >     | (not . isNull) under = error "Undergenerate"
 >     | otherwise = renameStates over
@@ -497,7 +524,8 @@ Logically this can't happen, but "Undergenerate" is much less embarassing
 >       ffsa = buildFSA fFactors
 >       under = minimize  (difference (makeInt fsa) (makeInt ffsa))
 >       over = minimize  (difference (makeInt ffsa) (makeInt fsa))
->       makeInt :: (Ord n, Ord e) => FSA n e -> FSA Int e
+>       makeInt :: (Ord n, Ord e) => FSA n e -> FSA Integer e
 >       makeInt = renameStates
+> -}
 
 \end{document}

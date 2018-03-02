@@ -1,16 +1,23 @@
-> {-# OPTIONS_HADDOCK show-extensions #-}
+> {-# OPTIONS_HADDOCK hide,show-extensions #-}
 > {-|
-> Module : ReadJeff
+> Module : Jeff
 > Copyright : (c) 2016-2018 Dakotah Lambert
+> LICENSE : BSD-style, see LICENSE
+> 
+> This module provides methods to convert automata to and from
+> Jeff's format.
 > -}
-> module ReadJeff (
->                  readJeff,
->                  transliterate,
->                  transliterateString
->                 ) where
+> module Jeff ( -- *Importing
+>               readJeff
+>             , transliterate
+>             , transliterateString
+>               -- *Exporting
+>             , exportJeff
+>             , untransliterate
+>             , untransliterateString
+>             ) where
 
 > import FSA
-> import Containers
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 > import System.IO
@@ -35,8 +42,8 @@ To start, we'll define a function to split a string on a delimiter
 
 Then use that to parse a string in Jeff format and generate an FSA
 
-> -- |Import an automaton from its representation in Jeff's format.
-> -- The resulting 'Int' node labels may have nothing to do with the
+> -- |Import an 'FSA' from its representation in Jeff's format.
+> -- The resulting @Int@ node labels may have nothing to do with the
 > -- node labels in the source.
 > readJeff :: String -> FSA Int String
 > readJeff = renameStates . readJeffWithoutRelabeling
@@ -125,4 +132,64 @@ Transliterating Jeff's FSAs into the form used by my compiler:
 >                                 (tmap transliterateTransition t)
 >                                 i f d
 
-< main = interact ((++ "\n") . show . readAndRelabelJeff)
+
+Reading Data From Jeff's Format
+===============================
+
+> -- |Convert an 'FSA' to its representation in Jeff's format.
+> exportJeff :: (Ord e, Ord n, Show e) => FSA n e -> String
+> exportJeff f = unlines (inits : trans ++ [fins])
+>     where list = keep (/= ' ') . commaSeparateList . tmap nodeLabel
+>           fins = list (finals f')
+>           inits = list (initials f') ++ "!"
+>           trans = bangTerminate . Set.toAscList .
+>                   tmap exportJeffTransition $ transitions f'
+>           f' = normalize f
+
+> bangTerminate :: [String] -> [String]
+> bangTerminate [] = []
+> bangTerminate (x:[]) = [x ++ "!"]
+> bangTerminate (x:xs) = x : bangTerminate xs
+
+> exportJeffTransition :: (Show e, Show n) => Transition n e -> String
+> exportJeffTransition t = nl (source t) ++ "," ++
+>                          nl (destination t) ++ "," ++
+>                          el (edgeLabel t)
+>     where nl = nq . show . nodeLabel
+>           el (Symbol a) = nq $ show a
+>           el Epsilon    = "\x03B5"
+>           nq = keep (/= '"')
+
+> -- |The inverse of 'transliterate'.
+> untransliterate :: (Ord n) => FSA n String -> FSA n String
+> untransliterate f = FSA (tmap untransliterateString (alphabet f))
+>                     (tmap untransliterateTransition (transitions f))
+>                     (initials f) (finals f) (isDeterministic f)
+
+> untransliterateTransition :: Transition n String -> Transition n String
+> untransliterateTransition t = Transition
+>                               (untransliterateString <$> edgeLabel t)
+>                               (source t)
+>                               (destination t)
+
+> -- |The inverse of 'transliterateString'.
+> untransliterateString :: String -> String
+> untransliterateString ('L':xs) = "w0." ++ untransliterateStress xs
+> untransliterateString ('H':xs) = "w1." ++ untransliterateStress xs
+> untransliterateString ('S':xs) = "w2." ++ untransliterateStress xs
+> untransliterateString ('X':xs) = "w3." ++ untransliterateStress xs
+> untransliterateString ('Y':xs) = "w4." ++ untransliterateStress xs
+> untransliterateString xs       = xs
+
+> untransliterateStress :: String -> String
+> untransliterateStress [] = "s0"
+> untransliterateStress "`" = "s1"
+> untransliterateStress "'" = "s2"
+> untransliterateStress xs  = xs
+
+> commaSeparateList :: (Collapsible c, Show b) => c b -> String
+> commaSeparateList xs
+>     | size xs == 0  = ""
+>     | size xs == 1  = show x
+>     | otherwise     = show x ++ ", " ++ commaSeparateList xs'
+>     where (x, xs') = choose xs

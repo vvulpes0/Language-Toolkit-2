@@ -1,9 +1,7 @@
 > module Main where
 
-> import Exporters (dotify)
-> import ReadJeff (readJeff, transliterate)
+> import Porters (to, from, Dot(Dot), Jeff(Jeff), transliterate)
 
-> import Control.DeepSeq
 > import System.Console.GetOpt
 > import System.Environment (getArgs)
 > import System.Exit (exitFailure)
@@ -36,9 +34,9 @@
 > printDot trp infile outfile
 >     = maybe ($ stdin) (\f -> withFile f ReadMode) infile $ \h ->
 >       output outfile  =<<
->       dotify          <$>
+>       to Dot          <$>
 >       transform       <$>
->       readJeff        <$>
+>       from Jeff       <$>
 >       hGetContents h
 >     where transform = if trp
 >                       then transliterate

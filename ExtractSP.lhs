@@ -8,6 +8,7 @@
 %format Epsilon = "\varepsilon"
 %format (FSA a b c d e) = "\Tup{Q," a "," b "," c "," d "}"
 %format FSAt = "\textit{FSA}"
+%format isSP' = isSP
 %format isSSQ = "(\sqsubseteq)"
 %format isIn (a) = "(\in" a ")"
 %format isNotIn (a) = "\not\in" a
@@ -23,6 +24,7 @@
 %format size (a) = "\left\|" a "\right\|"
 %format sortBy f = sort "_{" f "}"
 %format ssigma = "\Sigma"
+%format subsequenceClosure' = subsequenceClosure
 %format tmap = "\textit{map}"
 %format Transition a b c = "\Transition[" a "]{" b "}{" c "}"
 %format `union` = "\cup"
@@ -70,8 +72,21 @@
 
 %if false
 
-> module ExtractSP where
-> import Containers
+> {-# OPTIONS_HADDOCK show-extensions #-}
+> {-|
+> Module    : ExtractSP
+> Copyright : (c) 2017 Dakotah Lambert
+> License   : BSD-style, see LICENSE
+> 
+> Find forbidden subsequences of an automaton.
+> -}
+
+> module ExtractSP ( extractForbiddenSSQs
+>                  , isSP
+>                  , isSSQ
+>                  , subsequenceClosure
+>                  , spresidue
+>                  ) where
 > import FSA
 > import Traversals
 > import Data.List (sortBy)
@@ -109,6 +124,14 @@ If $w\in\SI(v)$, we say $v$ is a \emph{subsequence} of $w$,
 $v\sqsubseteq w$.
 Determining whether $v$ is a subsequence of $w$ is quite a simple algorithm:
 
+%if false
+Documentation
+
+> -- |@(isSSQ a b)@ returns true iff @b@ contains the symbols of @a@
+> -- in order, but not necessarily adjacently.
+
+%endif
+
 > isSSQ :: (Eq a) => [a] -> [a] -> Bool
 > []      `isSSQ`  _   =  True
 > _       `isSSQ`  []  =  False
@@ -140,13 +163,19 @@ that inserts a transition on $\EmptyString$
 wherever a transition occurred in $\delta$.
 
 
-> subsequenceClosure :: (Ord n, Ord e) => FSAt n e -> FSAt n e
-> subsequenceClosure (FSA ssigma delta q_0 qf d)  =  FSA ssigma (delta `union` delta_prime) q_0 qf False
+> subsequenceClosure' :: (Ord n, Ord e) => FSAt n e -> FSAt n e
+> subsequenceClosure' (FSA ssigma delta q_0 qf d)  =  FSA ssigma (delta `union` delta_prime) q_0 qf False
 >     where  delta_prime  =  tmap (\(Transition x a b) -> (Transition Epsilon a b)) delta
 
 %if false
 
-> spresidue :: (Enum n, Ord n, Ord e) => FSAt n e -> FSAt Integer e
+> -- |Returns an 'FSA' that accepts every string accepted by the
+> -- original, as well as every subsequence of these strings.
+> subsequenceClosure :: (Ord n, Ord e) => FSA n e -> FSA n e
+> subsequenceClosure = subsequenceClosure'
+
+> -- |The coresidue of an 'FSA' and its subsequence closure.
+> spresidue :: (Enum n, Ord n, Ord e) => FSA n e -> FSA Integer e
 > spresidue f = renameStates . minimize . determinize $
 >               (complSpApprox f `union` f)
 >     where complSpApprox  =  renameStates . complement . subsequenceClosure
@@ -230,8 +259,17 @@ $\Language{\Automaton{M}^\prime}$
 will give us the strictly piecewise constraints on
 $\Language{\Automaton{M}}$.
 
-> extractForbiddenSSQs :: (Ord n, Ord e) => FSAt n e -> Set [e]
+
+%if false
+
+> -- |Given an 'FSA' \(A\),
+> -- returns the set of subsequences \(v\) such that
+> -- for all words \(w\), \(v\sqsubseteq w\) implies
+> -- that \(w\) is not accepted by \(A\).
+> extractForbiddenSSQs :: (Ord n, Ord e) => FSA n e -> Set [e]
 > extractForbiddenSSQs = collectMinimalFSSQs
+
+%endif
 
 Since $\Automaton{M}^\prime$ is $\SP$,
 it suffices to simply traverse $\Automaton{M}^\prime$,
@@ -279,7 +317,17 @@ the same stringset as its source.
 This makes for quite the simple test to determine
 whether a stringset is $\SP$:
 
-> isSP :: (Ord n, Ord e) => FSAt n e -> Bool
-> isSP f = f == subsequenceClosure f
+> isSP' :: (Ord n, Ord e) => FSAt n e -> Bool
+> isSP' f = f == subsequenceClosure f
+
+%if false
+
+> -- |Returns @True@ iff the stringset represented by the given 'FSA'
+> -- is Strictly Piecewise, that is,
+> -- if the 'FSA' accepts all subsequences of every string it accepts.
+> isSP :: (Ord n, Ord e) => FSA n e -> Bool
+> isSP = isSP'
+
+%endif
 
 \end{document}

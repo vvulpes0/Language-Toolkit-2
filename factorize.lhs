@@ -1,10 +1,8 @@
 > module Main where
-> import Containers
-> import Exporters
+> import ExtractSL
 > import ExtractSP
 > import FSA
-> import ReadJeff
-> import SLfactors
+> import Porters
 
 > import Control.Concurrent
 > import Control.DeepSeq
@@ -44,9 +42,9 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 > main = do
 >   createDirectoryIfMissing True "Results"
 >   withFile "to_read" ReadMode $ \h -> do
->          filePaths <- lines `fmap` hGetContents h
+>          filePaths <- lines <$> hGetContents h
 >          tagged <- mapM
->                    (\fp -> (,) (makeName fp) `fmap` readJeffFromFile fp)
+>                    (\fp -> (,) (makeName fp) <$> readJeffFromFile fp)
 >                    filePaths
 >          mapM_ (forkChild . uncurry process) tagged
 >          waitForChildren
@@ -56,9 +54,9 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >                replace a b = map (\x -> if x == a then b else x)
 >                makeName = replace '_' ' ' . noSuffix . basename
 
-> readJeffFromFile :: FilePath -> IO (FSA Int String)
+> readJeffFromFile :: FilePath -> IO (FSA Integer String)
 > readJeffFromFile fp = withFile fp ReadMode $ \h -> do
->                         fsa <- readJeff `fmap` hGetContents h
+>                         fsa <- from Jeff <$> hGetContents h
 >                         return $!! fsa
 
 
@@ -82,7 +80,7 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >           mr = fm frees
 >           mf = fm (ta finals)
 
-> slApproximation :: (Ord n) => FSA n String -> FSA Int String
+> slApproximation :: (Ord n) => FSA n String -> FSA Integer String
 > slApproximation f = renameStates . minimize . buildFSA $
 >                     forbiddenFactors f
 
@@ -137,7 +135,7 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 
 
 
-> process :: String -> FSA Int String -> IO ()
+> process :: String -> FSA Integer String -> IO ()
 > process name fsa = do
 >   let (u0,w0,i0,r0,f0) = forbiddenFactors . transliterate $ fsa
 >       sp = normalize (subsequenceClosure fsa)
@@ -194,10 +192,10 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >     isSL = slQ fsa /= 0
 >     alpha = alphabet fsa
 
-> findSmallestSetOfNonStrictFactors :: FSA Int String -> FSA Int String -> IO (Maybe String)
+> findSmallestSetOfNonStrictFactors :: FSA Integer String -> FSA Integer String -> IO (Maybe String)
 > findSmallestSetOfNonStrictFactors approx orig =
 >     withFile "Compiled/constraints" ReadMode $ \h -> do
->       fsas <- mapM get =<< lines `fmap` hGetContents h
+>       fsas <- mapM get =<< lines <$> hGetContents h
 >       let xs = filter f fsas
 >       if null xs
 >       then return Nothing
@@ -206,17 +204,17 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >                 in x' == orig
 >           get fp = withFile fp ReadMode $ \h -> do
 >                      s <- hGetContents h
->                      return $!! (fp, c (readJeff s))
+>                      return $!! (fp, c (from Jeff s))
 >           c = contractAlphabetTo (alphabet orig)
 
-> writeJeff :: FilePath -> FSA Int String -> IO ()
+> writeJeff :: FilePath -> FSA Integer String -> IO ()
 > writeJeff fp fsa = withFile fp WriteMode $ \h -> do
->                      hPutStr h (exportJeff fsa)
+>                      hPutStr h (to Jeff fsa)
 >                      hFlush h
 
-> writeDot :: FilePath -> FSA Int String -> IO ()
+> writeDot :: FilePath -> FSA Integer String -> IO ()
 > writeDot fp fsa = withFile fp WriteMode $ \h -> do
->                     (hPutStr h . dotify . transliterate) fsa
+>                     (hPutStr h . to Dot . transliterate) fsa
 
 > writeFFChart :: FilePath -> String -> -- filepath, name
 >                 Bool -> -- is SL

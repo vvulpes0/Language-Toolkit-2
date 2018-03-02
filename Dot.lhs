@@ -1,13 +1,19 @@
-> module Exporters (
->                   dotify,
->                   dotifyWithName,
->                   exportJeff,
->                   renameStatesFromSets,
->                   untransliterate,
->                   untransliterateString
->                  ) where
+> {-# OPTIONS_HADDOCK hide,show-extensions #-}
+> {-|
+> Module    : Dot
+> Copyright : (c) 2017-2018 Dakotah Lambert
+> License   : BSD-style, see LICENSE
 > 
-> import Containers
+> This module provides methods to convert automata to the GraphViz
+> Dot format.  At the moment, only export is supported.
+> -}
+> module Dot ( -- *Exporting
+>              exportDot
+>            , exportDotWithName
+>              -- *Miscellaneous
+>            , formatSet
+>            ) where
+> 
 > import FSA
 > import Data.Set (Set)
 > import qualified Data.Set as Set
@@ -100,11 +106,15 @@
 >           makeLabel x  = show (idOf x) ++ " [label=\"" ++
 >                          (nq . show $ nodeLabel x) ++ "\"];"
 
-> dotify :: (Ord e, Ord n, Show e, Show n) => FSA n e -> String
-> dotify = dotifyWithName ""
+> -- |Convert an 'FSA' to its representation in the GraphViz @dot@ format.
+> exportDot :: (Ord e, Ord n, Show e, Show n) => FSA n e -> String
+> exportDot = exportDotWithName ""
 
-> dotifyWithName :: (Ord e, Ord n, Show e, Show n) => String -> FSA n e -> String
-> dotifyWithName name f =
+> -- |Convert an 'FSA' to its representation in the GraphViz @dot@ format,
+> -- with a provided name.
+> exportDotWithName :: (Ord e, Ord n, Show e, Show n) =>
+>                      String -> FSA n e -> String
+> exportDotWithName name f =
 >     unlines $ ["digraph " ++ name ++ " {",
 >                "graph [rankdir=\"LR\"];",
 >                "node  [fixedsize=\"false\", fontsize=\"12.0\", height=\"0.5\", width=\"0.5\"];",
@@ -115,54 +125,9 @@
 >     dotifyTransitions f  ++
 >     ["}"]
 
-> renameStatesFromSets :: (Ord e, Ord n, Show e, Show n) =>
->                         FSA (Set n) e -> FSA String e
-> renameStatesFromSets = renameStatesBy
->                        ((++ "}") . ('{' :) . commaSeparateList)
-
-> exportJeff :: (Ord e, Ord n, Show e) => FSA n e -> String
-> exportJeff f = unlines (inits : trans ++ [fins])
->     where list = filter (/= ' ') . commaSeparateList . tmap nodeLabel
->           fins = list (finals f')
->           inits = list (initials f') ++ "!"
->           trans = bangTerminate . Set.toAscList .
->                   tmap exportJeffTransition $ transitions f'
->           f' = normalize f
-
-> bangTerminate :: [String] -> [String]
-> bangTerminate [] = []
-> bangTerminate (x:[]) = [x ++ "!"]
-> bangTerminate (x:xs) = x : bangTerminate xs
-
-> exportJeffTransition :: (Show e, Show n) => Transition n e -> String
-> exportJeffTransition t = nl (source t) ++ "," ++
->                          nl (destination t) ++ "," ++
->                          el (edgeLabel t)
->     where nl = nq . show . nodeLabel
->           el (Symbol a) = nq $ show a
->           el Epsilon    = "\x03B5"
-
-> untransliterate :: (Ord n) => FSA n String -> FSA n String
-> untransliterate f = FSA (tmap untransliterateString (alphabet f))
->                     (tmap untransliterateTransition (transitions f))
->                     (initials f) (finals f) (isDeterministic f)
-
-> untransliterateTransition :: Transition n String -> Transition n String
-> untransliterateTransition t = Transition
->                               (untransliterateString <$> edgeLabel t)
->                               (source t)
->                               (destination t)
-
-> untransliterateString :: String -> String
-> untransliterateString ('L':xs) = "w0." ++ untransliterateStress xs
-> untransliterateString ('H':xs) = "w1." ++ untransliterateStress xs
-> untransliterateString ('S':xs) = "w2." ++ untransliterateStress xs
-> untransliterateString ('X':xs) = "w3." ++ untransliterateStress xs
-> untransliterateString ('Y':xs) = "w4." ++ untransliterateStress xs
-> untransliterateString xs       = xs
-
-> untransliterateStress :: String -> String
-> untransliterateStress [] = "s0"
-> untransliterateStress "`" = "s1"
-> untransliterateStress "'" = "s2"
-> untransliterateStress xs  = xs
+> -- |Turn a 'Data.Set.Set' into a 'String':
+> --
+> -- >>> formatSet (fromList [1, 2, 3])
+> -- "{1, 2, 3}"
+> formatSet :: Show n => Set n -> String
+> formatSet =  ((++ "}") . ('{' :) . commaSeparateList . Set.toAscList)

@@ -1,9 +1,10 @@
 > module ConstraintCompiler where
 
-> import Data.Set (Set)
 > import Factors
 > import FSA
-> import Containers
+
+> import Control.DeepSeq (NFData)
+> import Data.Set (Set)
 
 > header :: String -> String
 > header x = unlines [
@@ -17,7 +18,7 @@
 > compile name alpha constraint = name ++ "=" ++ show (compile' alpha constraint)
 > compile' :: (NFData e, Ord e) =>
 >             Set e -> Conjunction e -> FSA Integer e
-> compile' alpha constraint = normalize' $ buildConjunction alpha constraint
+> compile' alpha constraint = normalize' $ build alpha (singleton constraint)
 >     where normalize' a = (renameStates . minimize . determinize) a `asTypeOf` a
 > compileFromList :: (NFData e, Ord e, Show e) =>
 >                    String -> Set e -> [[Literal e]] -> String
