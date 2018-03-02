@@ -82,7 +82,7 @@
 >     where
 >       (thisp,restps) = choose ps
 >       exts = (extensions sm thisp)
->       someSingle  = any
+>       someSingle  = anyS
 >                     (maybe False
 >                      ((1 ==) . Set.size . nodeLabel) . endstate)
 >                     exts
@@ -90,7 +90,7 @@
 >              (maybe False
 >               ((1 <) . Set.size . nodeLabel) . endstate)
 >              exts
->       cycle = any (maybe False (isIn (stateMultiset thisp)) . endstate) live
+>       cycle = anyS (maybe False (isIn (stateMultiset thisp)) . endstate) live
 
 psgQ is the label of the initial state of the PSG, i.e., the stateset of
   the original DFA

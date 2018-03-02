@@ -6,6 +6,7 @@
 
 > import Control.Concurrent
 > import Control.DeepSeq
+> import Data.Functor ((<$>))
 > import Data.List (sortBy)
 > import Data.Set (Set)
 > import qualified Data.Set as Set

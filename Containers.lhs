@@ -34,6 +34,7 @@
 >                   , setFromMultiset
 >                   ) where
 
+> import safe Data.Monoid (Monoid(..))
 > import safe Data.Set (Set)
 > import safe qualified Data.Set as Set
 

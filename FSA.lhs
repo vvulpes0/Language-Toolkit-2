@@ -66,6 +66,9 @@
 > import Control.DeepSeq (NFData, rnf)
 > import Control.Parallel (par, pseq)
 
+> import Control.Applicative (Applicative(..))
+> import Data.Monoid (Monoid(..))
+
 
 
 Data Structures
