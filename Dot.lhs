@@ -37,11 +37,11 @@
 >                     collectBy source .
 >                     transitions
 
-> commaSeparateList :: (Collapsible c, Show b) => c b -> String
+> commaSeparateList :: (Collapsible c) => c String -> String
 > commaSeparateList xs
 >     | size xs == 0  = ""
->     | size xs == 1  = show x
->     | otherwise     = show x ++ ", " ++ commaSeparateList xs'
+>     | size xs == 1  = x
+>     | otherwise     = x ++ ", " ++ commaSeparateList xs'
 >     where (x, xs') = choose xs
 
 > -- |Return value is in the range \([0 .. n]\),
@@ -66,7 +66,8 @@
 >           list            = collapse (:) [] ts
 >           syms            = nq . commaSeparateList $
 >                             tmap (sym . first) list
->           sym (Symbol a)  = a
+>           sym (Symbol a)  = nq $ show a
+>           sym Epsilon     = "\x03b5" -- ε
 
 > dotifyTransitions :: (Ord n, Ord e, Show n, Show e) => FSA n e -> [String]
 > dotifyTransitions f = collapse (:) [] .
@@ -130,4 +131,4 @@
 > -- >>> formatSet (fromList [1, 2, 3])
 > -- "{1, 2, 3}"
 > formatSet :: Show n => Set n -> String
-> formatSet =  ((++ "}") . ('{' :) . commaSeparateList . Set.toAscList)
+> formatSet =  ((++ "}") . ('{' :) . commaSeparateList . tmap (nq . show) . Set.toAscList)

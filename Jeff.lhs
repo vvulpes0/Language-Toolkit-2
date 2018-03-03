@@ -47,7 +47,7 @@ Then use that to parse a string in Jeff format and generate an FSA
 > -- The resulting @Int@ node labels may have nothing to do with the
 > -- node labels in the source.
 > readJeff :: String -> FSA Int String
-> readJeff = renameStates . readJeffWithoutRelabeling
+> readJeff = transliterate . renameStates . readJeffWithoutRelabeling
 
 > readJeffStateList :: [String] -> Set (State String)
 > readJeffStateList [] = empty
@@ -157,7 +157,7 @@ Reading Data From Jeff's Format
 >                          nl (destination t) ++ "," ++
 >                          el (edgeLabel t)
 >     where nl = nq . show . nodeLabel
->           el (Symbol a) = nq $ show a
+>           el (Symbol a) = untransliterateString . nq $ show a
 >           el Epsilon    = "\x03B5"
 >           nq = keep (/= '"')
 

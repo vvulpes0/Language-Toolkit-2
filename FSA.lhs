@@ -437,9 +437,9 @@ and guarantees totality of the result.
 >                       nodeLabel
 >           nextPairs x qp = unionAll $
 >                            tmap (\a -> tmap (stateFromPair . (,) a) n2) n1
->               where n1 = nexts x f1 . State . fst $ nodeLabel qp
->                     n2 = nexts x f2 . State . snd $ nodeLabel qp
->           stateFromPair (q1, q2) = State (nodeLabel q1, nodeLabel q2)
+>               where n1 = nexts x f1 $ fmap fst qp
+>                     n2 = nexts x f2 $ fmap snd qp
+>           stateFromPair (q1, q2) = (,) <$> q1 <*> q2
 >           extensionsOnSymbol qp x = tmap (Transition x qp) $
 >                                     nextPairs x qp
 >           extensions qp = unionAll $ tmap (extensionsOnSymbol qp) $
@@ -488,48 +488,35 @@ and guarantees totality of the result.
 >           sts = union (tmap source trans) (tmap destination trans)
 >           det = isDeterministic f1 && isDeterministic f2
 
-> -- |The symmetric difference \((a\cup b)-(a\cap b)\) of two automata.
-> autSymmetricDifference :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e ->
->                           FSA (Maybe n1, Maybe n2) e
-> autSymmetricDifference f1 f2 = FSA bigalpha trans init fin det
->     where bigalpha = combineAlphabets f1 f2
->           cs = tmap (\(x, y) -> combine x y)
->           init = cs $ makeJustPairs (initials f1) (initials f2)
->           fin1 = finals f1
->           fin2 = finals f2
->           fin1WithNonFin2 = makeJustPairs fin1
->                             (difference (states f2) (finals f2))
->           fin2WithNonFin1 = makeJustPairs (difference (states f1) (finals f1))
->                             fin2
->           fin1WithN = tmap (flip (,) (State Nothing) . fmap Just) fin1
->           fin2WithN = tmap ((,) (State Nothing) . fmap Just) fin2
->           fin = (intersection sts
->                  (cs
->                   (unionAll [fin1WithNonFin2, fin1WithN,
->                              fin2WithNonFin1, fin2WithN])))
->           trans = combineTransitions f1 f2
->           sts = union (tmap source trans) (tmap destination trans)
->           det = isDeterministic f1 && isDeterministic f2
-
 For the difference A - B, the final states are those that are
 accepting in A and non-accepting in B.
 
+Note that the relative complement requires functionality.  Consider
+the case of (A - B) where B is nondeterministic in such a way that
+there exists a string w for which a computation leads to both an
+accepting state qa and a nonaccepting state qn.  Suppose that w leads
+to an accepting state in A, qf.  Then the cartesian construction will
+contain both (qf, qa) and (qf, qn).
+
+When selecting states to be accepting, (qf, qn) will be included since
+qn is nonaccepting in B, and (qf, qn) will be excluded since qa is
+accepting in B.  This is not what we want, as it means that w is still
+accepted.  Thus we cannot use the cartesian construction to gain an
+advantage over the naive implementation (A & not B).
+
 > autDifference :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e ->
->                  FSA (Maybe n1, Maybe n2) e
-> autDifference f1 f2 = FSA bigalpha trans init fin det
->     where bigalpha = combineAlphabets f1 f2
->           cs = tmap (\(x, y) -> combine x y)
->           init = cs $ makeJustPairs (initials f1) (initials f2)
->           fin1 = finals f1
->           fin1WithNonFin2 = makeJustPairs fin1
->                             (difference (states f2) (finals f2))
->           fin1WithN = tmap (flip (,) (State Nothing) . fmap Just) fin1
->           fin = (intersection sts
->                  (cs
->                   (unionAll [fin1WithNonFin2, fin1WithN])))
->           trans = combineTransitions f1 f2
->           sts = union (tmap source trans) (tmap destination trans)
->           det = isDeterministic f1 && isDeterministic f2
+>                  FSA (Maybe n1, Maybe (Set n2)) e
+> autDifference = fmap (. complement) autIntersection
+
+
+Much like the one-sided difference, the symmetric difference of two
+automata relies on determinism.
+
+> autSymmetricDifference :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e ->
+>                           FSA (Maybe (Maybe n1, Maybe n2),
+>                                Maybe (Set (Maybe n1, Maybe n2))) e
+> autSymmetricDifference f1 f2
+>     = autDifference (autUnion f1 f2) (autIntersection f1 f2)
 
 For a total functional FSA, the complement can be obtained by simply
 inverting the notion of accepting states.  Totality is necessary, as
@@ -568,7 +555,9 @@ and the string "a" is accepted in both.
 > -- |@(coresidue a b)@ is equivalent to @(complement (residue a b))@.
 > -- In the context of an approximation and its source,
 > -- represents unmet constraints of the source.
-> coresidue a b = minimize $ union (renameStates $ complement a) b
+> coresidue :: (Ord n, Ord e, Enum n) => FSA n e -> FSA n e -> FSA n e
+> coresidue a b = renameStates . minimize $
+>                 union (renameStates $ complement a) b
 
 
 Minimization
@@ -728,7 +717,11 @@ the FSA.
 > -- Node labels are irrelevant, so 'Int' is used as a small
 > -- representation.
 > normalize :: (Ord e, Ord n) => FSA n e -> FSA Integer e
-> normalize = renameStates . trimFailStates . minimize . trimUnreachables
+> normalize = f . trimFailStates . minimize . trimUnreachables
+>     where f fsa
+>               | isEmpty (states fsa) = complementDeterministic $
+>                                        totalWithAlphabet (alphabet fsa)
+>               | otherwise            = renameStates fsa
 
 
 J-Minimization
@@ -882,10 +875,9 @@ the source as accepting.
 > -- \(\{\delta(q_1,\sigma), \delta(q_2,\sigma), \ldots, \delta(q_n, \sigma)\}\),
 > -- where \(\delta\) is the transition function of the input.
 > -- The initial state is \(Q\), and the result is complete.
-> powersetGraph :: (Ord e, Ord n) => FSA n e -> FSA (Set Integer) e
-> powersetGraph f = powersetGraph' d hasAccept
->     where d             = normalize f
->           hasAccept qs  = intersection (finals d) qs /= empty
+> powersetGraph :: (Ord e, Ord n) => FSA n e -> FSA (Set n) e
+> powersetGraph f = powersetGraph' f hasAccept
+>     where hasAccept qs  = intersection (finals f) qs /= empty
 
 > powersetGraph' :: (Ord e, Ord n) =>
 >                           FSA n e ->

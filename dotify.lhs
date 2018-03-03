@@ -1,6 +1,6 @@
 > module Main where
 
-> import Porters (to, from, Dot(Dot), Jeff(Jeff), transliterate)
+> import Porters (to, from, Dot(Dot), Jeff(Jeff), untransliterate)
 
 > import System.Console.GetOpt
 > import System.Environment (getArgs)
@@ -41,8 +41,8 @@
 >       from Jeff       <$>
 >       hGetContents h
 >     where transform = if trp
->                       then transliterate
->                       else id
+>                       then id
+>                       else untransliterate
 
 > output :: Maybe FilePath -> String -> IO ()
 > output file s = maybe ($ stdout) (\f -> withFile f WriteMode) file $ \h ->

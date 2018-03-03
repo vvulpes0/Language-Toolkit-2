@@ -173,14 +173,18 @@
 
 > word :: (Enum a, Ord a, Ord b) =>
 >              Bool -> Set b -> [Set b] -> FSA a b
-> word True alpha []            = emptyWithAlphabet alpha
+> word True alpha []            = singletonWithAlphabet alpha []
 > word False alpha []           = complementDeterministic $
 >                                 singletonWithAlphabet alpha []
-> word isPositive alpha symseq  = FSA alpha trans
->                                 (singleton (State $ toEnum 0))
->                                 (if isPositive then fin else fin')
->                                 True
->     where tagged         = zip symseq $ tmap toEnum [0..]
+> word isPositive alpha symseq  = renameStates .
+>                                 (if isPositive
+>                                  then id
+>                                  else complementDeterministic) .
+>                                 determinize $
+>                                 FSA alpha trans
+>                                 (singleton (State 0))
+>                                 fin False
+>     where tagged         = zip symseq [0..]
 >           trans'         = unionAll $
 >                            tmap
 >                            (\(symset, st) ->
@@ -196,9 +200,6 @@
 >           trans          = union
 >                            (tmap (succtrans nextState) alpha)
 >                            trans'
->           fin'           = fromCollapsible . tmap State .
->                            insert sinkState $
->                            tmap snd tagged
 >           nextState      = succ . maximum $ tmap snd tagged
 >           sinkState      = succ nextState
 >           fin            = singleton (State nextState)

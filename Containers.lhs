@@ -64,6 +64,7 @@ are defined to allow such polymorphism.
 >     isNotIn :: c -> a -> Bool
 >     contains :: a -> c -> Bool
 >     doesNotContain :: a -> c -> Bool
+>     isEmpty :: (Eq c) => c -> Bool
 >     -- |@(union a b)@ returns a collection of elements that
 >     -- are in one of @a@ or @b@, or both.
 >     union :: c -> c -> c
@@ -85,7 +86,14 @@ are defined to allow such polymorphism.
 >     -- |@(isSupersetOf y x)@ tells whether @x@ is a superset of @y@.
 >     isSupersetOf :: (Eq c) => c -> c -> Bool
 >     isSupersetOf = flip isSubsetOf
+>     -- |@(isProperSubsetOf y x)@ tells whether @x@ is a proper subset of @y@.
+>     isProperSubsetOf :: (Eq c) => c -> c -> Bool
+>     isProperSubsetOf a b = isSubsetOf a b && a /= b
+>     -- |@(isProperSupersetOf y x)@ tells whether @x@ is a proper superset of @y@.
+>     isProperSupersetOf :: (Eq c) => c -> c -> Bool
+>     isProperSupersetOf a b = isSupersetOf a b && a /= b
 >
+>     isEmpty = (== empty)
 >     isIn = flip contains
 >     isNotIn c = not . isIn c
 >     contains = flip isIn
@@ -231,6 +239,7 @@ A Haskell list is a Collapsible Container:
 
 > instance Linearizable [] where
 >     choose (x:xs) = (x, xs)
+>     choose _      = (error "cannot choose an element from an empty list", [])
 > instance Collapsible [] where
 >     collapse = foldr
 > instance (Eq a) => Container [a] a where
@@ -244,7 +253,10 @@ A Haskell list is a Collapsible Container:
 A Set is like a list with no duplicates, so it should act similarly:
 
 > instance Linearizable Set where
->     choose  = Set.deleteFindMin
+>     choose xs
+>         | Set.null xs  = (error "cannot choose an element from an empty set",
+>                           Set.empty)
+>         | otherwise    = Set.deleteFindMin xs
 > instance Collapsible Set where
 >     collapse = Set.fold
 >     size = fromIntegral . Set.size
@@ -255,6 +267,10 @@ A Set is like a list with no duplicates, so it should act similarly:
 >     difference = (Set.\\)
 >     empty = Set.empty
 >     insert = Set.insert
+>     isSubsetOf = flip Set.isSubsetOf
+>     isProperSubsetOf = flip Set.isProperSubsetOf
+>     isSupersetOf = Set.isSubsetOf
+>     isProperSupersetOf = Set.isProperSubsetOf
 
 
 A new Multiset type, able to contain duplicates but still have
@@ -285,8 +301,10 @@ lookup-time logarithmic in the number of distinct elements.
 
 > instance Linearizable Multiset where
 >     choose (Multiset xs)
->         | m == 1     =  (a, f as)
->         | otherwise  =  (a, f ((a, pred m) : as))
+>         | Set.null xs  =  (error "cannot choose an element from an empty multiset",
+>                            Multiset (Set.empty))
+>         | m == 1       =  (a, f as)
+>         | otherwise    =  (a, f ((a, pred m) : as))
 >         where ((a,m):as) = Set.toAscList xs
 >               f = Multiset . Set.fromDistinctAscList
 > instance Collapsible Multiset where
