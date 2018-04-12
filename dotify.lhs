@@ -1,24 +1,25 @@
+
 > module Main where
-
+> 
 > import Porters (to, from, Dot(Dot), Jeff(Jeff), untransliterate)
-
+> 
 > import System.Console.GetOpt
 > import System.Environment (getArgs)
 > import System.Exit (exitFailure)
 > import System.IO (Handle, IOMode(ReadMode, WriteMode),
 >                   hFlush, hGetContents, hPutStr, stdin, stdout, withFile)
-
+> 
 > import Data.Functor ((<$>))
-
+> 
 > data Options = Options
 >     { optShowVersion   :: Bool
 >     , optShowUsage     :: Bool
 >     , optTransliterate :: Bool
 >     , optOutput        :: Maybe FilePath
 >     } deriving (Show)
-
+> 
 > main = uncurry act =<< compilerOpts =<< getArgs
-
+> 
 > act :: Options -> [String] -> IO ()
 > act opts files
 >     | optShowVersion opts       = printVersion
@@ -31,7 +32,7 @@
 >                          []      ->  Nothing
 >                          ("-":_) -> Nothing
 >                          (x:_)   ->  Just x
-
+> 
 > printDot :: Bool -> Maybe FilePath -> Maybe FilePath -> IO ()
 > printDot trp infile outfile
 >     = maybe ($ stdin) (\f -> withFile f ReadMode) infile $ \h ->
@@ -43,23 +44,23 @@
 >     where transform = if trp
 >                       then id
 >                       else untransliterate
-
+> 
 > output :: Maybe FilePath -> String -> IO ()
 > output file s = maybe ($ stdout) (\f -> withFile f WriteMode) file $ \h ->
 >                 hPutStr h s >> hFlush h
-
+> 
 > usageHeader = "Usage: dotify [OPTION...] [file]"
-
+> 
 > printVersion :: IO ()
 > printVersion = putStrLn "Version 1.0"
-
+> 
 > defaultOptions = Options
 >                  { optShowVersion   = False
 >                  , optShowUsage     = False
 >                  , optTransliterate = False
 >                  , optOutput        = Nothing
 >                  }
-
+> 
 > options :: [OptDescr (Options -> Options)]
 > options =
 >     [ Option ['h','?'] []
@@ -75,10 +76,11 @@
 >       (NoArg (\opts -> opts { optShowVersion = True }))
 >       "show version number"
 >     ]
-
+> 
 > compilerOpts :: [String] -> IO (Options, [String])
 > compilerOpts argv =
 >     case getOpt RequireOrder options argv of
 >       (o, n, []  ) -> return (foldl (flip id) defaultOptions o, n)
 >       (_, _, errs) -> ioError . userError $
 >                       concat errs ++ usageInfo usageHeader options
+

@@ -1,3 +1,4 @@
+
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-# Language
 >   FlexibleInstances,
@@ -33,16 +34,18 @@
 >                   , multisetFromList
 >                   , setFromMultiset
 >                   ) where
-
+> 
 > import safe Data.Monoid (Monoid(..))
 > import safe Data.Set (Set)
 > import safe qualified Data.Set as Set
+> 
 
 In mathematics, we typically use the same symbols to denote similar
 operations on objects with similar structure.  For example, both
 numbers and matrices can be multiplied, even though what constitutes
 multiplication differs between them.  In this module, a few classes
 are defined to allow such polymorphism.
+
 
 > -- |The 'Container' class is used for types that can contain objects
 > -- and can be combined with 'union', 'intersection', and 'difference'
@@ -92,7 +95,7 @@ are defined to allow such polymorphism.
 >     -- |@(isProperSupersetOf y x)@ tells whether @x@ is a proper superset of @y@.
 >     isProperSupersetOf :: (Eq c) => c -> c -> Bool
 >     isProperSupersetOf a b = isSupersetOf a b && a /= b
->
+> 
 >     isEmpty = (== empty)
 >     isIn = flip contains
 >     isNotIn c = not . isIn c
@@ -108,6 +111,7 @@ are defined to allow such polymorphism.
 >       difference,
 >       empty,
 >       (insert | singleton) #-}
+> 
 
 The `Linearizable` class is used for types that can be traversed
 linearly in one direction.  The class provides a function `choose`
@@ -117,19 +121,20 @@ containing all and only those elements of `ls` that were not chosen.
 The first and second parts of this pair may be returned alone by
 `chooseOne` or `discardOne`, respectively.
 
+
 > -- |The 'Linearizable' class is used for types that can be
 > -- traversed linearly in one direction.
 > class Linearizable l where
 >     -- |Return the next element and the collection of remaining elements.
 >     choose :: l a -> (a, l a)
-
+> 
 > -- |Like 'choose', but discards the remaining elements.
 > chooseOne :: (Linearizable l) => l a -> a
 > chooseOne   = fst . choose
 > -- |Like 'choose', but discards the next element.
 > discardOne :: (Linearizable l) => l a -> l a
 > discardOne  = snd . choose
-
+> 
 > -- |The 'Collapsible' class is used for types that can be collapsed
 > -- to a single value, like a fold over a list.  Any structure \(c\)
 > -- that is 'Collapsible' must necessarily be 'Linearizable', since:
@@ -140,11 +145,12 @@ The first and second parts of this pair may be returned alone by
 > class Linearizable c => Collapsible c where
 >     collapse :: (a -> b -> b) -> b -> c a -> b
 >     size :: (Integral a) => c b -> a
->
+> 
 >     collapse f = curry (fst . until ((== 0) . size . snd) continue)
 >         where continue (a, bs) = let (x, xs) = choose bs in (f x a, xs)
 >     size = collapse (const succ) 0
 >     {-# MINIMAL collapse | size #-}
+> 
 
 
 Consequences
@@ -153,10 +159,11 @@ Consequences
 A collapsible structure of containers may be merged into a single
 container with either unions or intersections:
 
+
 > -- |Combine 'Container's with 'union'.
 > unionAll :: (Container c a, Collapsible s) => s c -> c
 > unionAll = collapse union empty
-
+> 
 > -- |Combine 'Container's with 'intersection'.
 > -- An empty source yields an empty result.
 > intersectAll :: (Container c a, Collapsible s) => s c -> c
@@ -164,9 +171,11 @@ container with either unions or intersections:
 >     | size xs == 0  = empty
 >     | otherwise     = collapse intersection x xs'
 >     where (x, xs')  = choose xs
+> 
 
 It is nice to have tests for existential and universal satisfaction of
 predicates:
+
 
 > -- |True iff some element satisfies a predicate.
 > anyS :: Collapsible s => (a -> Bool) -> s a -> Bool
@@ -176,7 +185,7 @@ predicates:
 > "anyS/[]" forall (a :: [x]) f.
 >     anyS f a = any f a
 >   #-}
-
+> 
 > -- |True iff all elements satisfy a predicate.
 > allS :: Collapsible s => (a -> Bool) -> s a -> Bool
 > allS f = collapse ((&&) . f) True
@@ -185,10 +194,12 @@ predicates:
 > "allS/[]" forall (a :: [x]) f.
 >     allS f a = all f a
 >   #-}
+> 
 
 If something is a `Collapsible` `Container`, then we can use
 properties of each typeclass to build map and filter, here called
 `tmap` and `keep` to avoid namespace collisions.
+
 
 > -- |Appy a function to each element of a 'Collapsible'.
 > tmap :: (Collapsible s, Container (s b1) b) => (a -> b) -> s a -> s b1
@@ -199,7 +210,7 @@ properties of each typeclass to build map and filter, here called
 > "tmap/Set" forall (x :: Ord a => Set a) (f :: Ord b => x -> b) .
 >        tmap f x = Set.map f x
 >   #-}
-
+> 
 > -- |Retain only those elements that satisfy a predicate.
 > keep :: (Collapsible s, Container (s a) a) => (a -> Bool) -> s a -> s a
 > keep f xs = collapse maybeKeep empty xs
@@ -213,7 +224,7 @@ properties of each typeclass to build map and filter, here called
 > "keep/compose" forall (f :: a -> Bool) (g :: a -> Bool) xs.
 >       keep f (keep g xs) = keep (\x -> f x && g x) xs
 >   #-}
-
+> 
 > -- |Build a 'Container' from the elements of a 'Collapsible'.
 > -- This can be used to cast between most types of 'Container'.
 > -- Time complexity is \(O(nci)\), where \(n\) is the number of
@@ -230,12 +241,14 @@ properties of each typeclass to build map and filter, here called
 > "fromCollapsible/setFromList"      forall (xs :: Ord a => [a]).
 >                                    fromCollapsible xs = Set.fromList xs
 >   #-}
+> 
 
 
 Standard Prelude Types
 =======================
 
 A Haskell list is a Collapsible Container:
+
 
 > instance Linearizable [] where
 >     choose (x:xs) = (x, xs)
@@ -249,8 +262,10 @@ A Haskell list is a Collapsible Container:
 >     difference a b = filter (isNotIn b) a
 >     empty = []
 >     insert = (:)
+> 
 
 A Set is like a list with no duplicates, so it should act similarly:
+
 
 > instance Linearizable Set where
 >     choose xs
@@ -271,16 +286,18 @@ A Set is like a list with no duplicates, so it should act similarly:
 >     isProperSubsetOf = flip Set.isProperSubsetOf
 >     isSupersetOf = Set.isSubsetOf
 >     isProperSupersetOf = Set.isProperSubsetOf
+> 
 
 
 A new Multiset type, able to contain duplicates but still have
 lookup-time logarithmic in the number of distinct elements.
 
+
 > -- |A 'Multiset' is a 'Set' that may contain more than one instance
 > -- of any given element.
 > newtype Multiset a = Multiset (Set (a, Integer))
 >     deriving (Eq, Ord)
-
+> 
 > -- |Analogous to 'isIn', returning the number of occurrences of an
 > -- element in a 'Multiset'.
 > -- Time complexity is \(O(\log{n})\),
@@ -292,13 +309,13 @@ lookup-time logarithmic in the number of distinct elements.
 >     where f (y, m)
 >               | y == x     =  m
 >               | otherwise  =  0
-
+> 
 > -- |A specialization of 'fromCollapsible'
 > -- with time complexity \(O(n)\),
 > -- where \(n\) is the number of distinct elements in the source.
 > setFromMultiset :: Multiset a -> Set a
 > setFromMultiset (Multiset a) = Set.mapMonotonic fst a
-
+> 
 > instance Linearizable Multiset where
 >     choose (Multiset xs)
 >         | Set.null xs  =  (error "cannot choose an element from an empty multiset",
@@ -339,7 +356,7 @@ lookup-time logarithmic in the number of distinct elements.
 > instance Ord a => Monoid (Multiset a) where
 >     mempty = empty
 >     mappend = union
-
+> 
 > instance Show a => Show (Multiset a) where
 >     showsPrec p m = showParen (p > 10) $
 >                     showString "multisetFromList " .
@@ -350,11 +367,11 @@ lookup-time logarithmic in the number of distinct elements.
 >                     ("multisetFromList", s) <- lex r
 >                     (xs, t) <- reads s
 >                     return (multisetFromList xs, t)
-
+> 
 > -- |A specialization of 'fromCollapsible'.
 > multisetFromList :: Ord a => [a] -> Multiset a
 > multisetFromList = fromCollapsible
-
+> 
 > unionSortedMultis :: Ord a => [(a, Integer)] -> [(a, Integer)] -> [(a, Integer)]
 > unionSortedMultis xs [] = xs
 > unionSortedMultis [] ys = ys
@@ -362,7 +379,7 @@ lookup-time logarithmic in the number of distinct elements.
 >     | fst x < fst y  =  x : unionSortedMultis xs (y:ys)
 >     | fst x > fst y  =  y : unionSortedMultis (x:xs) ys
 >     | otherwise      =  unionSortedMultis ((fst x, snd x + snd y) : xs) ys
-
+> 
 > intersectSortedMultis :: Ord a => [(a, Integer)] -> [(a, Integer)] -> [(a, Integer)]
 > intersectSortedMultis _ [] = []
 > intersectSortedMultis [] _ = []
@@ -371,7 +388,7 @@ lookup-time logarithmic in the number of distinct elements.
 >     | fst x > fst y  =  intersectSortedMultis (x:xs) ys
 >     | otherwise      =  (fst x, min (snd x) (snd y)) :
 >                         intersectSortedMultis xs ys
-
+> 
 > differenceSortedMultis :: Ord a => [(a, Integer)] -> [(a, Integer)] -> [(a, Integer)]
 > differenceSortedMultis xs [] = xs
 > differenceSortedMultis [] _  = []
@@ -381,3 +398,4 @@ lookup-time logarithmic in the number of distinct elements.
 >     | snd x <= snd y  =  differenceSortedMultis xs ys
 >     | otherwise       =  (fst x, snd x - snd y) :
 >                          differenceSortedMultis xs ys
+

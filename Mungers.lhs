@@ -22,11 +22,13 @@
 Transliteration and name munging functions from \texttt{Exporters.hs}
                 
 
+
 > module Mungers where
 > import FSA
 >     
 > import qualified Data.Set as Set
 > import Data.Char as Char
+> 
 
 \begin{verbatim}
 transLit  -- transliterate Jeff's fsa to use {L,H,S}X{0,1,2}
@@ -35,6 +37,7 @@ transLit  -- transliterate Jeff's fsa to use {L,H,S}X{0,1,2}
   w2 --> S
   .s --> \epsilon
 \end{verbatim}
+
 
 > transLit :: String -> String
 > transLit [] = []
@@ -56,6 +59,7 @@ transLit  -- transliterate Jeff's fsa to use {L,H,S}X{0,1,2}
 > mungeToInt :: (Ord a, Ord b) => FSA b a -> FSA Int a
 > mungeToInt fsa = renameStates fsa
 > 
+> 
 
 \begin{verbatim}
  The next few things just reformat the FSA tokens so that they don't 
@@ -64,14 +68,17 @@ transLit  -- transliterate Jeff's fsa to use {L,H,S}X{0,1,2}
 deFang -- strip out non-Alpha for dot graph name
 \end{verbatim}
 
+
 > deFang :: String -> String
 > deFang [] = []
 > deFang (c:cs)
 >        | isAlpha c = c : (deFang cs)
 >        | otherwise = deFang cs
+> 
 
 
 \texttt{encodestates} flattens Set valued states in a dot-compatible way
+
 
 > encodeStates :: (Ord a, Show a, Ord b, Show b) => 
 >                    (FSA (Set.Set b) a) -> (FSA String a)
@@ -108,5 +115,6 @@ deFang -- strip out non-Alpha for dot graph name
 >       flattenTransition t = (Transition (edgeLabel t) 
 >                              (flattenState (source t))
 >                              (flattenState (destination t)) )
+> 
 
 \end{document}

@@ -26,6 +26,7 @@
        writes strings accepted by fsa up to length bound on stdout
 \end{verbatim}
 
+
 > module Main (main) where
 > 
 >     
@@ -70,5 +71,6 @@
 >        bound <- getBound
 >        fsa <- getFSA
 >        (putStr.burstnl) (List.sortBy shorterOrLessThan (Set.toList(acceptsDFS fsa bound)))
+> 
 
 \end{document}

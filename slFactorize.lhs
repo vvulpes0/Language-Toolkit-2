@@ -59,39 +59,46 @@ slFactorize Name < fsa (in Jeff's format)
   \end{itemize}
 \end{itemize}
 
-> module Main (main) where
 
+> module Main (main) where
+> 
 > import ExtractSL
 > import Factors
 > import Mungers
 > import FSA
 > import Dot (exportDotWithName)
 > import Porters
-
+> 
 > import Data.Set (Set)
 > import qualified Data.Set as Set
-
+> 
 > import System.Environment as Env
-
+> 
 > import GHC.IO.Handle
 > import System.IO
+> 
 
 
 Get name of pattern from first argument for exportDotWithName
+
 
 > getName ::  IO String
 > getName = getArgs >>= return.aName
 >           where aName [] = ""
 >                 aName (x:xs) = x
+> 
 
 Get FSA in multiline format, as in STII fsasJeff
 
+
 > getFSA :: IO (FSA Integer String)
 > getFSA = getContents >>= return . from Jeff . transLit
+> 
 
 Write fsa as show show of Haskell datatype (as per Dakotah's usage)
  to name.fsa.hs and its dot format to name.fsa.dot
 Returns fsa wrapped in IO
+
 
 > writeFSA :: (Ord a, Show a, Ord b, Show b) => 
 >                    String -> String -> (FSA b a) -> IO (FSA b a)
@@ -100,13 +107,15 @@ Returns fsa wrapped in IO
 >       writeFile (name++"."++ext++".hs") (show fsa)
 >       writeFile (name++"."++ext++".dot") (exportDotWithName (deFang name) fsa)
 >       return fsa
+> 
 
 Convert to PSG and write as show show and its dot as with fsa\\
 Returns the PSG wrapped in IO\\
 Q: Why does generatePowerSetGraph fix elt type of stateset as Int?
 
+
 > writePSG :: (Ord a, Show a, Ord b, Show b) => 
->                      String -> (FSA b a) -> IO (FSA (Set Integer) a)
+>                      String -> (FSA b a) -> IO (FSA (Set b) a)
 > writePSG name fsa =
 >     do
 >       writeFile (name++".psg.hs") (show psg)
@@ -127,8 +136,12 @@ Q: Why does generatePowerSetGraph fix elt type of stateset as Int?
 >       writeFSA name ("SL") slFSA
 >       return (renameStates $ residue slFSA fsa)
 >         where
->           ffs = forbiddenFactors fsa
->           (units,words,inits,free,finals) = ffs
+>           ffs = forbiddenSubstrings fsa
+>           units = forbiddenUnits ffs
+>           words = forbiddenWords ffs
+>           inits = forbiddenInitials ffs
+>           free = forbiddenFrees ffs
+>           finals = forbiddenFinals ffs
 >           slFSA = ((renameStates . minimize . buildFSA) ffs) `asTypeOf` fsa
 > 
 > chkValid :: (Ord a, Show a, Ord b, Show b) =>
@@ -149,5 +162,6 @@ Q: Why does generatePowerSetGraph fix elt type of stateset as Int?
 >          res <- writeFactors name (mungeToInt fsa)
 >          writeFSA name "res" res
 >          putStrLn (chkValid res)
+> 
 
 \end{document}
