@@ -10,7 +10,7 @@
 > Module    : FSA
 > Copyright : (c) 2014-2018 Dakotah Lambert
 > License   : BSD-style, see LICENSE
-> 
+
 > The purpose of this module is to define an interface to a generic,
 > reusable impementation of finite-state automata (FSAs).  The primary
 > motivation for this is to allow for efficient analysis of stringsets
@@ -60,16 +60,16 @@
 >            , Transition(..)
 >            , module Containers
 >            ) where
-> 
+
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 > import Containers
 > import Control.DeepSeq (NFData, rnf)
 > import Control.Parallel (par, pseq)
-> 
+
 > import Control.Applicative (Applicative(..))
 > import Data.Monoid (Monoid(..))
-> 
+
 
 
 
@@ -102,83 +102,8 @@ itself.
 >                    , isDeterministic  ::  Bool
 >                    }
 >     deriving (Show, Read)
-> 
-
-FSAs represent languages, so it makes sense to use equivalence of the
-represented languages as the criterion for equivalence of the FSAs
-themselves.  First, an FSA represents the empty language if it has
-no reachable accepting states:
 
 
-> -- |True iff the input accepts no strings.
-> isNull :: (Ord e, Ord n) => FSA n e -> Bool
-> isNull = (== empty) . finals . trimUnreachables
-> 
-
-Calls to `isomorphic` should work for NFAs as well as DFAs, but in the
-current implementation, in general, will not.  This is because
-multiple start states are combined with the cartesian product to
-create c, rather than mapped from a to their counterparts in b, a much
-harder problem.
-
-
-> isomorphic :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e -> Bool
-> isomorphic a b = (alphabet a        == alphabet b)         &&
->                  (size (initials a) == size (initials b))  &&
->                  (size (finals a)   == size (finals b))    &&
->                  (size (states a)   == size (states b))    &&
->                  (size (initials a) == size (initials c))  &&
->                  (size (finals a)   == size (finals c))    &&
->                  (size (states a)   == s)
->     where c  = autUnion a b
->           s  = size . keep ((/=) (State (Nothing, Nothing))) $ states c
-> 
-> instance (Ord e, Ord n) => Eq (FSA n e) where
->     a == b = isomorphic (normalize a) (normalize b)
-> 
-> instance (Enum n, Ord n, Ord e) => Container (FSA n e) [e] where
->     isIn                 =  accepts
->     union                =  apply autUnion
->     intersection         =  apply autIntersection
->     difference           =  apply autDifference
->     symmetricDifference  =  apply autSymmetricDifference
->     empty                =  emptyLanguage
->     singleton            =  singletonLanguage
-> 
-> apply :: (Ord e, Ord n1, Ord n2, Enum n2) =>
->          (a -> b -> FSA n1 e) -> a -> b -> FSA n2 e
-> apply f = curry (renameStates . uncurry f)
-> 
-> pfold :: (a -> a -> a) -> [a] -> a
-> pfold = fmap (. treeFromList) treeFold
-> 
-> -- |Intersect all given automata, in parallel if possible.
-> -- An empty intersection is undefined.
-> -- In theory it should be the total language over the
-> -- total alphabet, but the latter cannot be defined.
-> -- Intermediate results are evaluated to normal form.
-> flatIntersection :: (Enum n, Ord n, NFData n, Ord e, NFData e) =>
->                     [FSA n e] -> FSA n e
-> flatIntersection [] = error "Cannot take a nullary intersection"
-> flatIntersection xs = pfold i xs
->     where i a b = let x = renameStates . minimize $ autIntersection a b
->                   in rnf x `seq` x
-> 
-> -- |Union all given automata, in parallel if possible.
-> -- An empty union is defined as the empty language over
-> -- an empty alphabet.
-> -- Intermediate results are evaluated to normal form.
-> flatUnion :: (Enum n, Ord n, NFData n, Ord e, NFData e) =>
->              [FSA n e] -> FSA n e
-> flatUnion [] = emptyLanguage
-> flatUnion xs = pfold u xs
->     where u a b = let x = renameStates . minimize $ autUnion a b
->                   in rnf x `seq` x
-> 
-> instance (NFData n, NFData e) => NFData (FSA n e) where
->     rnf (FSA a t i f d) = rnf a `seq` rnf t `seq` rnf i `seq`
->                           rnf f `seq` rnf d
-> 
 > -- |The collection of all states in an FSA.
 > states :: (Ord e, Ord n) => FSA n e -> Set (State n)
 > states f = unionAll [initials f, finals f, others]
@@ -186,24 +111,24 @@ harder problem.
 >          extractStates t  = doubleton (source t) (destination t)
 >          doubleton a b    = insert b (singleton a)
 >          ts               = transitions f
-> 
+
 > -- |An automaton accepting every string over a given alphabet.
 > totalWithAlphabet :: (Ord e, Enum n, Ord n) => Set e -> FSA n e
 > totalWithAlphabet as = FSA as trans (singleton q) (singleton q) True
 >     where trans  = tmap (flip (flip Transition q) q . Symbol) as
 >           q      = State $ toEnum 0
-> 
+
 > -- |An automaton accepting no strings over a given alphabet.
 > emptyWithAlphabet :: (Ord e, Enum n, Ord n) => Set e -> FSA n e
 > emptyWithAlphabet as = FSA as trans (singleton q) empty True
 >     where trans  = tmap (flip (flip Transition q) q . Symbol) as
 >           q      = State $ toEnum 0
-> 
+
 > -- |A specialization of 'emptyWithAlphabet' where the alphabet
 > -- is itself empty.
 > emptyLanguage :: (Ord e, Ord n, Enum n) => FSA n e
 > emptyLanguage = emptyWithAlphabet empty
-> 
+
 
 A singleton FSA is one that accepts exactly one (possibly-empty)
 string.  The number of states in such an FSA is equal to the length of
@@ -229,12 +154,12 @@ the string plus two.
 >           begins = singleton (State $ toEnum 1)
 >           last = (+ 1) . fromIntegral . length $ str
 >           finals = singleton (State $ toEnum last)
-> 
+
 > -- |An automaton that accepts only the given string,
 > -- over the minimal alphabet required to represent this string.
 > singletonLanguage :: (Ord e, Enum n, Ord n) => [e] -> FSA n e
 > singletonLanguage s = singletonWithAlphabet (Set.fromList s) s
-> 
+
 
 
 Formal Symbols
@@ -250,7 +175,26 @@ input.
 > data Symbol e = Epsilon  -- ^The edge may be taken without consuming any input.
 >               | Symbol e -- ^The edge requires consuming this symbol.
 >               deriving (Eq, Ord, Read, Show)
-> 
+
+The Symbol type is used to adjoin Epsilon to an alphabet.  We often
+want only the real portion of a string, where instances of Epsilon are
+not important.  The 'unsymbols' function does this transformation:
+
+    unsymbols [Symbol 'a', Epsilon, Symbol 'b', Epsilon] :: [Char]
+
+becomes simply
+
+    "ab".
+
+This transformed a [Symbol Char] to a [Char].  The container type need not
+be the same though:
+
+    unsymbols [Symbol 'a', Epsilon, Symbol 'b', Epsilon] :: Set Char
+
+becomes
+
+    fromList ['a', 'b'].
+
 > -- |Remove 'Epsilon' from a 'Collapsible' of 'Symbol'
 > -- and present the unwrapped results as a new 'Container'.
 > unsymbols :: (Collapsible s, Eq c, Container c e, Monoid c) =>
@@ -258,44 +202,15 @@ input.
 > unsymbols = mconcat . collapse (insert . f) empty
 >     where f (Symbol x) = singleton x
 >           f _          = empty
-> 
-> instance Functor Symbol where
->     fmap _ Epsilon     =  Epsilon
->     fmap f (Symbol e)  =  Symbol (f e)
-> 
-> instance (NFData e) => NFData (Symbol e) where
->     rnf Epsilon = ()
->     rnf (Symbol e) = rnf e
-> 
 
 States
 ------
-
 
 > -- |A vertex of the graph representation of an 'FSA' is a 'State',
 > -- which can be labelled with any arbitrary value, so long as every
 > -- vertex of a single automaton is labelled with a distinct value
 > -- of the same type.
 > data State n = State {nodeLabel :: n} deriving (Eq, Ord, Read, Show)
-> 
-> instance Functor State where
->     fmap f = State . f . nodeLabel
-> 
-> instance Applicative State where
->     pure   =  State
->     (<*>)  =  fmap . nodeLabel
-> 
-> instance Monad State where
->     return   =  pure
->     a >>= f  =  f $ nodeLabel a
-> 
-> instance (Monoid n) => Monoid (State n) where
->     mempty   =  State mempty
->     mappend  =  fmap . nodeLabel . fmap mappend
-> 
-> instance (NFData n) => NFData (State n) where
->     rnf (State n) = rnf n
-> 
 
 Transitions
 -----------
@@ -306,27 +221,154 @@ components to a transition: an edge label, and two states.  If a
 computation in the first state encounters a symbol matching the
 transition's edge label, then it moves to the second state.
 
-
 > -- |The edges of an 'FSA'.
 > data Transition n e = Transition { edgeLabel   :: (Symbol e)
 >                                  , source      :: (State n)
 >                                  , destination ::(State n)
 >                                  }
 >                     deriving (Eq, Ord, Show, Read)
-> 
+
+
+Class Instances
+===============
+
+Here we define class instances for FSAs and their component types.
+
+Symbol
+------
+
+> instance Functor Symbol where
+>     fmap _ Epsilon     =  Epsilon
+>     fmap f (Symbol e)  =  Symbol (f e)
+
+> instance (NFData e) => NFData (Symbol e) where
+>     rnf Epsilon = ()
+>     rnf (Symbol e) = rnf e
+
+
+State
+-----
+
+> instance Functor State where
+>     fmap f = State . f . nodeLabel
+
+> instance Applicative State where
+>     pure   =  State
+>     (<*>)  =  fmap . nodeLabel
+
+> instance Monad State where
+>     return   =  pure
+>     a >>= f  =  f $ nodeLabel a
+
+> instance (Monoid n) => Monoid (State n) where
+>     mempty   =  State mempty
+>     mappend  =  fmap . nodeLabel . fmap mappend
+
+> instance (NFData n) => NFData (State n) where
+>     rnf (State n) = rnf n
+
+
+Transition
+----------
+
 > instance (NFData n, NFData e) => NFData (Transition n e) where
 >     rnf t = rnf (edgeLabel t) `seq`
 >             rnf (source t)    `seq`
 >             rnf (destination t)
-> 
+
 > newtype Noitisnart e n = Noitisnart { transition :: Transition n e }
-> 
+
 > instance Functor (Noitisnart e) where
 >     fmap f = Noitisnart . fmap' . transition
 >         where fmap' t = t { source       =  fmap f (source t)
 >                           , destination  =  fmap f (destination t)
 >                           }
-> 
+
+
+FSA
+---
+
+FSAs represent languages, so it makes sense to use equivalence of the
+represented languages as the criterion for equivalence of the FSAs
+themselves.  First, an FSA represents the empty language if it has
+no reachable accepting states:
+
+> -- |True iff the input accepts no strings.
+> isNull :: (Ord e, Ord n) => FSA n e -> Bool
+> isNull = (== empty) . finals . trimUnreachables
+
+Two FSAs are considered equal iff they are isomorphic.
+
+> instance (Ord e, Ord n) => Eq (FSA n e) where
+>     a == b = isomorphic (normalize a) (normalize b)
+
+Calls to `isomorphic` should work for NFAs as well as DFAs, but in the
+current implementation, in general, will not.  This is because
+multiple start states are combined with the cartesian product to
+create c, rather than mapped from a to their counterparts in b, a much
+harder problem.
+
+> isomorphic :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e -> Bool
+> isomorphic a b = (alphabet a        == alphabet b)         &&
+>                  (size (initials a) == size (initials b))  &&
+>                  (size (finals a)   == size (finals b))    &&
+>                  (size (states a)   == size (states b))    &&
+>                  (size (initials a) == size (initials c))  &&
+>                  (size (finals a)   == size (finals c))    &&
+>                  (size (states a)   == s)
+>     where c  = autUnion a b
+>           s  = size . keep ((/=) (State (Nothing, Nothing))) $ states c
+
+> instance (Enum n, Ord n, Ord e) => Container (FSA n e) [e] where
+>     isIn                 =  accepts
+>     union                =  apply autUnion
+>     intersection         =  apply autIntersection
+>     difference           =  apply autDifference
+>     symmetricDifference  =  apply autSymmetricDifference
+>     empty                =  emptyLanguage
+>     singleton            =  singletonLanguage
+
+> apply :: (Ord e, Ord n1, Ord n2, Enum n2) =>
+>          (a -> b -> FSA n1 e) -> a -> b -> FSA n2 e
+> apply f = curry (renameStates . uncurry f)
+
+> pfold :: (a -> a -> a) -> [a] -> a
+> pfold = fmap (. treeFromList) treeFold
+
+It is better to use flatIntersection and flatUnion than the
+appropriate fold, because the flat- functions take advantage
+of parallelism if possible.
+
+> -- |Intersect all given automata, in parallel if possible.
+> -- An empty intersection is undefined.
+> -- In theory it should be the total language over the
+> -- total alphabet, but the latter cannot be defined.
+> -- Intermediate results are evaluated to normal form.
+> flatIntersection :: (Enum n, Ord n, NFData n, Ord e, NFData e) =>
+>                     [FSA n e] -> FSA n e
+> flatIntersection [] = error "Cannot take a nullary intersection"
+> flatIntersection xs = pfold i xs
+>     where i a b = let x = renameStates . minimize $ autIntersection a b
+>                   in rnf x `seq` x
+
+> -- |Union all given automata, in parallel if possible.
+> -- An empty union is defined as the empty language over
+> -- an empty alphabet.
+> -- Intermediate results are evaluated to normal form.
+> flatUnion :: (Enum n, Ord n, NFData n, Ord e, NFData e) =>
+>              [FSA n e] -> FSA n e
+> flatUnion [] = emptyLanguage
+> flatUnion xs = pfold u xs
+>     where u a b = let x = renameStates . minimize $ autUnion a b
+>                   in rnf x `seq` x
+
+> instance (NFData n, NFData e) => NFData (FSA n e) where
+>     rnf (FSA a t i f d) = rnf a `seq` rnf t `seq` rnf i `seq`
+>                           rnf f `seq` rnf d
+
+
+Acceptance and the Transition Function
+======================================
 
 To determine whether an FSA accepts a string of Symbols, there must
 exist a mechanism to determine which State to enter upon consuming a
@@ -335,13 +377,13 @@ that to define the transition function.
 
 
 > data ID n e = ID (State n) [Symbol e] deriving (Eq, Ord, Read, Show)
-> 
+
 > state :: ID n e -> State n
 > state (ID a _) = a
-> 
+
 > string :: ID n e -> [Symbol e]
 > string (ID _ xs) = xs
-> 
+
 > epsilonClosure :: (Ord e, Ord n) => FSA n e -> State n -> Set (State n)
 > epsilonClosure fsa q
 >     | isDeterministic fsa  = singleton q
@@ -353,7 +395,7 @@ that to define the transition function.
 >               where seens = keep ((isIn seen) . source) epsilons
 >                     closure = union seen $ tmap destination seens
 >                     numNew = size closure - size seen
-> 
+
 > step :: (Ord e, Ord n) => FSA n e -> Set (ID n e) -> Set (ID n e)
 > step fsa ids
 >     | filteredIDs == empty  = empty
@@ -372,7 +414,7 @@ that to define the transition function.
 >                                   tmap
 >                                   (epsilonClosure fsa . destination)
 >                                   sameLabel)
-> 
+
 
 We should not have to produce IDs ourselves.  We can define the transition
 function `delta` from an FSA, a symbol, and a state to a set of states:
@@ -381,15 +423,15 @@ function `delta` from an FSA, a symbol, and a state to a set of states:
 > delta :: (Ord e, Ord n) =>
 >          FSA n e -> Symbol e -> Set (State n) -> Set (State n)
 > delta f x = tmap state . step f . tmap ((flip ID) [x])
-> 
+
 > compute :: (Ord e, Ord n) => FSA n e -> [Symbol e] -> Set (ID n e)
 > compute fsa str = until (allS (null . string)) (step fsa) initialIDs
 >     where initialIDs = tmap (flip ID str) (initials fsa)
-> 
+
 > accepts :: (Ord e, Ord n) => FSA n e -> [e] -> Bool
 > accepts fsa = anyS (isIn (finals fsa)) . tmap state .
 >               compute fsa . tmap Symbol
-> 
+
 
 
 Logical Operators
@@ -398,20 +440,20 @@ Logical Operators
 
 > combine :: State a -> State b -> State (a, b)
 > combine (State a) (State b) = State (a, b)
-> 
+
 > makePairs :: (Ord a, Ord b) => Set a -> Set b -> Set (a, b)
 > makePairs xs ys = unionAll $ tmap (\x -> tmap ((,) x) ys) xs
-> 
+
 > makeJustPairs :: (Ord a, Ord b) =>
 >                  Set (State a) -> Set (State b) ->
 >                  Set (State (Maybe a), State (Maybe b))
 > makeJustPairs xs ys = makePairs (justify xs) (justify ys)
 >     where justify :: Ord c => Set (State c) -> Set (State (Maybe c))
 >           justify = tmap (\(State z) -> State (Just z))
-> 
+
 > combineAlphabets :: Ord e => FSA n e -> FSA n1 e -> Set e
 > combineAlphabets f1 f2 = union (alphabet f1) (alphabet f2)
-> 
+
 
 The Cartesian construction for automata is closely related to the
 tensor product of graphs.  Given two automata, M1 and M2, we construct
@@ -479,7 +521,7 @@ and guarantees totality of the result.
 >                                seen,
 >                                union exts partial))
 >                           (initialset, empty, empty)
-> 
+
 > autIntersection :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e ->
 >                    FSA (Maybe n1, Maybe n2) e
 > autIntersection f1 f2 = FSA bigalpha trans init fin det
@@ -491,7 +533,7 @@ and guarantees totality of the result.
 >           trans = combineTransitions f1 f2
 >           sts = union (tmap source trans) (tmap destination trans)
 >           det = isDeterministic f1 && isDeterministic f2
-> 
+
 > autUnion :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e ->
 >             FSA (Maybe n1, Maybe n2) e
 > autUnion f1 f2 = FSA bigalpha trans init fin det
@@ -510,7 +552,7 @@ and guarantees totality of the result.
 >           trans = combineTransitions f1 f2
 >           sts = union (tmap source trans) (tmap destination trans)
 >           det = isDeterministic f1 && isDeterministic f2
-> 
+
 
 For the difference A - B, the final states are those that are
 accepting in A and non-accepting in B.
@@ -532,7 +574,7 @@ advantage over the naive implementation (A & not B).
 > autDifference :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e ->
 >                  FSA (Maybe n1, Maybe (Set n2)) e
 > autDifference = fmap (. complement) autIntersection
-> 
+
 
 
 Much like the one-sided difference, the symmetric difference of two
@@ -544,7 +586,7 @@ automata relies on determinism.
 >                                Maybe (Set (Maybe n1, Maybe n2))) e
 > autSymmetricDifference f1 f2
 >     = autDifference (autUnion f1 f2) (autIntersection f1 f2)
-> 
+
 
 For a total functional FSA, the complement can be obtained by simply
 inverting the notion of accepting states.  Totality is necessary, as
@@ -568,13 +610,13 @@ and the string "a" is accepted in both.
 > -- accepted by the input.
 > complement :: (Ord e, Ord n) => FSA n e -> FSA (Set n) e
 > complement = complementDeterministic . determinize
-> 
+
 > -- |Returns the 'complement' of a deterministic 'FSA'.
 > -- The precondition that the input is deterministic
 > -- is not checked.
 > complementDeterministic :: (Ord e, Ord n) => FSA n e -> FSA n e
 > complementDeterministic f = f { finals = difference (states f) (finals f) }
-> 
+
 > -- |@(residue a b)@ is equivalent to @(difference a b)@.
 > -- In the context of an approximation and its source,
 > -- represents the strings accepted by the approximation
@@ -587,7 +629,7 @@ and the string "a" is accepted in both.
 > coresidue :: (Ord n, Ord e, Enum n) => FSA n e -> FSA n e -> FSA n e
 > coresidue a b = renameStates . minimize $
 >                 union (renameStates $ complement a) b
-> 
+
 
 
 Minimization
@@ -607,14 +649,14 @@ equivalence class.
 > -- as the input, with a minimal number of states.
 > minimize :: (Ord e, Ord n) => FSA n e -> FSA (Set (Set n)) e
 > minimize = minimizeDeterministic . determinize
-> 
+
 > -- |Returns a deterministic 'FSA' recognizing the same stringset
 > -- as the input, with a minimal number of states.
 > -- The precondition that the input is deterministic
 > -- is not checked.
 > minimizeDeterministic :: (Ord e, Ord n) => FSA n e -> FSA (Set n) e
 > minimizeDeterministic = minimizeOver nerode
-> 
+
 > -- |Returns a deterministic 'FSA' minimized over a given relation.
 > -- The precondition that the input is deterministic
 > -- is not checked.
@@ -631,7 +673,7 @@ equivalence class.
 >                     Transition a (classOf p) (classOf q))
 >                    (transitions fsa))
 >           newfsa = FSA (alphabet fsa) trans init fin True
-> 
+
 > -- |Two strings \(u\) and \(v\) are equivalent iff
 > -- for all strings \(w\), \(uw\) and \(vw\) lead to
 > -- states in the same equivalence class.
@@ -644,7 +686,7 @@ equivalence class.
 >                        [singleton x,
 >                         (tmap snd . keep ((== x) . fst)) i,
 >                         (tmap fst . keep ((== x) . snd)) i])
-> 
+
 
 The easiest way to construct the equivalence classes is to iteratively
 build a set of known-distinct pairs.  In the beginning we know that
@@ -672,7 +714,7 @@ is the set of states not distinct from p.
 >                                  keep (f x) (difference allPairs x),
 >                                  x))
 >                     (initiallyDistinguished, empty))
-> 
+
 > areDistinguishedByOneStep :: (Ord e, Ord n) =>
 >                              FSA n e ->
 >                              Set (State n, State n) ->
@@ -687,7 +729,7 @@ is the set of states not distinct from p.
 >                         tmap (pairs' (destinations q a))
 >                         (destinations p a)
 >           newPairs = unionAll $ tmap newPairs' (alphabet fsa)
-> 
+
 
 We only need to check each pair of states once: (1, 2) and (2, 1) are
 equivalent in this sense.  Since they are not equivalent in Haskell,
@@ -697,13 +739,13 @@ direction.
 
 > makePair :: (Ord a) => a -> a -> (a, a)
 > makePair a b = (min a b, max a b)
-> 
+
 > pairs :: (Ord a) => Set a -> Set (a, a)
 > pairs xs = unionAll $ tmap (\x -> pairs' (keep (> x) xs) x) xs
-> 
+
 > pairs' :: (Ord a) => Set a -> a -> Set (a, a)
 > pairs' xs x = tmap (\y -> makePair x y) xs
-> 
+
 
 An FSA is certainly not minimal if there are states that cannot be
 reached by any path from the initial state.  We can trim those.
@@ -725,7 +767,7 @@ reached by any path from the initial state.  We can trim those.
 >                              (tmap state . step fsa . initialIDs . Symbol)
 >                              alpha))
 >                     newqs = union next qs
-> 
+
 
 An FSA will often contain states from which no path at all leads to an
 accepting state.  These represent failure to match a pattern, which
@@ -746,10 +788,10 @@ the FSA.
 >               }
 >     where reverseTransition (Transition x s d) = Transition x d s
 >           reverseTransitions = tmap reverseTransition . transitions
-> 
+
 > trimFailStates :: (Ord e, Ord n) => FSA n e -> FSA n e
 > trimFailStates = FSA.reverse . trimUnreachables . FSA.reverse
-> 
+
 > -- |Returns a normal form of the input.
 > -- An FSA is in normal form if it is minimal and deterministic,
 > -- and contains neither unreachable states nor nonaccepting sinks.
@@ -761,7 +803,7 @@ the FSA.
 >               | isEmpty (states fsa) = complementDeterministic $
 >                                        totalWithAlphabet (alphabet fsa)
 >               | otherwise            = renameStates fsa
-> 
+
 
 
 J-Minimization
@@ -790,7 +832,7 @@ but are actually equivalent in terms of their two-sided ideals.
 >                 Set (Set (State ([Maybe n], [Symbol e])))
 > jEquivalence f = splitJEqClass f $
 >                  Set.fromList [finals f, difference (states f) (finals f)]
-> 
+
 > splitJEqClass :: (Ord e, Ord n) =>
 >                  FSA ([Maybe n], [Symbol e]) e ->
 >                  Set (Set (State ([Maybe n], [Symbol e]))) ->
@@ -799,7 +841,7 @@ but are actually equivalent in terms of their two-sided ideals.
 >     | size new == size xi  = xi
 >     | otherwise            = splitJEqClass f new
 >     where new = unionAll $ tmap (splitJEqClass' f xi) xi
-> 
+
 > splitJEqClass' :: (Ord e, Ord n) =>
 >                   FSA ([Maybe n], [Symbol e]) e ->
 >                   Set (Set (State ([Maybe n], [Symbol e]))) ->
@@ -811,7 +853,7 @@ but are actually equivalent in terms of their two-sided ideals.
 >     where (x, xs)  = choose s
 >           ys       = keep ((==) (p2 f x) . p2 f) xs
 >           ys'      = difference xs ys
-> 
+
 
 The primitive left-ideal of an element x of the syntactic monoid is
 the set of elements {ax} for all elements a:
@@ -832,7 +874,7 @@ the set of elements {ax} for all elements a:
 >                                   Just a  -> insert a (unmaybe ys)
 >                                   _       -> unmaybe ys
 >               where (y, ys) = choose cs
-> 
+
 > pr :: (Ord n, Ord e) => FSA n e -> State n -> Set (State n)
 > pr f x = snd $ until
 >          ((==) 0 . size . fst)
@@ -841,11 +883,11 @@ the set of elements {ax} for all elements a:
 >          (singleton x, singleton x)
 >     where pr'     = tmap state . unionAll . tmap pr''
 >           pr'' x  = step f $ tmap (ID x . singleton . Symbol) (alphabet f)
-> 
+
 > p2 :: (Ord n, Ord e) => FSA (n, [Symbol e]) e ->
 >       State (n, [Symbol e]) -> Set (State (n, [Symbol e]))
 > p2 f = unionAll . tmap (pr f) . pl f
-> 
+
 
 
 Determinization
@@ -859,7 +901,7 @@ and minimization require DFAs as input.
 
 > metaFlip :: Ord n => Set (State n) -> State (Set n)
 > metaFlip = State . tmap nodeLabel
-> 
+
 > powersetConstruction :: (Ord e, Ord n) =>
 >                         FSA n e ->
 >                         Set (State n) ->
@@ -886,7 +928,7 @@ and minimization require DFAs as input.
 >                 (keep
 >                  isFinal
 >                  (tmap (\(_, x, _) -> x) trans'))
-> 
+
 
 
 
@@ -898,7 +940,7 @@ and minimization require DFAs as input.
 >     | otherwise = powersetConstruction f (initials f) isFinal
 >     where isFinal = not . Set.null . intersection (finals f) .
 >                     unionAll . tmap (epsilonClosure f)
-> 
+
 
 
 The Powerset Graph
@@ -927,7 +969,7 @@ the source as accepting.
 > powersetGraph :: (Ord e, Ord n) => FSA n e -> FSA (Set n) e
 > powersetGraph f = powersetGraph' f hasAccept
 >     where hasAccept qs  = intersection (finals f) qs /= empty
-> 
+
 > powersetGraph' :: (Ord e, Ord n) =>
 >                           FSA n e ->
 >                           (Set (State n) -> Bool) ->
@@ -935,7 +977,7 @@ the source as accepting.
 > powersetGraph' f isFinal = powersetConstruction f
 >                            (states f)
 >                            isFinal
-> 
+
 
 
 The Syntactic Monoid
@@ -981,7 +1023,7 @@ state is considered accepting in the syntactic monoid.
 >                        then i
 >                        else empty
 >           (t,_,f,_)  = syntacticMonoid' m n (empty, i, i', i)
-> 
+
 > syntacticMonoid' :: (Ord e, Ord n) => FSA n e -> Int ->
 >                     (Set (Transition ([Maybe n], [Symbol e]) e),
 >                      Set (State ([Maybe n], [Symbol e])),
@@ -1018,7 +1060,7 @@ state is considered accepting in the syntactic monoid.
 >                       Set.toList $ finals f
 >           hasFinal  = not . (==0) . size . intersection fins .
 >                       take n . fst . nodeLabel
-> 
+
 > replaceDestinationFromMap :: (Container (c (State (a, b))) (State (a, b)),
 >                               Collapsible c, Eq a) =>
 >                              c (State (a, b)) -> Transition (a, b) e ->
@@ -1028,13 +1070,13 @@ state is considered accepting in the syntactic monoid.
 >     | otherwise     = Transition (edgeLabel t) (source t) (chooseOne m')
 >     where m'  = keep ((==) (fn $ destination t) . fn) m
 >           fn  = fst . nodeLabel
-> 
+
 > mergeByDestFst :: (Container (c (Transition (n, n') e))
 >                    (Transition (n, n') e),
 >                    Collapsible c, Ord n, Ord n', Ord e) =>
 >                   c (Transition (n, n') e) -> c (Transition (n, n') e)
 > mergeByDestFst l = mergeByDestFst' empty l
-> 
+
 > mergeByDestFst' :: (Container (c (Transition (n, n') e))
 >                     (Transition (n, n') e),
 >                     Collapsible c, Ord n, Ord n', Ord e) =>
@@ -1051,7 +1093,7 @@ state is considered accepting in the syntactic monoid.
 >           fnd           = fst . nodeLabel . destination
 >           sds           = keep ((==) (fnd x) . fnd) xs
 >           set_dest d t  = Transition (edgeLabel t) (source t) d
-> 
+
 
 
 Alphabet Manipulation
@@ -1062,7 +1104,7 @@ Alphabet Manipulation
 > extendAlphabetTo :: (Ord a, Ord b) => Set b -> FSA a b ->
 >                   FSA (Maybe Integer, Maybe a) b
 > extendAlphabetTo syms = autUnion (emptyWithAlphabet syms)
-> 
+
 > -- |Remove symbols from the alphabet of an automaton.
 > contractAlphabetTo :: (Ord a, Ord b) => Set b -> FSA a b ->
 >                       FSA a b
@@ -1075,12 +1117,12 @@ Alphabet Manipulation
 >                   (isIn (insert Epsilon $ tmap Symbol syms)
 >                    . edgeLabel) $
 >                   transitions fsa
-> 
+
 > -- |Ignore the alphabet of an automaton and use a given alphabet instead.
 > forceAlphabetTo :: (Ord a, Ord b) => Set b -> FSA a b ->
 >                    FSA (Maybe Integer, Maybe a) b
 > forceAlphabetTo syms = contractAlphabetTo syms . extendAlphabetTo syms
-> 
+
 
 
 Miscellaneous Functions
@@ -1102,7 +1144,7 @@ type to improve memory usage and processing speed.
 > {-# RULES
 >   "renameStates/identity" renameStates = id
 >   #-}
-> 
+
 > -- |Transform the node labels of an automaton using a given function.
 > -- The precondition that this function is injective is not checked.
 > renameStatesBy :: (Ord e, Ord n, Ord n1) =>
@@ -1113,17 +1155,17 @@ type to improve memory usage and processing speed.
 >                        , initials    = tmap (fmap f) (initials a)
 >                        , finals      = tmap (fmap f) (finals a)
 >                        }
-> 
+
 
 Mapping on tuples:
 
 
 > mapfst :: (a -> b) -> (a, c) -> (b, c)
 > mapfst f (a, b) = (f a, b)
-> 
+
 > mapsnd :: (b -> c) -> (a, b) -> (a, c)
 > mapsnd f (a, b) = (a, f b)
-> 
+
 
 A parallel fold implementation based on a tree.  The accumulating
 function must be both associative and commutative, as the tree is
@@ -1141,17 +1183,17 @@ built in such a way that order of elements is not preserved.
 > listFromTree :: Tree a -> [a]
 > listFromTree (Leaf x) = [x]
 > listFromTree (Tree l r) = listFromTree l ++ listFromTree r
-> 
+
 > instance NFData a => NFData (Tree a) where
 >     rnf (Leaf a) = rnf a
 >     rnf (Tree l r) = rnf l `seq` rnf r
-> 
+
 > treeFold :: (a -> a -> a) -> Tree a -> a
 > treeFold _ (Leaf x) = x
 > treeFold mappend (Tree l r) = l' `par` r' `pseq` (l' `mappend` r')
 >     where l' = treeFold mappend l
 >           r' = treeFold mappend r
-> 
+
 
 Split a linked list into two smaller lists by taking the even and odd
 elements.  This does not require computing the list's length, thus it
@@ -1163,4 +1205,3 @@ can be more efficient than splitting at the middle element.
 >     where rEvenOdds' p      []        =  p
 >           rEvenOdds' (a,b)  (x:[])    =  (x:a, b)
 >           rEvenOdds' (a,b)  (x:y:xs)  =  rEvenOdds' (x:a, y:b) xs
-
