@@ -8,6 +8,7 @@
 > import Control.DeepSeq
 > import Data.Functor ((<$>))
 > import Data.List (sortBy)
+> import Data.Ord (comparing)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 > import System.Directory
@@ -92,19 +93,23 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >           formatFP' (x:xs)   = x:formatFP' xs
 >           formatFP' []       = []
 
-> formatAlphabet :: (Show e) => Set e -> String
-> formatAlphabet = concatMap formatSymbol . Set.toAscList
+> formatAlphabet :: Set String -> String
+> formatAlphabet = concatMap formatSymbol .
+>                  Set.toAscList .
+>                  tmap untransliterateString
 
 > formatSymbol :: (Show e) => e -> String
 > formatSymbol = take 2 . (++ "  ") . filter (/= '"') .
 >                transliterateString . show
 
-> formatSequences :: (Ord e, Show e) => Set [e] -> String
+> formatSequences :: Set [String] -> String
 > formatSequences = unlines . map formatSequence . sortBy comp . Set.toList
 >     where comp xs ys
 >               | length xs < length ys = LT
 >               | length xs > length ys = GT
->               | otherwise             = compare xs ys
+>               | otherwise             = compare
+>                                         (map untransliterateString xs)
+>                                         (map untransliterateString ys)
 
 > formatSubstrings :: ForbiddenSubstrings String -> String
 > formatSubstrings ffs = formatSequences .
@@ -263,7 +268,6 @@ I'm cheating right now, but I'll fix this later.
 >               ) ns
 >     where realName = dropWhile (== ' ') $
 >                      dropWhile (isIn "0123456789") name
->           g h = hPutStrLn h . formatSequences . tmap (map (fmap untransliterateString))
 >           slK = findKFromFFs ffs
 >           spK = (maximum . insert 0 . tmap size) fssqs
 >           coslK = findKFromFFs rfs
@@ -304,7 +308,7 @@ I'm cheating right now, but I'll fix this later.
 >                  Set [String],
 >                  Set [String])
 > keepUseful ffs@(u,w,i,r,f) fssqs potential@(_,pw,pi,pr,pf) = (u,nw,ni,nr,nf)
->     where k = keepPossible isSSQ fssqs
+>     where k = keep (not . isEmpty) . keepPossible isSSQ fssqs
 >           fpa = prependFish . appendFish
 >           fp  = prependFish
 >           fa  = appendFish

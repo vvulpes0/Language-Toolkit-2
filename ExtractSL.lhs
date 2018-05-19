@@ -65,11 +65,11 @@ MoL'17 as is the notion of an $\SL$ approximation of a non-$\SL$ stringset.
 >                  , isSLPSG
 >                  , slPSGQ
 >                  ) where
-> 
+
 > import FSA
 > import Traversals  -- for initialsPaths, rejectingPaths
 > import Factors
-> 
+
 > import Control.DeepSeq
 > import Data.Set (Set)
 > import qualified Data.Set as Set
@@ -89,18 +89,18 @@ the polynomial-time pair-graph version.
 > -- some specific factor size \(k\).
 > isSL :: (Ord e, Ord n) => FSA n e -> Bool
 > isSL = (> 0) . slQ
-> 
+
 > -- |Returns the smallest factor size for which
 > -- the stringset represented by the given 'FSA'
 > -- satisfies Suffix-Substitution Closure,
 > -- or @0@ if there is no such \(k\).
 > slQ :: (Ord e, Ord n) => FSA n e -> Integer
 > slQ fsa = slPSGQ (powersetGraph fsa)
-> 
+
 > -- |isSL with precomputed PSG
 > isSLPSG :: (Ord e, Ord n) => FSA (Set n) e -> Bool
 > isSLPSG = (>0) . slPSGQ
-> 
+
 > -- |slQ with precomputed PSG
 > slPSGQ :: (Ord e, Ord n) => FSA (Set n) e -> Integer
 > slPSGQ psg = slTraversal psg (initialsPaths psg) 0
@@ -134,9 +134,6 @@ former case it evaluates to $0$.
 >               ((1 <) . Set.size . nodeLabel) . endstate)
 >              exts
 >       cycle = anyS (maybe False (isIn (stateMultiset thisp)) . endstate) live
-> 
-
-
 
 \section*{Extracting Forbidden Factors}
 The algorithms for gathering Forbidden Initial, Free and Final Factors all
@@ -162,8 +159,7 @@ the there is exactly one initial state of a PSG, so this is just lowering the
 type of a singleton set.
 
 > psgQ :: (Ord a, Ord b) => FSA (Set b) a -> State (Set b)
-> psgQ = Set.findMin . FSA.initials
-> 
+> psgQ = Set.findMin . initials
 
 
 %% {---------------------------------------------------------------------------}
@@ -211,20 +207,18 @@ type of a singleton set.
 >                         , forbiddenFinals         ::   Set [e]
 >                         }
 >     deriving (Eq, Ord, Show, Read)
-> 
+
 > -- |forbiddenUnits relative to a domain alphabet
 > forbiddenUnitsWithAlphabet :: (Ord e) => 
 >                                 Set e -> ForbiddenSubstrings e -> Set e
 > forbiddenUnitsWithAlphabet a fs = difference a (attestedUnits fs)
-> 
-> 
 
 
 ForbiddenPaths are the internal structure gathered by the PSG traversals.
 This structure does not include attested units or forbidden units or words,
 which are computable separately from the FSA and the forbidden paths and are
 not relevant until the optimal set of initial, free and final forbidden paths
-are fixed.  Labels of paths are (Symbol e)
+are fixed.  Labels of paths are (Symbol e).  Note that since these are paths in the powerset graph `n' here is `Set n' for the `n' of the FSA.
 
 > data ForbiddenPaths n e = 
 >           ForbiddenPaths { -- |Paths witnessing forbidden initial factors
@@ -238,18 +232,26 @@ are fixed.  Labels of paths are (Symbol e)
 >                                   
 > -- |Convert Set of Paths to Set of sequences of (Symbol e)
 > factorsFromPaths :: (Ord e, Ord n) =>
->                       Set(Path n e) -> Set [Symbol e]
+>                       Set (Path n e) -> Set [Symbol e]
 > factorsFromPaths = tmap labels
-> 
+
 > -- |Convert Set of Paths to Set of Substrings of alphabet type
 > stringsFromPaths :: (Ord e, Ord n) =>
 >                      Set(Path n e) -> Set [e]
 > stringsFromPaths = tmap (unsymbols . labels)
-> 
+
+> -- |Convert path to Set of states visited by path
+> pathToStateSet :: (Ord a, Ord b) => Path b a -> Set (State b)
+> pathToStateSet = setFromMultiset . stateMultiset
+
+> -- visitedStateSets paths is the set of sets of states visited in each path
+> --  in paths
+> visitedStateSets :: (Ord a, Ord b) => Set (Path b a) -> Set (Set (State b))
+> visitedStateSets = tmap pathToStateSet
+
 > -- a tractable version of unsymbol
 > emancipate :: (Symbol e) -> e
 > emancipate (Symbol x) = x
-> 
 
 \begin{itemize}
 \item Attested units are alphabet elements that actually occur on a productive  
@@ -279,7 +281,7 @@ are fixed.  Labels of paths are (Symbol e)
 >         where
 >           aUns = tmap (emancipate . edgeLabel) (transitions fsa)
 >           fUns = alph `difference` aUns
->           fPs = forbiddenPathsWithAlphabet alph fsa
+>           fPs = forbiddenNDPathsWithAlphabet alph fsa
 >           fInSym = factorsFromPaths (initialPaths fPs)
 >           fFrSym = factorsFromPaths (freePaths fPs)
 >           fFiSym = factorsFromPaths (finalPaths fPs)
@@ -288,13 +290,13 @@ are fixed.  Labels of paths are (Symbol e)
 >           fIns = tmap unsymbols fInSym
 >           fFrs = tmap unsymbols fFrSym
 >           fFis = tmap unsymbols fFiSym
-> 
+
 > -- |Forbidden substrings of the given 'FSA' relative to its alphabet
 > forbiddenSubstrings :: (Ord e, Ord n, Enum n) =>
 >                        FSA n e
 >                     -> ForbiddenSubstrings e
 > forbiddenSubstrings fsa = forbiddenSubstringsWithAlphabet (alphabet fsa) fsa
-> 
+
 > -- |Paths representing the forbidden substrings of the given 'FSA'.
 > --   the alphabet of which must be a subset of the provided alphabet.
 > forbiddenPathsWithAlphabet:: (Ord e, Ord n, Enum n) =>
@@ -309,8 +311,6 @@ are fixed.  Labels of paths are (Symbol e)
 >        fInitP = initialFPs fsa (max 0 (k-1))
 >        fFreeP = freeFPsPSG psg k
 >        fFinP = finalFPsPSG psg (max 0 (k-1))
-> 
-
 
 
 > -- |Paths representing forbidden substrings of the given 'FSA'.
@@ -318,8 +318,21 @@ are fixed.  Labels of paths are (Symbol e)
 >                  FSA n e ->
 >                  ForbiddenPaths (Set n) e
 > forbiddenPaths fsa = forbiddenPathsWithAlphabet (alphabet fsa) fsa
-> 
 
+> forbiddenNDPathsWithAlphabet :: (Ord e, Ord n, Enum n) =>
+>                                 Set e
+>                              -> FSA n e
+>                              -> ForbiddenPaths (Set (Set n)) e
+> forbiddenNDPathsWithAlphabet alph fsa =
+>     ForbiddenPaths fInitP fFreeP fFinP
+>         where psg     =  powersetGraph fsa
+>               fInitP  =  initialNDFPs fsa
+>               fFreeP  =  freeNDFPsPSG psg
+>               fFinP   =  finalNDFPsPSG psg
+
+> forbiddenNDPaths :: (Ord e, Ord n, Enum n) =>
+>                     FSA n e -> ForbiddenPaths (Set (Set n)) e
+> forbiddenNDPaths fsa = forbiddenNDPathsWithAlphabet (alphabet fsa) fsa
 
 %% Bounded search for forbidden factors.
 
@@ -352,7 +365,7 @@ are fixed.  Labels of paths are (Symbol e)
 >        fInitP = initialFPs fsa bnd
 >        fFreeP = freeFPsPSG psg bnd
 >        fFinP = finalFPsPSG psg bnd
-> 
+
 > -- |The forbidden substrings of the given 'FSA'.
 > -- Takes at most bound-1 many iterations of each
 > -- cycle in the powerset graph.
@@ -362,10 +375,6 @@ are fixed.  Labels of paths are (Symbol e)
 >                         -> ForbiddenPaths (Set n) e
 > forbiddenPathsWithBound b fsa =
 >     forbiddenPathsWithAlphabetWithBound (alphabet fsa) b fsa
-> 
-
-
-
 
 %% Forbidden words
 %% Labels of acyclic paths from the start state of the DFA that end at a 
@@ -412,10 +421,6 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 >                   | (Set.null s) = 0
 >                   | otherwise = 
 >                       (maximum . map size) (Set.toList s)
-> 
-> 
-
-
 
 > initialFPs :: (Ord a, Ord b, Enum b) =>
 >               FSA b a
@@ -426,11 +431,19 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 > -- if it is potentially so, then it should be (states rFSA), but these are not
 > --   related in any meaningful way with the initials of fsa
 >         where rFSA = renameStates . normalize $ FSA.reverse fsa
-> 
+
+> initialNDFPs :: (Ord a, Ord b, Enum b) =>
+>                 FSA b a
+>              -> Set (Path (Set (Set b)) a)
+> initialNDFPs fsa = tmap (\p -> p {labels = word p}) $
+>                    finalNDFPsPSG (powersetGraph rFSA)
+> -- See note in initialFPs
+>         where rFSA = renameStates . normalize $ FSA.reverse fsa
+
 > freeFPs :: (Ord e, Ord n, Enum n) =>
 >            (FSA n e) -> Integer -> Set(Path(Set n) e)
 > freeFPs fsa bound = freeFPsPSG (powersetGraph fsa) bound
-> 
+
 > -- if bound >= 0 then take cycles up to bound+1 times
 > -- otherwise take cycles arbitrarily many times
 > -- bound should be < 0 only if the psg is the PSG of an FSA that recognizes an
@@ -448,7 +461,29 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 >                  (Path empty (pure stateEmpty) (singleton stateEmpty) 0)
 >           | otherwise = empty
 >       stateEmpty = (State empty)
-> 
+
+> -- if bound >= 0 then take cycles up to bound+1 times
+> -- otherwise take cycles arbitrarily many times
+> -- bound should be < 0 only if the psg is the PSG of an FSA that recognizes an
+> --   SL stringset, otherwise termination is not guaranteed
+> freeNDFPsPSG :: (Ord e, Ord n, Enum n) =>
+>                 (FSA (Set n) e)
+>              -> Set (Path(Set (Set n)) e)
+> freeNDFPsPSG psg
+>     = gatherNDFPs psgR (Set.singleton stateQ) initialFront empty
+>     where 
+>       psgR = (trimRevPSG psg)
+>       stateQ = psgQ psg
+>       initialFront
+>           | (contains (State empty) (states psg))
+>               =  singleton
+>                  (Path {
+>                     labels = empty
+>                   , endstate = pure (State (singleton empty))
+>                   , stateMultiset = singleton (State (singleton (empty)))
+>                   , depth = 0
+>                   })
+>           | otherwise = empty
 
 
 %% finalFPs
@@ -467,13 +502,11 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 %% bound should be < 0 only if the psg is the PSG of an FSA that recognizes an
 %%   SL stringset, otherwise termination is not guaranteed
 
-
-
 > finalFPs :: (Ord e, Ord n, Enum n) => (FSA n e)
 >                                -> Integer                 -- bound
 >                                -> Set (Path (Set n) e)
 > finalFPs fsa bound = finalFPsPSG (powersetGraph fsa) bound
-> 
+
 > finalFPsPSG :: (Ord e, Ord n, Enum n) =>
 >                (FSA (Set n) e) -> Integer
 >                                -> Set (Path (Set n) e)
@@ -487,28 +520,47 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 >                      (\s -> Path empty (pure s) (singleton s) 0)
 >                      (difference
 >                       (states psgR)
->                       (insert (State empty) (FSA.initials psgR)))
-> 
+>                       (insert (State empty) (initials psgR)))
 
+
+%% [DL, 19 May 2018]:
+%% I don't know if the initial frontier should consist of
+%% a single stateset containing all non-final states
+%% or several singleton statesets.
+%% Right now, I am going with the former.
+
+> finalNDFPsPSG :: (Ord e, Ord n, Enum n) =>
+>                  (FSA (Set n) e)
+>               -> Set (Path (Set (Set n)) e)
+> finalNDFPsPSG psg
+>     = gatherNDFPs psgR (singleton stateQ) initialFront empty
+>     where 
+>       psgR = (trimRevPSG psg)
+>       stateQ = psgQ psg
+>       initialFront = singleton $
+>                      Path {
+>                        labels = empty
+>                      , endstate = pure nonFinalsState
+>                      , stateMultiset = singleton nonFinalsState
+>                      , depth = 0
+>                      }
+>       nonFinalsState = fmap Set.fromList         .
+>                        sequence . Set.toList     .
+>                        difference (states psgR)  $
+>                        insert (State empty) (initials psgR)
 
 %% trimRevPSG psg is reverse of
 %%    (psg with in-edges to Q and out-edges from $\emptyset$ removed)
 %%    note that such edges are necessarily self-edges
 
-
-
 > trimRevPSG :: (Ord e, Ord n, Enum n) => FSA (Set n) e -> FSA (Set n) e
-> trimRevPSG psg = FSA.reverse psgr
->     where
->       psgr = FSA (alphabet psg)
->                  (Set.filter
->                          (\t ->
->                               ((destination t) /= (psgQ psg))
->                               && (source t) /= (State (Set.empty)) )
->                              (transitions psg) )
->                  (FSA.initials psg) (FSA.finals psg) (isDeterministic psg)
-> 
-
+> trimRevPSG psg = FSA.reverse $
+>                  psg {
+>                    transitions = keep
+>                                  (\t -> (destination t /= psgQ psg
+>                                         && source t /= State empty))
+>                                  (transitions psg)
+>                  }
 
 %%  Breadth-first traversal of graph
 %%   Returns list of strings labeling paths from initial frontier to a goal
@@ -540,7 +592,22 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 >       acceptableExtensions p
 >           | (bound < 0) = Set.toList (extensions psg p)
 >           | otherwise = Set.toList (boundedCycleExtensions psg bound p)
-> 
+
+> gatherNDFPs :: (Ord e, Ord n, Enum n) =>
+>                FSA (Set n) e               -- graph (psGraph based)
+>             -> Set (State (Set n))         -- set of goal states
+>             -> [Path (Set (Set n)) e]      -- frontier
+>             -> Set (Path (Set (Set n)) e)  -- FPs so far
+>             -> Set (Path (Set (Set n)) e)  -- FPs
+> gatherNDFPs psg goal front fps
+>     | isEmpty front = fps
+>     | otherwise = gatherNDFPs psg goal nextFront (union nextFPs fps)
+>     where
+>       (nextFront,nextFPs)           -- (frontier k+1, k-FPs)
+>           = nondeterministicPassK goal
+>             (unionAll (map acceptableExtensions front)) -- extensions of front k
+>             empty empty       -- initial front & FPs for pass k
+>       acceptableExtensions = Set.toList . nondeterministicAcyclicExtensions psg
 
 
 %% passK scans extensions of kth frontier for length k FPs 
@@ -569,7 +636,27 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 >               front)
 >            (insert p fps)
 >     | otherwise = passK goals ps (p:front) fps -- in frontier k+1
-> 
+
+> nondeterministicPassK :: (Ord e, Ord n, Enum n) =>
+>                          Set (State (Set n))           -- goal states
+>                       -> [Path (Set (Set n)) e]        -- extensions of front k
+>                       -> [Path (Set (Set n)) e]        -- front k+1 so far
+>                       -> Set (Path (Set (Set n)) e)    -- k-FPs so far
+>                       -> ([Path (Set (Set n)) e],
+>                           Set (Path (Set (Set n)) e))  -- (front, k-FPs)
+> nondeterministicPassK goals [] front fps = (front, fps)
+> nondeterministicPassK goals (p:ps) front fps
+>     | contains (labels p) (tmap labels fps)    -- extends known fp
+>         = nondeterministicPassK goals ps front fps
+>     | maybe False (any (isIn goals . State) . nodeLabel) (endstate p) -- new fp
+>         = nondeterministicPassK goals ps
+>            (keep
+>               ((\x -> doesNotContain (labels x)
+>                       (insert (labels p) (tmap labels fps))))
+>               front)
+>            (insert p fps)
+>     | otherwise = nondeterministicPassK
+>                   goals ps (p:front) fps -- in frontier k+1
 
 
 %% verification 
@@ -586,9 +673,6 @@ buildFSAs FFs -> tuple of lists of FSAs for each FF
 >                 , [FSA Integer e] -- finals
 >                 )
 > buildFSAs = buildFSAsFromFFs . forbiddenSubstrings
-> 
-
-
 
 > buildFSAsFromFFs :: (NFData e, Ord e) =>
 >                     ForbiddenSubstrings e
@@ -609,11 +693,8 @@ buildFSAs FFs -> tuple of lists of FSAs for each FF
 >       ias = build True False (forbiddenInitials fs)
 >       fras = build False False (forbiddenFrees fs)
 >       fias = build False True (forbiddenFinals fs)
-> 
-
 
 %% build FSA from FSAs
-
 
 > combineFSAs :: (NFData e, Ord e) =>
 >                (Set e,    -- alphabet
@@ -625,18 +706,14 @@ buildFSAs FFs -> tuple of lists of FSAs for each FF
 > combineFSAs (alphs,was,ias,fras,fias) =
 >     flatIntersection
 >     (totalWithAlphabet alphs : concat [was, ias, fras, fias])
-> 
-
 
 %% build FSA from forbidden factors
 %% Since this uses renameStates the State type of the result will be Integer
 %% This really needs to be as strict as possible, which I hope it isn't
 
-
 > -- |Create an 'FSA' satisfying the conditions imposed by the
 > -- given sets of forbidden substrings.
 > buildFSA :: (NFData e, Ord e) => (ForbiddenSubstrings e) -> FSA Integer e
 > buildFSA = combineFSAs . buildFSAsFromFFs
-> 
 
 \end{document}
