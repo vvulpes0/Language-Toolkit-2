@@ -1,25 +1,25 @@
-
 > module Main where
-> 
-> import Porters (to, from, Dot(Dot), Jeff(Jeff), untransliterate)
-> 
+
+> import FSA
+> import Porters (to, from, Dot(Dot), Jeff(Jeff), untransliterateString)
+
 > import System.Console.GetOpt
 > import System.Environment (getArgs)
 > import System.Exit (exitFailure)
 > import System.IO (Handle, IOMode(ReadMode, WriteMode),
 >                   hFlush, hGetContents, hPutStr, stdin, stdout, withFile)
-> 
+
 > import Data.Functor ((<$>))
-> 
+
 > data Options = Options
 >     { optShowVersion   :: Bool
 >     , optShowUsage     :: Bool
->     , optTransliterate :: Bool
+>     , optTransliterate :: String -> String
 >     , optOutput        :: Maybe FilePath
->     } deriving (Show)
-> 
+>     }
+
 > main = uncurry act =<< compilerOpts =<< getArgs
-> 
+
 > act :: Options -> [String] -> IO ()
 > act opts files
 >     | optShowVersion opts       = printVersion
@@ -29,54 +29,57 @@
 >                                   file (optOutput opts)
 >     where printUsage = putStr $ usageInfo usageHeader options
 >           file       = case files of
->                          []      ->  Nothing
->                          ("-":_) -> Nothing
->                          (x:_)   ->  Just x
-> 
-> printDot :: Bool -> Maybe FilePath -> Maybe FilePath -> IO ()
-> printDot trp infile outfile
->     = maybe ($ stdin) (\f -> withFile f ReadMode) infile $ \h ->
->       output outfile  =<<
->       to Dot          <$>
->       transform       <$>
->       from Jeff       <$>
+>                          []       ->  Nothing
+>                          ("-":_)  ->  Nothing
+>                          (x:_)    ->  Just x
+
+> printDot :: (String -> String) -> Maybe FilePath -> Maybe FilePath -> IO ()
+> printDot tf infile outfile
+>     = maybe ($ stdin) (flip withFile ReadMode) infile $ \h ->
+>       output outfile      =<<
+>       to Dot              <$>
+>       renameSymbolsBy tf  <$>
+>       from Jeff           <$>
 >       hGetContents h
->     where transform = if trp
->                       then id
->                       else untransliterate
-> 
+
 > output :: Maybe FilePath -> String -> IO ()
 > output file s = maybe ($ stdout) (\f -> withFile f WriteMode) file $ \h ->
 >                 hPutStr h s >> hFlush h
-> 
+
 > usageHeader = "Usage: dotify [OPTION...] [file]"
-> 
+
 > printVersion :: IO ()
-> printVersion = putStrLn "Version 1.0"
+> printVersion = putStrLn "Version 1.1"
 > 
 > defaultOptions = Options
 >                  { optShowVersion   = False
 >                  , optShowUsage     = False
->                  , optTransliterate = False
+>                  , optTransliterate = untransliterateString
 >                  , optOutput        = Nothing
 >                  }
-> 
+
 > options :: [OptDescr (Options -> Options)]
 > options =
->     [ Option ['h','?'] []
+>     [ Option ['c'] []
+>       (NoArg (\opts -> opts { optTransliterate = compactString }))
+>       "use compact symbols, e.g. 0/2"
+>     , Option ['h','?'] []
 >       (NoArg (\opts -> opts { optShowUsage = True }))
->       "show this help",
->       Option ['o'] []
+>       "show this help"
+>     , Option ['o'] []
 >       (ReqArg (\f opts -> opts { optOutput = if f == "-" then Nothing else Just f }) "FILE")
->       "output FILE",
->       Option ['t'] []
->       (NoArg (\opts -> opts { optTransliterate = True }))
->       "use transliterated symbols",
->       Option ['v'] []
+>       "output FILE"
+>     , Option ['t'] []
+>       (NoArg (\opts -> opts { optTransliterate = id }))
+>       "use transliterated symbols, e.g. L'"
+>     , Option ['v'] []
 >       (NoArg (\opts -> opts { optShowVersion = True }))
 >       "show version number"
+>     , Option ['w'] []
+>       (NoArg (\opts -> opts { optTransliterate = untransliterateString }))
+>       "use wide symbols, e.g. w0.s0"
 >     ]
-> 
+
 > compilerOpts :: [String] -> IO (Options, [String])
 > compilerOpts argv =
 >     case getOpt RequireOrder options argv of
@@ -84,3 +87,4 @@
 >       (_, _, errs) -> ioError . userError $
 >                       concat errs ++ usageInfo usageHeader options
 
+> compactString = flip difference "ws" . tr "." "/" . untransliterateString

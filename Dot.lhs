@@ -1,4 +1,3 @@
-
 > {-# OPTIONS_HADDOCK hide,show-extensions #-}
 > {-|
 > Module    : Dot
@@ -14,14 +13,14 @@
 >              -- *Miscellaneous
 >            , formatSet
 >            ) where
-> 
+
 > import FSA
 > import Data.Set (Set)
 > import qualified Data.Set as Set
-> 
+
 > nq :: String -> String
 > nq = keep (/= '"')
-> 
+
 > collectBy :: (Collapsible t,
 >               Container (t a) a, Container (t (t a)) (t a), Eq b) =>
 >              (a -> b) -> t a -> t (t a)
@@ -31,20 +30,20 @@
 >                       difference xs firstKind
 >     where first      = chooseOne xs
 >           firstKind  = keep ((==) (f first) . f) xs
-> 
+
 > transitionClasses :: (Ord n, Ord e) => FSA n e -> Set (Set (Transition n e))
 > transitionClasses = unionAll .
 >                     tmap (collectBy destination) .
 >                     collectBy source .
 >                     transitions
-> 
+
 > commaSeparateList :: (Collapsible c) => c String -> String
 > commaSeparateList xs
 >     | size xs == 0  = ""
 >     | size xs == 1  = x
 >     | otherwise     = x ++ ", " ++ commaSeparateList xs'
 >     where (x, xs') = choose xs
-> 
+
 > -- |Return value is in the range \([0 .. n]\),
 > -- where \(n\) is the size of the input.
 > -- A value of \(n\) indicates that the element was
@@ -55,7 +54,7 @@
 >     | a == x       = 0
 >     | otherwise    = 1 + shortLabelIn as x
 >     where (a, as) = choose xs
-> 
+
 > dotifyTransitionSet :: (Collapsible c, Eq e, Show e) =>
 >                        c (Symbol e, Int, Int) -> String
 > dotifyTransitionSet ts
@@ -69,7 +68,7 @@
 >                             tmap (sym . first) list
 >           sym (Symbol a)  = nq $ show a
 >           sym Epsilon     = "\x03b5" -- ε
-> 
+
 > dotifyTransitions :: (Ord n, Ord e, Show n, Show e) => FSA n e -> [String]
 > dotifyTransitions f = collapse (:) [] .
 >                       tmap (dotifyTransitionSet .
@@ -79,39 +78,39 @@
 >                                   shortLabelIn sts (source tr),
 >                                   shortLabelIn sts (destination tr))
 >           sts                  = states f
-> 
+
 > dotifyInitial :: Int -> [String]
 > dotifyInitial n = [fakeStart ++ " [style=\"invis\", width=\"0\", height=\"0\", label=\"\"];",
 >                    fakeStart ++ " -> " ++ realStart ++ ";"]
 >     where realStart  = show n
 >           fakeStart  = '_' : realStart ++ "_"
-> 
+
 > dotifyFinal :: Int -> [String]
 > dotifyFinal = (:[]) . (++ " [peripheries=\"2\"];") . show
-> 
+
 > dotifyInitials :: (Ord e, Ord n, Show n) => FSA n e -> [String]
 > dotifyInitials f = unionAll .
 >                    tmap (dotifyInitial .
 >                          shortLabelIn (states f)) $
 >                    initials f
-> 
+
 > dotifyFinals :: (Ord e, Ord n, Show n) => FSA n e -> [String]
 > dotifyFinals f = unionAll .
 >                  tmap (dotifyFinal .
 >                        shortLabelIn (states f)) $
 >                  finals f
-> 
+
 > dotifyStates :: (Ord e, Ord n, Show n) => FSA n e -> [String]
 > dotifyStates f = collapse (:) [] $ tmap makeLabel sts
 >     where sts          = states f
 >           idOf         = shortLabelIn sts
 >           makeLabel x  = show (idOf x) ++ " [label=\"" ++
 >                          (nq . show $ nodeLabel x) ++ "\"];"
-> 
+
 > -- |Convert an 'FSA' to its representation in the GraphViz @dot@ format.
 > exportDot :: (Ord e, Ord n, Show e, Show n) => FSA n e -> String
 > exportDot = exportDotWithName ""
-> 
+
 > -- |Convert an 'FSA' to its representation in the GraphViz @dot@ format,
 > -- with a provided name.
 > exportDotWithName :: (Ord e, Ord n, Show e, Show n) =>
@@ -126,11 +125,10 @@
 >     dotifyFinals f       ++
 >     dotifyTransitions f  ++
 >     ["}"]
-> 
+
 > -- |Turn a 'Data.Set.Set' into a 'String':
 > --
 > -- >>> formatSet (fromList [1, 2, 3])
 > -- "{1, 2, 3}"
 > formatSet :: Show n => Set n -> String
 > formatSet =  ((++ "}") . ('{' :) . commaSeparateList . tmap (nq . show) . Set.toAscList)
-

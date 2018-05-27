@@ -25,6 +25,7 @@
 %format sortBy f = sort "_{" f "}"
 %format ssigma = "\Sigma"
 %format subsequenceClosure' = subsequenceClosure
+%format ForbiddenSubsequences e = Set [e]
 %format tmap = "\textit{map}"
 %format Transition a b c = "\Transition[" a "]{" b "}{" c "}"
 %format `union` = "\cup"
@@ -74,6 +75,9 @@
 
 
 > {-# OPTIONS_HADDOCK show-extensions #-}
+> {-# Language
+>   MultiParamTypeClasses
+>   #-}
 > {-|
 > Module    : ExtractSP
 > Copyright : (c) 2017 Dakotah Lambert
@@ -81,22 +85,58 @@
 > 
 > Find forbidden subsequences of an automaton.
 > -}
-> 
-> module ExtractSP ( extractForbiddenSSQs
+
+> module ExtractSP ( ForbiddenSubsequences(..)
+>                  , forbiddenSubsequences
+>                  , fsaFromForbiddenSubsequences
 >                  , isSP
 >                  , isSSQ
 >                  , subsequenceClosure
->                  , spresidue
 >                  ) where
+> import Factors
 > import FSA
 > import Traversals
+
+> import Control.DeepSeq (NFData)
 > import Data.List (sortBy)
 > import Data.Ord (comparing)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
-> 
+
+> data ForbiddenSubsequences e = ForbiddenSubsequences {
+>       attestedAlphabet  ::  Set e
+>     , getSubsequences   ::  Set [e]
+>     } deriving (Eq, Ord, Read, Show)
+
+> instance Ord e => Container (ForbiddenSubsequences e) [e] where
+>     isEmpty c     =  isEmpty (getSubsequences c)
+>     isIn c        =  isIn (getSubsequences c)
+>     union         =  g union
+>     intersection  =  g intersection
+>     difference    =  g difference
+>     empty         =  ForbiddenSubsequences {
+>                        attestedAlphabet = empty
+>                      , getSubsequences = empty
+>                      }
+>     singleton a   =  ForbiddenSubsequences {
+>                        attestedAlphabet = fromCollapsible a
+>                      , getSubsequences = singleton a
+>                      }
+
+> g :: Ord e =>
+>   (Set [e] -> Set [e] -> Set [e])
+>   -> ForbiddenSubsequences e -> ForbiddenSubsequences e
+>   -> ForbiddenSubsequences e
+> g f c1 c2 = ForbiddenSubsequences {
+>               attestedAlphabet = union
+>                                  (attestedAlphabet c1)
+>                                  (attestedAlphabet c2)
+>             , getSubsequences = f
+>                                 (getSubsequences c1)
+>                                 (getSubsequences c2)
+>               }
+
 > type FSAt = FSA
-> 
 
 %endif
 
@@ -132,7 +172,6 @@ Documentation
 
 > -- |@(isSSQ a b)@ returns true iff @b@ contains the symbols of @a@
 > -- in order, but not necessarily adjacently.
-> 
 
 %endif
 
@@ -143,7 +182,6 @@ Documentation
 > (v:vs)  `isSSQ`  (w:ws)
 >     | v == w     =  vs `isSSQ` ws
 >     | otherwise  =  (v:vs) `isSSQ` ws
-> 
 
 %if false
 For formatting's sake:
@@ -151,7 +189,6 @@ For formatting's sake:
 
 > isNotSSQ :: (Eq a) => [a] -> [a] -> Bool
 > a `isNotSSQ` b = not (a `isSSQ` b)
-> 
 
 %endif
 
@@ -175,25 +212,13 @@ wherever a transition occurred in $\delta$.
 > subsequenceClosure' :: (Ord n, Ord e) => FSAt n e -> FSAt n e
 > subsequenceClosure' (FSA ssigma delta q_0 qf d)  =  FSA ssigma (delta `union` delta_prime) q_0 qf False
 >     where  delta_prime  =  tmap (\(Transition x a b) -> (Transition Epsilon a b)) delta
-> 
 
 %if false
-
 
 > -- |Returns an 'FSA' that accepts every string accepted by the
 > -- original, as well as every subsequence of these strings.
 > subsequenceClosure :: (Ord n, Ord e) => FSA n e -> FSA n e
 > subsequenceClosure = subsequenceClosure'
-> 
-> -- |The coresidue of an 'FSA' and its subsequence closure.
-> spresidue :: (Enum n, Ord n, Ord e) => FSA n e -> FSA Integer e
-> spresidue f = renameStates . minimize . determinize $
->               (complSpApprox f `union` f)
->     where complSpApprox  =  renameStates . complement . subsequenceClosure
->           renameStates' :: (Ord n, Ord e') => FSA n e' -> FSA Integer e'
->           renameStates' f =  renameStates f
->           f' = renameStates' f
-> 
 
 % endif
 
@@ -271,17 +296,17 @@ $\Language{\Automaton{M}^\prime}$
 will give us the strictly piecewise constraints on
 $\Language{\Automaton{M}}$.
 
-
 %if false
-
 
 > -- |Given an 'FSA' \(A\),
 > -- returns the set of subsequences \(v\) such that
 > -- for all words \(w\), \(v\sqsubseteq w\) implies
 > -- that \(w\) is not accepted by \(A\).
-> extractForbiddenSSQs :: (Ord n, Ord e) => FSA n e -> Set [e]
-> extractForbiddenSSQs = collectMinimalFSSQs
-> 
+> forbiddenSubsequences :: (Ord n, Ord e) => FSA n e -> ForbiddenSubsequences e
+> forbiddenSubsequences fsa = ForbiddenSubsequences {
+>                               attestedAlphabet = alphabet fsa
+>                             , getSubsequences  = collectMinimalFSSQs fsa
+>                             }
 
 %endif
 
@@ -299,13 +324,11 @@ and exactly one initial state,
 we can also use the acyclic paths of its reversal,
 which prevents having to reverse every extracted string.
 
-
 > collectFSSQs :: (Ord n, Ord e) => FSAt n e -> Set [e]
 > collectFSSQs f = tmap (unsymbols . labels) .
 >                  keep (maybe False (isIn (finals f')) . endstate) $
 >                  acyclicPaths f'
 >     where f' = normalize . FSA.reverse . complement $ subsequenceClosure f
-> 
 
 Further, we can derive a minimal set of forbidden subsequences by
 filtering out elements that are generated by others.  Formally, if
@@ -321,7 +344,6 @@ minimal forbidden subsequence.
 >                         collectFSSQs
 >     where  filterAbsorbed (x:xs)  =  x : filterAbsorbed (keep (\y -> x `isNotSSQ` y) xs)
 >            filterAbsorbed _       =  []
-> 
 
 This concludes the algorithm for extracting minimal forbidden subsequences,
 and thus for extracting strictly-piecewise factors
@@ -335,20 +357,27 @@ the same stringset as its source.
 This makes for quite the simple test to determine
 whether a stringset is $\SP$:
 
-
 > isSP' :: (Ord n, Ord e) => FSAt n e -> Bool
 > isSP' f = f == subsequenceClosure f
-> 
 
 %if false
-
 
 > -- |Returns @True@ iff the stringset represented by the given 'FSA'
 > -- is Strictly Piecewise, that is,
 > -- if the 'FSA' accepts all subsequences of every string it accepts.
 > isSP :: (Ord n, Ord e) => FSA n e -> Bool
 > isSP = isSP'
-> 
+
+> -- |The stringset represented by the forbiddenSubsequences.
+> fsaFromForbiddenSubsequences :: (Ord e, NFData e) =>
+>                                 ForbiddenSubsequences e
+>                              -> FSA Integer e
+> fsaFromForbiddenSubsequences fssqs =
+>     build (attestedAlphabet fssqs) . singleton .
+>     makeConstraint .
+>     tmap (singleton . forbidden . Subsequence . tmap singleton) .
+>     fromCollapsible $
+>     getSubsequences fssqs
 
 %endif
 

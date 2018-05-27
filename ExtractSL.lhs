@@ -42,6 +42,9 @@ MoL'17 as is the notion of an $\SL$ approximation of a non-$\SL$ stringset.
 
 
 > {-# OPTIONS_HADDOCK show-extensions #-}
+> {-# Language
+>   MultiParamTypeClasses
+>   #-}
 > {-|
 > Module    : ExtractSL
 > Copyright : (c) 2017-2018 Jim Rogers and Dakotah Lambert
@@ -51,6 +54,7 @@ MoL'17 as is the notion of an $\SL$ approximation of a non-$\SL$ stringset.
 > -}
 > module ExtractSL ( ForbiddenSubstrings(..)
 >                  , ForbiddenPaths(..)
+>                  , TaggedSubstring(..)
 >                  -- *Extracting forbidden substrings
 >                  , factorsFromPaths
 >                  , forbiddenSubstrings
@@ -207,6 +211,56 @@ type of a singleton set.
 >                         , forbiddenFinals         ::   Set [e]
 >                         }
 >     deriving (Eq, Ord, Show, Read)
+
+> data TaggedSubstring e = Free [e] | Initial [e] | Final [e] | Word [e]
+>                          deriving (Eq, Ord, Read, Show)
+
+> instance Ord e =>
+>     Container (ForbiddenSubstrings e) (TaggedSubstring e) where
+>         empty = ForbiddenSubstrings empty empty empty empty empty empty
+>         isEmpty fs = isEmpty (forbiddenWords fs) &&
+>                      isEmpty (forbiddenInitials fs) &&
+>                      isEmpty (forbiddenFrees fs) &&
+>                      isEmpty (forbiddenFinals fs)
+>         insert (Free [x]) c = c {
+>                                 forbiddenUnits = insert x (forbiddenUnits c)
+>                               , forbiddenFrees = insert [x] (forbiddenFrees c)
+>                               }
+>         insert (Free x) c = c {
+>                               forbiddenFrees = insert x (forbiddenFrees c)
+>                             }
+>         insert (Final x) c = c {
+>                                forbiddenFinals = insert x (forbiddenFinals c)
+>                              }
+>         insert (Initial x) c = c {
+>                                  forbiddenInitials = insert x (forbiddenInitials c)
+>                                }
+>         insert (Word x) c = c {
+>                               forbiddenWords = insert x (forbiddenWords c)
+>                             }
+>         contains (Free x) c = contains x (forbiddenFrees c)
+>         contains (Final x) c = contains x (forbiddenFinals c)
+>         contains (Initial x) c = contains x (forbiddenInitials c)
+>         contains (Word x) c = contains x (forbiddenWords c)
+>         union = g union union
+>         intersection = g intersection intersection
+>         difference = g difference difference
+
+> g :: Ord e =>
+>      (Set e -> Set e -> Set e)
+>   -> (Set [e] -> Set [e] -> Set [e])
+>   -> ForbiddenSubstrings e -> ForbiddenSubstrings e
+>   -> ForbiddenSubstrings e
+> g fU f a b = ForbiddenSubstrings {
+>                attestedUnits = union (attestedUnits a) (attestedUnits b)
+>              , forbiddenUnits = fU (forbiddenUnits a) (forbiddenUnits b)
+>              , forbiddenWords = f (forbiddenWords a) (forbiddenWords b)
+>              , forbiddenInitials = f
+>                                    (forbiddenInitials a)
+>                                    (forbiddenInitials b)
+>              , forbiddenFrees = f (forbiddenFrees a) (forbiddenFrees b)
+>              , forbiddenFinals = f (forbiddenFinals a) (forbiddenFinals b)
+>              }
 
 > -- |forbiddenUnits relative to a domain alphabet
 > forbiddenUnitsWithAlphabet :: (Ord e) => 

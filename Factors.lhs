@@ -1,4 +1,3 @@
-
 > module Factors ( -- *Constructions
 >                  required
 >                , forbidden
@@ -30,13 +29,13 @@
 >                , wpluss0, wpluss1, wpluss2, wplusminus, wplus
 >                , wxs0, wxs1, wxs2, wxplus, wxminus, wx
 >                ) where
-> 
+
 > import FSA
-> 
+
 > import Control.DeepSeq (NFData)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
-> 
+
 > -- |A substring or subsequence, from which to build constraints.
 > data Factor e
 >     = Substring {
@@ -54,7 +53,7 @@
 > data Disjunction e  =  Disjunction (Set (Literal e)) deriving (Eq, Ord, Read, Show)
 > -- |Multiple disjunctions, joined by @AND@.
 > data Conjunction e  =  Conjunction (Set (Disjunction e)) deriving (Eq, Ord, Read, Show) -- Primitive Constraint
-> 
+
 > -- |The factor is required to appear in every string.
 > -- Note that a conjunctive constraint of
 > -- (@required (Substring x True True)@)
@@ -64,7 +63,7 @@
 > -- | The factor is not allowed to appear in any word.
 > forbidden :: Factor e -> Literal e
 > forbidden = Literal False
-> 
+
 > buildFactor :: (Enum n, Ord n, Ord e) => Set e -> Factor e -> Bool -> FSA n e
 > buildFactor alpha (Substring factor anchoredToHead anchoredToTail) = flip (flip f alpha) factor
 >     where f = case (anchoredToHead, anchoredToTail) of
@@ -97,15 +96,23 @@
 > buildLiteral alpha (Literal isPositive factor) = buildFactor alpha factor isPositive
 > buildDisjunction :: (Enum n, NFData n, Ord n, NFData e, Ord e) =>
 >                     Set e -> Disjunction e -> FSA n e
-> buildDisjunction alpha (Disjunction literals) = flatUnion . tmap (buildLiteral alpha) . Set.toList $ literals
+> buildDisjunction alpha (Disjunction literals) =
+>     flatUnion . insert (emptyWithAlphabet alpha) .
+>     tmap (buildLiteral alpha) $ Set.toList literals
 > buildConjunction :: (Enum n, NFData n, Ord n, NFData e, Ord e) =>
 >                     Set e -> Conjunction e -> FSA n e
-> buildConjunction alpha (Conjunction disjunctions) = flatIntersection . tmap (buildDisjunction alpha) . Set.toList $ disjunctions
+> buildConjunction alpha (Conjunction disjunctions) =
+>     flatIntersection . insert (totalWithAlphabet alpha) .
+>     tmap (buildDisjunction alpha) $ Set.toList disjunctions
+
 > -- |Build an 'FSA' representing the conjunction of a set of
 > -- constraints provided in conjunctive normal form.
 > build :: (Enum n, NFData n, Ord n, NFData e, Ord e) =>
 >          Set e -> Set (Conjunction e) -> FSA n e
-> build alpha conjunctions = flatIntersection . tmap (buildConjunction alpha) . Set.toList $ conjunctions
+> build alpha conjunctions = flatIntersection                  .
+>                            insert (totalWithAlphabet alpha)  .
+>                            tmap (buildConjunction alpha)     $
+>                            Set.toList conjunctions
 > -- |Combine inner lists by 'Disjunction',
 > -- and form a 'Conjunction' of the results.
 > makeConstraint :: (Ord e) => [[Literal e]] -> Conjunction e
@@ -115,7 +122,7 @@
 > buildFromList :: (Enum n, NFData n, Ord n, NFData e, Ord e) =>
 >                  Set e -> [[[Literal e]]] -> FSA n e
 > buildFromList alpha = build alpha . makeConstraintList
-> 
+
 > w0s0, w0s1, w0s2, w1s0, w1s1, w1s2 :: Set String
 > w2s0, w2s1, w2s2, w3s0, w3s1, w3s2 :: Set String
 > w4s0, w4s1, w4s2, wxs0, wxs1, wxs2 :: Set String
@@ -137,7 +144,7 @@
 > wxs0 = unionAll [w0s0, w1s0, w2s0, w3s0, w4s0]
 > wxs1 = unionAll [w0s1, w1s1, w2s1, w3s1, w4s1]
 > wxs2 = unionAll [w0s2, w1s2, w2s2, w3s2, w4s2]
-> 
+
 > w0, w1, w2, w3, w4, wx, defaultAlphabet :: Set String
 > w0 = unionAll [w0s0, w0s1, w0s2]
 > w1 = unionAll [w1s0, w1s1, w1s2]
@@ -147,7 +154,7 @@
 > wx = unionAll [w0, w1, w2, w3, w4]
 > -- |Equivalent to 'wx'.
 > defaultAlphabet = wx
-> 
+
 > w0plus, w1plus, w2plus, w3plus, w4plus, wxplus :: Set String
 > w0plus = unionAll [w0s1, w0s2]
 > w1plus = unionAll [w1s1, w1s2]
@@ -155,7 +162,7 @@
 > w3plus = unionAll [w3s1, w3s2]
 > w4plus = unionAll [w4s1, w4s2]
 > wxplus = unionAll [w0plus, w1plus, w2plus, w3plus, w4plus]
-> 
+
 > w0minus, w1minus, w2minus, w3minus, w4minus, wxminus :: Set String
 > w0minus = unionAll [w0s0, w0s1]
 > w1minus = unionAll [w1s0, w1s1]
@@ -163,7 +170,7 @@
 > w3minus = unionAll [w3s0, w3s1]
 > w4minus = unionAll [w4s0, w4s1]
 > wxminus = unionAll [w0minus, w1minus, w2minus, w3minus, w4minus]
-> 
+
 > wplus, wpluss0, wpluss1, wpluss2, wplusplus, wplusminus :: Set String
 > wplus = wx `difference` w0
 > wpluss0 = wxs0 `difference` w0
@@ -171,7 +178,7 @@
 > wpluss2 = wxs2 `difference` w0
 > wplusplus = wxplus `difference` w0
 > wplusminus = wxminus `difference` w0
-> 
+
 > word :: (Enum a, Ord a, Ord b) =>
 >              Bool -> Set b -> [Set b] -> FSA a b
 > word True alpha []            = singletonWithAlphabet alpha []
@@ -204,7 +211,7 @@
 >           nextState      = succ . maximum $ tmap snd tagged
 >           sinkState      = succ nextState
 >           fin            = singleton (State nextState)
-> 
+
 > initialLocal :: (Enum a, Ord a, Ord b) =>
 >                 Bool -> Set b -> [Set b] -> FSA a b
 > initialLocal _ alpha [] = complementDeterministic $
@@ -235,14 +242,12 @@
 >                            (State sinkState)
 >                            (Set.fromList $ tmap (State . snd) tagged)
 >           fin            = singleton (State nextState)
-> 
 
 For final and non-anchored factors, it would be nice to use KMP.
 However, for that to work properly, I believe we would have to expand
 the symbol-sets, then combine all the results with either union or
 intersection (depending on whether the factor is to be positive or
 negative).  Making these from NFAs is cheaper, it seems.
-
 
 > finalLocal :: (Enum a, Ord a, Ord b) =>
 >                 Bool -> Set b -> [Set b] -> FSA a b
@@ -266,7 +271,7 @@ negative).  Making these from NFAs is cheaper, it seems.
 >           fsa            = FSA alpha trans
 >                            (singleton (State 0))
 >                            fin False
-> 
+
 > local :: (Enum a, Ord a, Ord b) =>
 >                 Bool -> Set b -> [Set b] -> FSA a b
 > local _ alpha [] = complementDeterministic $
@@ -292,10 +297,9 @@ negative).  Making these from NFAs is cheaper, it seems.
 >           fsa            = FSA alpha trans
 >                            (singleton (State 0))
 >                            fin False
-> 
+
 > selftrans, succtrans :: (Enum n) => n -> e -> Transition n e
 > selftrans n x  = Transition (Symbol x) (State n) (State n)
 > succtrans n x  = Transition (Symbol x) (State n) (State $ succ n)
 > sinktrans :: n -> n -> e -> Transition n e
 > sinktrans sinkState n x = Transition (Symbol x) (State n) (State sinkState)
-

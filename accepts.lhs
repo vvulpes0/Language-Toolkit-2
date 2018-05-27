@@ -14,7 +14,7 @@
 
 
 \author{JRogers}
-\title{\texttt{accepts} --- program for colleting accepted strings}
+\title{\texttt{accepts} --- program for collecting accepted strings}
 \date{}
 
 \begin{document}
@@ -28,49 +28,45 @@
 
 
 > module Main (main) where
-> 
->     
+
 > import FSA
-> 
 > import Porters
-> 
-> -- import SLfactors
 > import Factors
-> import Mungers
 > import Traversals
->     
+
 > import qualified Data.Set as Set
 > import qualified Data.List as List
->     
+
 > import System.Environment as Env
-> 
-> burstWith :: Char -> [String] -> String
-> burstWith c sts = foldr (catc) "" sts
->                   where
->                     catc s1 s2 = s1 ++ c:s2
-> 
-> burstnl = burstWith '\n'
-> 
+
 > getBound ::  IO Integer
-> getBound = getArgs >>= return . read . head
-> 
+> getBound = fmap (read . head) getArgs
+
 > getFSA :: IO (FSA Integer String)
-> getFSA = getContents >>= return . from Jeff . transLit
-> 
-> getFSAbyName :: String -> IO (FSA Integer String)
-> getFSAbyName path = readFile path >>= return . from Jeff . transLit
-> 
-> shorterOrLessThan :: String -> String -> Ordering
+> getFSA = fmap (from Jeff) getContents
+
+> shorterOrLessThan :: Ord a => [a] -> [a] -> Ordering
 > shorterOrLessThan l r
->     | ((length l) < (length r)) = LT
->     | ((length l) == (length r) && l < r) = LT
->     | ((length l) == (length r) && l == r) = EQ
->     | otherwise = GT
-> 
+>     | l == r               =  EQ
+>     | (ll < rl)            =  LT
+>     | (ll == rl && l < r)  =  LT
+>     | otherwise            =  GT
+>     where ll = length l
+>           rl = length r
+
 > main = do
 >        bound <- getBound
 >        fsa <- getFSA
->        (putStr.burstnl) (List.sortBy shorterOrLessThan (Set.toList(acceptsDFS fsa bound)))
-> 
+>        (putStr .
+>         unlines .
+>         tmap (concat . tmap (take 2 . (++ " ") . transliterateString)) .
+>         List.sortBy shorterOrLessThan .
+>         tmap (tmap (untransliterateString) . unsymbols . word) .
+>         Set.toList $
+>         rejectingPaths (complement fsa) bound)
+
+%% This was originally acceptsDFS instead of rejectingPaths.
+%% But acceptsDFS is no longer exported and there is no acceptingPaths.
+%% This is fine for now.
 
 \end{document}

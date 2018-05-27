@@ -1,0 +1,84 @@
+.TH DOTIFY 1 "2018-05-24" "Version 1.1"
+.SH NAME
+dotify \- convert automata to GraphViz format directed graphs
+.SH SYNOPSIS
+.B dotify
+.RB [ -c | -t | -w ]
+.RB [ -hv? ]
+.RB [ -o
+.IR outfile ]
+.RI [ infile ]
+.SH DESCRIPTION
+If the
+.I infile
+operand is missing or equal to
+.RB \*(lq \- \*(rq,
+then data is read from the standard input.
+In all other cases, the
+.I infile
+operand is the name of a file from which to read.
+If the contents represent a valid automaton,
+a directed graph in the GraphViz format is printed to the standard output.
+.P
+Specifying more than one of the mutually-exclusive options
+.BR -c ,
+.BR -t ,
+and
+.B -w
+shall not be considered an error.
+The last option specified shall determine the behavior of the utility.
+.SH OPTIONS
+.TP
+.B -c
+Use compact symbols,
+where, for example, a light syllable with primary stress is represented by
+.BR 0/2 .
+.TP
+.BR -h ", " -?
+Show a brief help message and exit.
+.TP
+.BI "-o " outfile
+Write output to
+.I outfile
+instead of the standard output.
+.TP
+.B -t
+Use transliterated symbols,
+where, for example, a light syllable with primary stress is represented by
+.BR L\(aq .
+.TP
+.B -v
+Instead of doing any processing, print the version number and exit.
+.TP
+.B -w
+Use wide symbols,
+where, for example, a light syllable with primary stress is represented by
+.BR w0.s2 .
+This is the default.
+.SH "EXIT STATUS"
+.TP
+.B 0
+Successful program execution
+.TP
+.B ">0"
+An error occurred.
+.SH EXAMPLES
+.BI "dotify " automaton.fsa " | dot -Tpng > " image.png
+.RS
+Create a PNG image from
+.I automaton.fsa
+and write the result to
+.IR image.png .
+.RE
+.B dotify -co
+.I out.dot automaton.fsa
+.RS
+Using compact symbols,
+write a GraphViz representation of
+.I automaton.fsa
+to
+.IR out.dot .
+.RE
+.SH "SEE ALSO"
+.BR dot (1),
+.BR graphviz (7)
