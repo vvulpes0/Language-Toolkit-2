@@ -85,16 +85,12 @@ are defined to allow such polymorphism.
 >     singleton :: a -> c
 >     -- |@(isSubsetOf y x)@ tells whether @x@ is a subset of @y@.
 >     isSubsetOf :: (Eq c) => c -> c -> Bool
->     isSubsetOf a b = intersection a b == b
 >     -- |@(isSupersetOf y x)@ tells whether @x@ is a superset of @y@.
 >     isSupersetOf :: (Eq c) => c -> c -> Bool
->     isSupersetOf = flip isSubsetOf
 >     -- |@(isProperSubsetOf y x)@ tells whether @x@ is a proper subset of @y@.
 >     isProperSubsetOf :: (Eq c) => c -> c -> Bool
->     isProperSubsetOf a b = isSubsetOf a b && a /= b
 >     -- |@(isProperSupersetOf y x)@ tells whether @x@ is a proper superset of @y@.
 >     isProperSupersetOf :: (Eq c) => c -> c -> Bool
->     isProperSupersetOf a b = isSupersetOf a b && a /= b
 >     -- Default definitions:
 >     isEmpty = (== empty)
 >     isIn = flip contains
@@ -104,6 +100,10 @@ are defined to allow such polymorphism.
 >     insert a c = union (singleton a) c
 >     singleton a = insert a empty
 >     symmetricDifference a b = union (difference a b) (difference b a)
+>     isSubsetOf a b = intersection a b == b
+>     isSupersetOf = flip isSubsetOf
+>     isProperSubsetOf a b = isSubsetOf a b && a /= b
+>     isProperSupersetOf a b = isSupersetOf a b && a /= b
 >     {-# MINIMAL
 >       (contains | isIn),
 >       union,
@@ -259,10 +259,11 @@ A Haskell list is a Collapsible Container:
 > instance (Eq a) => Container [a] a where
 >     contains = elem
 >     union = (++)
->     intersection a b = filter (isIn b) a
+>     intersection a b = filter (isIn a) b -- maintain order of B for isSubsetOf
 >     difference a b = filter (isNotIn b) a
 >     empty = []
 >     insert = (:)
+>     isSubsetOf a b = intersection a b == b
 
 A Set is like a list with no duplicates, so it should act similarly:
 

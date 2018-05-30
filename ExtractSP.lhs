@@ -178,10 +178,10 @@ Documentation
 
 > isSSQ :: (Eq a) => [a] -> [a] -> Bool
 > []      `isSSQ`  _   =  True
-> _       `isSSQ`  []  =  False
-> (v:vs)  `isSSQ`  (w:ws)
->     | v == w     =  vs `isSSQ` ws
->     | otherwise  =  (v:vs) `isSSQ` ws
+> (v:vs)  `isSSQ`  ws
+>     | isEmpty notV  =  False
+>     | otherwise     =  vs `isSSQ` tail notV
+>     where notV = dropWhile (/= v) ws
 
 %if false
 For formatting's sake:
