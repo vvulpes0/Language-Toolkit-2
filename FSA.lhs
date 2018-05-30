@@ -258,7 +258,7 @@ State
 > instance (Semigroup n) => Semigroup (State n) where
 >     (<>) = fmap . nodeLabel . fmap (<>)
 
-> instance (Monoid n) => Monoid (State n) where
+> instance (Semigroup n, Monoid n) => Monoid (State n) where
 >     mempty   =  State mempty
 >     mappend  =  (<>)
 
