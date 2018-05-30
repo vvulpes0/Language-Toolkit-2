@@ -37,6 +37,7 @@
 >                   , tr
 >                   ) where
 
+> import safe Data.Semigroup (Semigroup(..))
 > import safe Data.Monoid (Monoid(..))
 > import safe Data.Set (Set)
 > import safe qualified Data.Set as Set
@@ -199,7 +200,7 @@ properties of each typeclass to build map and filter, here called
 > {-# INLINE[1] tmap #-}
 > {-# RULES
 > "tmap/[]"  tmap = map
-> "tmap/Set" forall (x :: Ord a => Set a) (f :: Ord b => x -> b) .
+> "tmap/Set" forall (x :: Ord a => Set a) (f :: Ord b => a -> b) .
 >        tmap f x = Set.map f x
 >   #-}
 
@@ -352,9 +353,12 @@ lookup-time logarithmic in the number of distinct elements.
 >               ys' = Set.toAscList ys
 >               zs  = differenceSortedMultis xs' ys'
 
+> instance Ord a => Semigroup (Multiset a) where
+>     (<>) = union
+
 > instance Ord a => Monoid (Multiset a) where
 >     mempty = empty
->     mappend = union
+>     mappend = (<>)
 
 > instance Show a => Show (Multiset a) where
 >     showsPrec p m = showParen (p > 10) $

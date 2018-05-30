@@ -68,6 +68,7 @@
 > import Control.Parallel (par, pseq)
 
 > import Control.Applicative (Applicative(..))
+> import Data.Semigroup (Semigroup(..))
 > import Data.Monoid (Monoid(..))
 
 
@@ -254,9 +255,12 @@ State
 >     return   =  pure
 >     a >>= f  =  f $ nodeLabel a
 
+> instance (Semigroup n) => Semigroup (State n) where
+>     (<>) = fmap . nodeLabel . fmap (<>)
+
 > instance (Monoid n) => Monoid (State n) where
 >     mempty   =  State mempty
->     mappend  =  fmap . nodeLabel . fmap mappend
+>     mappend  =  (<>)
 
 > instance (NFData n) => NFData (State n) where
 >     rnf (State n) = rnf n
