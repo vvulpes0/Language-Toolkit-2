@@ -33,6 +33,16 @@
 >                   , multiplicity
 >                   , multisetFromList
 >                   , setFromMultiset
+>                     -- *Set of Set with alternate ordering
+>                     -- |The 'choose' instance for 'Set' will always pick
+>                     -- the least available element.
+>                     -- If one wants to process elements
+>                     -- in a different order,
+>                     -- one can simply wrap the elements in such a way
+>                     -- that they sort in the intended order of processing.
+>                     -- This section contains some such wrapper types.
+>                   , IncreasingSize(..)
+>                   , DecreasingSize(..)
 >                     -- *Miscellaneous functions
 >                   , tr
 >                   ) where
@@ -401,6 +411,42 @@ lookup-time logarithmic in the number of distinct elements.
 >     | snd x <= snd y  =  differenceSortedMultis xs ys
 >     | otherwise       =  (fst x, snd x - snd y) :
 >                          differenceSortedMultis xs ys
+
+
+Subsets sorted by increasing and decreasing size
+================================================
+
+> -- |Wrap a 'Collapsible' type to sort in order of increasing size.
+> -- For elements of the same size, treat them normally.
+> newtype IncreasingSize x = IncreasingSize {
+>       getIncreasing :: x
+>     } deriving (Eq, Read, Show)
+
+> -- |Wrap a 'Collapsible' type to sort in order of decreasing size.
+> -- For elements of the same size, treat them normally.
+> newtype DecreasingSize x = DecreasingSize {
+>       getDecreasing :: x
+>     } deriving (Eq, Read, Show)
+
+> instance (Collapsible x, Ord (x a)) => Ord (IncreasingSize (x a)) where
+>     compare (IncreasingSize x) (IncreasingSize y)
+>         = case compare (size x) (size y) of
+>             LT  ->  LT
+>             GT  ->  GT
+>             _   ->  compare x y
+
+> instance (Collapsible x, Ord (x a)) => Ord (DecreasingSize (x a)) where
+>     compare (DecreasingSize x) (DecreasingSize y)
+>         = case compare (size x) (size y) of
+>             LT  ->  GT
+>             GT  ->  LT
+>             _   ->  compare x y
+
+> instance Functor IncreasingSize where
+>     fmap f (IncreasingSize x) = IncreasingSize (f x)
+
+> instance Functor DecreasingSize where
+>     fmap f (DecreasingSize x) = DecreasingSize (f x)
 
 
 Miscellaneous functions

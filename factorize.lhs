@@ -227,106 +227,58 @@ actually required.
 >           lfi      =  f False True (forbiddenFinals fs)
 >           lwo      =  f True True (forbiddenWords fs)
 
-> -- |A list of all subsets of the given container, each appearing
-> -- exactly once except the container itself which is duplicated at
-> -- the head of the list.
-
-> subsets :: (Eq (c a), Collapsible c, Container (c a) a) => c a -> [c a]
-> subsets xs = xs : empty : subs (singleton empty) xs
->     where subs prev xs
->               | isEmpty xs = empty
->               | otherwise  = let (a, as)  =  choose xs
->                                  next     =  map (insert a) prev
->                              in next ++ subs (prev ++ next) as
-
 > trueRequireds :: (Ord e, NFData e) =>
 >                  FSA Integer e
 >               -> Set (Literal e)
 >               -> Set (Literal e)
-> trueRequireds fsa = findGoodSubset . tmap f . subsets
->     where f ls  =  ( ls
->                    , isEmpty               .
->                      intersection fsa      .
->                      build (alphabet fsa)  .
->                      singleton             .
->                      makeConstraint        .
->                      fromCollapsible       $
->                      tmap singleton ls
->                    )
+> trueRequireds fsa = maybe empty id           .
+>                     findGood isGood Nothing  .
+>                     singleton                .
+>                     DecreasingSize
+>     where isGood = isEmpty               .
+>                    intersection fsa      .
+>                    build (alphabet fsa)  .
+>                    singleton             .
+>                    makeConstraint        .
+>                    fromCollapsible       .
+>                    tmap singleton
 
-We want a smallest subset of required factors.  There are a few
-different ways that we can reduce the number of tests required.
+> findGood :: Ord a =>
+>             (Set a -> Bool)
+>          -> Maybe (DecreasingSize (Set a))
+>          -> Set (DecreasingSize (Set a))
+>          -> Maybe (Set a)
+> findGood isGood current subsets
+>     | isEmpty subsets = fmap getDecreasing current
+>     | isEmpty s  =  fmap getDecreasing current
+>     -- Note that the "max" of two "DecreasingSize" objects
+>     -- is the one with fewer elements
+>     | isGood s   =  findGood isGood
+>                     (maybe (Just s') (Just . max s') current)
+>                     (union ss smaller)
+>     | otherwise  =  findGood isGood
+>                     current
+>                     (tmap (fmap (flip difference s)) ss)
+>     where (s', ss)  =  choose subsets
+>           s         =  getDecreasing s'
+>           smaller   =  tmap (DecreasingSize . difference s . singleton) s
 
-The first is that we can sort the list in terms of increasing subset
-size, then test in order until we find a good one.  If none of the
-subsets are sufficient, this requires 2^n tests, where n is the size
-of the original set, as well as 2^n space to sort the list.
 
-The second is that we can sort the list in terms of decreasing subset
-size.  If we find a subset where none of its elements are required,
-then we can ignore all subsets of this set.  This still requires 2^n
-space to sort the list, and may still require 2^n tests if a singleton
-set is sufficient.
+We view required factors as co-strict constraints.  That is, a set of
+required factors {A, B} means that A must occur _or_ B must occur,
+not necessarily both.  If it is inconsistent with a given automaton
+to forbid all factors in a set, then that automaton requires the
+occurrence of at least one factor in that set.  Of course, this set
+may contain factors that are not required, and therefore not
+sufficient to satisfy the actual constraints of the stringset, so we
+want to find a smallest such set.
 
-A third method is to not sort the subsets at all, except to guarantee
-that the container itself is listed first.  If no subset will be
-sufficient, we can see this from the first test and immediately return
-empty.  Beyond this, if a good subset is found, all further subsets of
-the same size or larger can be immediately discarded.  Unfortunately,
-due to the implementation of 'subsets' no later element is a subset of
-an earlier element (except for the head appearance of the container
-itself), so we cannot rely on the much faster discard allowed by the
-second option.
+If forbidding all factors in a set is not inconsistent, then no
+subsets of that set will contain a complete set of required factors.
+Therefore we begin with the complete set of potentially required
+factors and iteratively produce smaller subsets while discarding
+those sets that are known to be non-productive.
 
-Here we implement the third method.  Pros and cons:
-
-1:
-	Pros:
-	* Fast if a small subset is sufficient
-	* Requires no further testing if a sufficient subset is found
-	Cons:
-	* Requires 2^n tests if no subset is sufficient
-	* Requires sorting
-2:
-	Pros:
-	* Fast if no subset is sufficient
-	Cons:
-	* Can require 2^n tests if a small subset is sufficient
-	* Must test later subsets even if a sufficient one is found
-	* Requires sorting
-3:
-	Pros:
-	* Does not require sorting
-	* Fast if no subset is sufficient
-	Cons:
-	* Performance not guaranteed when a small subset suffices
-	* Slow if a relatively large subset is needed
-	* Can require further testing after finding a sufficient subset
-
-> findGoodSubset :: (Ord e, NFData e) =>
->                   [(Set (Literal e), Bool)]
->                -> Set (Literal e)
-> findGoodSubset [] = error "Even the empty container has itself as a subset."
-> findGoodSubset (x:xs)
->     | not (snd x) = empty
->     | otherwise   = findGoodSubset' (fst x) xs
-
-> findGoodSubset' :: (Ord e, NFData e) =>
->                    Set (Literal e)
->                 -> [(Set (Literal e), Bool)]
->                 -> Set (Literal e)
-> findGoodSubset' x [] = x
-> findGoodSubset' x ((ls, isGood):lss)
->     | isGood     =  findGoodSubset' ls (keep ((< size ls) . size . fst) lss)
->     | otherwise  =  findGoodSubset' x lss
-
-If 'subsets' is changed in the future to list things where larger
-subsets come first, replace the otherwise case above with:
-
-    findGoodSubset' x (keep (not . isSubsetOf ls . fst) lss)
-
-The filter step is currently omitted because it never removes anything
-with the current implementation.
 
 > reformApproximation :: (Ord e, NFData e) =>
 >                        Set e
