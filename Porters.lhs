@@ -19,6 +19,7 @@
 >                  -- various formats.
 >                , Dot(Dot)
 >                , Jeff(Jeff)
+>                , Pleb(Pleb)
 >                  -- *Miscellaneous
 >                , formatSet
 >                , transliterate
@@ -37,6 +38,7 @@
 >             , transliterateString
 >             , untransliterate
 >             , untransliterateString)
+> import Pleb ( readPleb )
 
 > -- |A type that can be written from an 'FSA'.
 > class Exportable t where
@@ -79,3 +81,10 @@
 > instance Exportable Dot where
 >     fromFSA          =  Dot . exportDot
 >     extract (Dot s)  =  s
+
+=== instances for Pleb format
+
+> newtype Pleb = Pleb String
+
+> instance Importable Pleb where
+>     toFSA (Pleb s) = readPleb s

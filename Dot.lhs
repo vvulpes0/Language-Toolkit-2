@@ -66,7 +66,7 @@
 >           list            = collapse (:) [] ts
 >           syms            = nq . commaSeparateList $
 >                             tmap (sym . first) list
->           sym (Symbol a)  = nq $ show a
+>           sym (Symbol a)  = deescape . nq $ show a
 >           sym Epsilon     = "\x03b5" -- ε
 
 > dotifyTransitions :: (Ord n, Ord e, Show n, Show e) => FSA n e -> [String]
@@ -132,3 +132,12 @@
 > -- "{1, 2, 3}"
 > formatSet :: Show n => Set n -> String
 > formatSet =  ((++ "}") . ('{' :) . commaSeparateList . tmap (nq . show) . Set.toAscList)
+
+> deescape :: String -> String
+> deescape ('\\' : '&' : xs) = deescape xs
+> deescape ('\\' : x : xs)
+>     | isEmpty digits = x : deescape xs
+>     | otherwise      = toEnum (read digits) : deescape others
+>     where (digits, others) = span (isIn "0123456789") (x:xs)
+> deescape (x:xs) = x : deescape xs
+> deescape _      = []

@@ -337,7 +337,7 @@ Here we consider FSAs to be Semigroups (and Monoids) under concatenation
 >     (<>) = apply autConcatenation
 
 > instance (Enum n, Ord n, Ord e) => Monoid (FSA n e) where
->     mempty   =  emptyLanguage
+>     mempty   =  singletonLanguage empty
 >     mappend  =  (<>)
 
 > apply :: (Ord e, Ord n1, Ord n2, Enum n2) =>
