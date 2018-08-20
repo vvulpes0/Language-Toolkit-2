@@ -51,22 +51,16 @@
 > automatonFromFactor :: Set String
 >                     -> Set (String, Set String)
 >                     -> PFactor -> Either String (FSA Integer String)
-> automatonFromFactor alphabet dictionary (BasicFactor aa)
+> automatonFromFactor alphabet dictionary (LocalFactor aa)
 >     = case aa of
 >         Word a  ->  f True  True  <$> sequenceFromAtom dictionary a
 >         Head a  ->  f True  False <$> sequenceFromAtom dictionary a
 >         Tail a  ->  f False True  <$> sequenceFromAtom dictionary a
 >         Free a  ->  f False False <$> sequenceFromAtom dictionary a
 >     where f h t ss = buildLiteral alphabet . required $ Substring ss h t
-> automatonFromFactor alphabet dictionary (PieceFactor aa fc)
->     = case fc of
->         (FactorCont aa' fc')  ->  renameStates <$> minimize <$>
->                                   f (BasicFactor aa) <<>>
->                                   Right (totalWithAlphabet alphabet) <<>>
->                                   f (PieceFactor aa' fc')
->         _                     ->  f (BasicFactor aa)
->     where f         =  automatonFromFactor alphabet dictionary
->           a <<>> b  =  (<>) <$> a <*> b
+> automatonFromFactor alphabet dictionary (PieceFactor a)
+>     = buildLiteral alphabet . required . Subsequence  <$>
+>       sequenceFromAtom dictionary a
 
 > sequenceFromAtom :: Set (String, Set String) -> Atom
 >                  -> Either String [Set String]
@@ -191,11 +185,9 @@
 >           usedSymbolsL' (ExprListCont e c)
 >               = union (usedSymbols e) (usedSymbolsL' c)
 > usedSymbolsPF :: PFactor -> Set String
-> usedSymbolsPF (BasicFactor a) = usedSymbolsA a
-> usedSymbolsPF (PieceFactor a c) = union (usedSymbolsA a) (usedSymbolsPF' c)
->     where usedSymbolsPF' FactorEnd = empty
->           usedSymbolsPF' (FactorCont a c)
->               = union (usedSymbolsA a) (usedSymbolsPF' c)
+> usedSymbolsPF (LocalFactor a) = usedSymbolsA a
+> usedSymbolsPF (PieceFactor a) = usedSymbolsA (Free a)
+
 > usedSymbolsA :: AnchoredAtom -> Set String
 > usedSymbolsA aa = case aa of
 >                     Word (Atom a) -> f a
@@ -255,13 +247,9 @@
 >                   | ExprListEnd
 >                   deriving (Eq, Ord, Read, Show)
 
-> data PFactor = PieceFactor AnchoredAtom FactorCont
->              | BasicFactor AnchoredAtom
+> data PFactor = PieceFactor Atom
+>              | LocalFactor AnchoredAtom
 >                deriving (Eq, Ord, Read, Show)
-
-> data FactorCont = FactorCont AnchoredAtom FactorCont
->                 | FactorEnd
->                   deriving (Eq, Ord, Read, Show)
 
 > data AnchoredAtom = Word Atom
 >                   | Head Atom
@@ -385,37 +373,14 @@
 
 > parseFactor :: [Token] -> (Maybe PFactor, [Token])
 > parseFactor ts = maybe
->                  (mapfst (fmap BasicFactor) (parseAnchoredAtom ts))
->                  (\(d, xs) ->
->                   (\(atom, (cont, ts'')) ->
->                    (PieceFactor <$> atom <*> cont, ts''))
->                   (fmap (parseFactorCont d)
->                    (parseAnchoredAtom xs)
->                   )
->                  )
->                  ts'
+>                  (mapfst (fmap LocalFactor) (parseAnchoredAtom ts))
+>                  (mapfst (fmap PieceFactor) . parseAtom)
+>                  afterMarker
 >     where pieceMarkers = ["..", "‥"]
->           delimiters   = ['<', '⟨']
->           afterMarker xs     =  maybeHead . map snd . keep fst $
->                                 map (\m -> (isPrefixOf xs (tsyms m),
->                                             drop (length m) xs))
->                                 pieceMarkers
->           afterDelimiter xs  =  maybeHead . map snd . keep fst $
->                                 map (\d -> (isPrefixOf xs [TSymbol d],
->                                             (d, drop 1 xs)))
->                                 delimiters
->           ts' = maybe Nothing afterDelimiter (afterMarker ts)
-
-> parseFactorCont :: Char -> [Token] -> (Maybe FactorCont, [Token])
-> parseFactorCont d (t:ts)
->     | t == TSymbol (matchingDelimiter d) = (Just FactorEnd, ts)
->     | otherwise = let (a, ts')   =  parseAnchoredAtom (t:ts)
->                       (b, ts'')  =  parseFactorCont d ts'
->                   in maybe
->                      (Nothing, ts')
->                      (\atom -> (FactorCont atom <$> b, ts''))
->                      a
-> parseFactorCont d _ = (Nothing, [])
+>           afterMarker  =  maybeHead . map snd . keep fst $
+>                           map (\m -> (isPrefixOf ts (tsyms m),
+>                                       drop (length m) ts))
+>                           pieceMarkers
 
 > parseAnchoredAtom :: [Token] -> (Maybe AnchoredAtom, [Token])
 > parseAnchoredAtom ts
@@ -442,7 +407,7 @@
 > parseAtom :: [Token] -> (Maybe Atom, [Token])
 > parseAtom (TSymbol x:ts)
 >     | isIn "<⟨" x  = mapfst (fmap Atom) (parseAtomCont x ts)
->     | otherwise     = (Nothing, TSymbol x:ts)
+>     | otherwise    = (Nothing, TSymbol x:ts)
 > parseAtom _ = (Nothing, [])
 
 > parseAtomCont :: Char -> [Token] -> (Maybe AtomCont, [Token])
