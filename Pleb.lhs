@@ -34,8 +34,8 @@
 > automatonFromExpr alphabet dictionary e
 >     = case e of
 >         Concatenation es  ->  f mconcat es
->         Conjunction es    ->  f intersectAll es
->         Disjunction es    ->  f unionAll es
+>         Conjunction es    ->  f flatIntersection es
+>         Disjunction es    ->  f flatUnion es
 >         Factor f          ->  automatonFromFactor alphabet dictionary f
 >         Iteration e       ->  g (renameStates . minimize . kleeneClosure) e
 >         Negation e        ->  g complementDeterministic e
