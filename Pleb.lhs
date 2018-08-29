@@ -166,10 +166,10 @@
 > parseNAryExpr :: Dictionary SymSet -> Dictionary Expr -> Parse NAryExpr
 > parseNAryExpr dict subexprs
 >     = (makeLifter
->        [ ([".", "⋄"],         Concatenation)
->        , (["⋂", "∩", "/\\"],  Conjunction)
+>        [ (["⋂", "∩", "/\\"],  Conjunction)
 >        , (["⋃", "∪", "\\/"],  Disjunction)
 >        , (["‥", ".."],        PRelation)
+>        , ([".", "⋄"],         Concatenation)
 >        ] <*>
 >        parseDelimited ['(', '{']
 >        (parseSeparated "," (parseExpr dict subexprs)))
