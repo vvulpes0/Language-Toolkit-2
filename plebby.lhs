@@ -139,7 +139,7 @@
 >                  , std_out = NoStream
 >                  , std_err = NoStream
 >                  }
->       dotP     = (proc "dot" ["-Gdpi=250", "-Tpng"]) {
+>       dotP     = (proc "dot" ["-Tpng"]) {
 >                    std_in = CreatePipe
 >                  , std_out = UseHandle writeEnd
 >                  , std_err = NoStream
