@@ -1,21 +1,37 @@
 > module Main where
 
 > import FSA
-> import Pleb ( Env, Expr
->             , doParse, doStatements, makeAutomaton, parseExpr, tokenize)
-> import Porters
+> import Pleb ( Env
+>             , Expr
+>             , doParse
+>             , doStatements
+>             , makeAutomaton
+>             , parseExpr
+>             , tokenize
+>             )
+> import Porters ( Dot(..), formatSet, to )
 
-> import Control.Applicative (Applicative(..))
-> import Control.Monad.Trans.Class (lift)
-> import Data.Functor ((<$>))
+> import Control.Applicative ( Applicative(..) )
+> import Control.Monad.Trans.Class ( lift )
+> import Data.Functor ( (<$>) )
 > import System.Console.Haskeline ( InputT
 >                                 , defaultSettings
 >                                 , getInputLine
 >                                 , runInputT
 >                                 )
-> import System.IO
-> import System.IO.Error
-> import System.Process
+> import System.IO ( hClose
+>                  , hPutStr
+>                  , hPutStrLn
+>                  , hSetBinaryMode
+>                  , stderr
+>                  )
+> import System.IO.Error ( catchIOError )
+> import System.Process ( CreateProcess(..)
+>                       , StdStream(..)
+>                       , createProcess
+>                       , proc
+>                       , waitForProcess
+>                       )
 
 > main = runInputT defaultSettings (processLines (empty, empty, Nothing))
 
@@ -27,8 +43,12 @@
 >                    | R c
 >                      deriving (Eq, Ord, Read, Show)
 > data Command = Bindings
+>              | D_PSG Expr -- Display Powerset Graph
+>              | D_SM Expr -- Display Syntactic Monoid
 >              | Display Expr
 >              | Dotify Expr
+>              | DT_PSG Expr -- Dotify Powerset Graph
+>              | DT_SM Expr -- Dotify Syntactic Monoid
 >              | ErrorMsg String
 >              | Read FilePath
 >              | Reset
@@ -65,16 +85,20 @@
 >                        doParse p $ tokenize (drop (length s) str)
 >           commands  =  [ (":bindings",       pure (L Bindings))
 >                        , (":display",        ((L .         Display) <$> pe ))
+>                        , (":dot-psg",        ((L .         DT_PSG ) <$> pe ))
+>                        , (":dot-synmon",     ((L .         DT_SM  ) <$> pe ))
 >                        , (":dot",            ((L .         Dotify ) <$> pe ))
 >                        , (":equal",          ((M . uncurry Equal  ) <$> p2e))
 >                        , (":implies",        ((M . uncurry Subset ) <$> p2e))
+>                        , (":psg",            ((L .         D_PSG  ) <$> pe ))
 >                        , (":reset",          pure (L Reset))
 >                        , (":strict-subset",  ((M . uncurry SSubset) <$> p2e))
 >                        , (":subset",         ((M . uncurry Subset ) <$> p2e))
+>                        , (":synmon",         ((L .         D_SM   ) <$> pe ))
 >                        ]
 >           doOne xs  = case xs of
->                         (x:[]) -> f x
->                         _      -> L (ErrorMsg "unknown interpreter command")
+>                         (x:_)  ->  f x
+>                         _      ->  L (ErrorMsg "unknown interpreter command")
 >           err = ErrorMsg "failed to evaluate"
 
 > doCommand :: Env -> Command -> IO Env
@@ -91,9 +115,25 @@
 >         Display expr -> (maybe err display $
 >                          makeAutomaton (dict, subexprs, Just expr)) >>
 >                         return e
->         Dotify expr -> (maybe err (putStr . to Dot) $
+>         D_PSG expr -> (maybe err
+>                        (display . renameStatesBy formatSet . powersetGraph) $
+>                        makeAutomaton (dict, subexprs, Just expr)) >>
+>                         return e
+>         D_SM expr -> (maybe err
+>                       (display . renameStatesBy f . syntacticMonoid) $
+>                       makeAutomaton (dict, subexprs, Just expr)) >>
+>                      return e
+>         Dotify expr -> (maybe err p $
 >                         makeAutomaton (dict, subexprs, Just expr)) >>
 >                        return e
+>         DT_PSG expr -> (maybe err
+>                        (p . renameStatesBy formatSet . powersetGraph) $
+>                        makeAutomaton (dict, subexprs, Just expr)) >>
+>                         return e
+>         DT_SM expr -> (maybe err
+>                        (p . renameStatesBy f . syntacticMonoid) $
+>                        makeAutomaton (dict, subexprs, Just expr)) >>
+>                       return e
 >         ErrorMsg str -> hPutStrLn stderr str >> return e
 >         Read file -> catchIOError (doStatements e <$> readFile file)
 >                      (const $ hPutStrLn stderr
@@ -106,6 +146,14 @@
 >                                then Nothing
 >                                else last)
 >       where err = hPutStrLn stderr "could not parse expression"
+>             f (_, xs) = '<' : f' xs ++ ">"
+>             f' [] = ""
+>             f' (a:[]) = f'' a
+>             f' (a:as) = f'' a ++ " " ++ f' as
+>             f'' Epsilon = "ε"
+>             f'' (Symbol x) = x
+>             p :: (Ord n, Ord e, Show n, Show e) => FSA n e -> IO ()
+>             p = putStr . to Dot
 
 > doRelation :: Env -> Relation -> Maybe Bool
 > doRelation e r = case r of
@@ -129,22 +177,29 @@
 
 
 
+> deescape :: String -> String
+> deescape ('\\' : '&' : xs) = deescape xs
+> deescape ('\\' : x : xs)
+>     | isEmpty digits = x : deescape xs
+>     | otherwise      = toEnum (read digits) : deescape others
+>     where (digits, others) = span (isIn "0123456789") (x:xs)
+> deescape (x:xs) = x : deescape xs
+> deescape _      = []
+
 > display :: (Ord n, Ord e, Show n, Show e) => FSA n e -> IO ()
 > display fsa = do
->   (readEnd, writeEnd) <- createPipe
->   hSetBinaryMode readEnd True
->   hSetBinaryMode writeEnd True
+>   let dotP     = (proc "dot" ["-Tpng"]) {
+>                    std_in = CreatePipe
+>                  , std_out = CreatePipe
+>                  , std_err = NoStream
+>                  }
+>   (Just std_in, Just pipe, _, dot_ph) <- createProcess dotP
+>   hSetBinaryMode pipe True
 >   let displayP = (proc "display" []) {
->                    std_in = UseHandle readEnd
+>                    std_in = UseHandle pipe
 >                  , std_out = NoStream
 >                  , std_err = NoStream
 >                  }
->       dotP     = (proc "dot" ["-Tpng"]) {
->                    std_in = CreatePipe
->                  , std_out = UseHandle writeEnd
->                  , std_err = NoStream
->                  }
->   (Just std_in, _, _, dot_ph) <- createProcess dotP
 >   createProcess displayP
 >   hPutStr std_in (to Dot fsa)
 >   hClose std_in

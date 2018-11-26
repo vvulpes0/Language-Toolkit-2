@@ -105,7 +105,7 @@
 >     where sts          = states f
 >           idOf         = shortLabelIn sts
 >           makeLabel x  = show (idOf x) ++ " [label=\"" ++
->                          (nq . show $ nodeLabel x) ++ "\"];"
+>                          (deescape . nq . show $ nodeLabel x) ++ "\"];"
 
 > -- |Convert an 'FSA' to its representation in the GraphViz @dot@ format.
 > exportDot :: (Ord e, Ord n, Show e, Show n) => FSA n e -> String
