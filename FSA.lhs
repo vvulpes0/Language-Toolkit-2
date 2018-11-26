@@ -50,6 +50,7 @@
 >            , extendAlphabetTo
 >            , contractAlphabetTo
 >            , forceAlphabetTo
+>            , semanticallyExtendAlphabetTo
 >            , renameSymbolsBy
 >            -- ** Transformations of 'State' labels
 >            , renameStatesBy
@@ -1129,9 +1130,25 @@ Alphabet Manipulation
 =====================
 
 > -- |Add missing symbols to the alphabet of an automaton.
+> -- The result is an automaton with at least the provided alphabet
+> -- that licenses exactly the same set of strings as the input.
 > extendAlphabetTo :: (Ord a, Ord b) => Set b -> FSA a b ->
 >                   FSA (Maybe Integer, Maybe a) b
 > extendAlphabetTo syms = autUnion (emptyWithAlphabet syms)
+
+> -- |Add missing symbols to the alphabet of an automaton.
+> -- As the symbol 'Nothing' is taken to represent
+> -- any symbol not currently in the alphabet,
+> -- new edges are added in parallel to existing edges labelled by 'Nothing'.
+> semanticallyExtendAlphabetTo :: (Ord a, Ord b) => Set b -> FSA a (Maybe b) ->
+>                                 FSA a (Maybe b)
+> semanticallyExtendAlphabetTo syms fsa = fsa { transitions = union ts ts' }
+>     where new  =  difference (tmap Just syms) (alphabet fsa)
+>           ts   =  transitions fsa
+>           ts'  =  unionAll .
+>                   tmap
+>                   (\e -> tmap (\x -> e {edgeLabel = Symbol x} ) new) $
+>                   keep ((== Symbol Nothing) . edgeLabel) ts
 
 > -- |Remove symbols from the alphabet of an automaton.
 > contractAlphabetTo :: (Ord a, Ord b) => Set b -> FSA a b ->
