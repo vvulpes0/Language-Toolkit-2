@@ -48,9 +48,10 @@
 >            , jEquivalence
 >            -- ** Alphabetic Transformations
 >            , extendAlphabetTo
+>            , semanticallyExtendAlphabetTo
 >            , contractAlphabetTo
 >            , forceAlphabetTo
->            , semanticallyExtendAlphabetTo
+>            , desemantify
 >            , renameSymbolsBy
 >            -- ** Transformations of 'State' labels
 >            , renameStatesBy
@@ -1136,19 +1137,52 @@ Alphabet Manipulation
 >                   FSA (Maybe Integer, Maybe a) b
 > extendAlphabetTo syms = autUnion (emptyWithAlphabet syms)
 
+A "semantic automaton" is one in which a constraint is realized for
+a universal alphabet.  This is achieved by using edges labelled by
+'Nothing' to represent symbols not already included in the alphabet
+and an extend function that takes these edges into account.
+
+For example, consider the local and piecewise constraints:
+* No A immediately follows another A, and
+* No A follows another A.
+As automata with alphabet {A} these constraints appear identical,
+each licensing only the empty string and "A" itself.  But if the
+alphabet were instead {A,B}, then they would instead license:
+* B*A?(BA?)*, and
+* B*A?B*, respectively.
+Since the source automata for these constraints are identical,
+no algorithm can know which variant to extend the alphabet to.
+Encoding the universal alphabet in the transition graph with
+semantic automata can prevent this issue by explicitly stating
+which alternative is correct.
+
+One caveat with the use of semantic automata is that before any
+operation combines two or more automata, the inputs must have their
+alphabets unified.
+
 > -- |Add missing symbols to the alphabet of an automaton.
 > -- As the symbol 'Nothing' is taken to represent
 > -- any symbol not currently in the alphabet,
 > -- new edges are added in parallel to existing edges labelled by 'Nothing'.
 > semanticallyExtendAlphabetTo :: (Ord a, Ord b) => Set b -> FSA a (Maybe b) ->
 >                                 FSA a (Maybe b)
-> semanticallyExtendAlphabetTo syms fsa = fsa { transitions = union ts ts' }
->     where new  =  difference (tmap Just syms) (alphabet fsa)
+> semanticallyExtendAlphabetTo syms fsa = fsa { alphabet = union as new
+>                                             , transitions = union ts ts' }
+>     where as   =  alphabet fsa
+>           new  =  difference (tmap Just syms) as
 >           ts   =  transitions fsa
 >           ts'  =  unionAll .
 >                   tmap
 >                   (\e -> tmap (\x -> e {edgeLabel = Symbol x} ) new) $
 >                   keep ((== Symbol Nothing) . edgeLabel) ts
+
+> -- |Remove the semantic 'Nothing' edges from an automaton and reflect this
+> -- change in the type.
+> desemantify :: (Ord a, Ord b) => FSA a (Maybe b) -> FSA a b
+> desemantify fsa = renameSymbolsBy (maybe undefined id) $
+>                   contractAlphabetTo
+>                   (difference (alphabet fsa) (singleton Nothing))
+>                   fsa
 
 > -- |Remove symbols from the alphabet of an automaton.
 > contractAlphabetTo :: (Ord a, Ord b) => Set b -> FSA a b ->
