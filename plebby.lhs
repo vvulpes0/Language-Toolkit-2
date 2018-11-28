@@ -118,26 +118,30 @@
 >                putStrLn "# Expression aliases:"
 >                putStrLn (formatSet $ tmap fst subexprs)
 >                return e
->         Display expr -> (maybe err (display . desemantify) $
+>         Display expr -> (maybe err (display . normalize . desemantify) $
 >                          makeAutomaton (dict, subexprs, Just expr)) >>
 >                         return e
 >         D_PSG expr -> (maybe err
->                        (display . renameStatesBy formatSet . powersetGraph . desemantify) $
+>                        (display . renameStatesBy formatSet . powersetGraph .
+>                         normalize . desemantify) $
 >                        makeAutomaton (dict, subexprs, Just expr)) >>
 >                         return e
 >         D_SM expr -> (maybe err
->                       (display . renameStatesBy f . syntacticMonoid . desemantify) $
+>                       (display . renameStatesBy f . syntacticMonoid .
+>                        normalize . desemantify) $
 >                       makeAutomaton (dict, subexprs, Just expr)) >>
 >                      return e
->         Dotify expr -> (maybe err (p . desemantify) $
+>         Dotify expr -> (maybe err (p . normalize . desemantify) $
 >                         makeAutomaton (dict, subexprs, Just expr)) >>
 >                        return e
 >         DT_PSG expr -> (maybe err
->                        (p . renameStatesBy formatSet . powersetGraph . desemantify) $
+>                        (p . renameStatesBy formatSet . powersetGraph .
+>                         normalize . desemantify) $
 >                        makeAutomaton (dict, subexprs, Just expr)) >>
 >                         return e
 >         DT_SM expr -> (maybe err
->                        (p . renameStatesBy f . syntacticMonoid . desemantify) $
+>                        (p . renameStatesBy f . syntacticMonoid .
+>                         normalize . desemantify) $
 >                        makeAutomaton (dict, subexprs, Just expr)) >>
 >                       return e
 >         ErrorMsg str -> hPutStrLn stderr str >> return e
@@ -164,8 +168,10 @@
 > doRelation :: Env -> Relation -> Maybe Bool
 > doRelation e r = case r of
 >                    Equal p1 p2    ->  relate e (==) p1 p2
->                    IsSL p         ->  isSL <$> desemantify <$> makeAutomaton (e' p)
->                    IsSP p         ->  isSP <$> desemantify <$> makeAutomaton (e' p)
+>                    IsSL p         ->  isSL <$> normalize <$> desemantify <$>
+>                                       makeAutomaton (e' p)
+>                    IsSP p         ->  isSP <$> normalize <$> desemantify <$>
+>                                       makeAutomaton (e' p)
 >                    Subset p1 p2   ->  relate e isSupersetOf p1 p2
 >                    SSubset p1 p2  ->  relate e isProperSupersetOf p1 p2
 >     where e' p = (\(a, b, _) -> (a, b, Just p)) e
