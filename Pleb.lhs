@@ -37,7 +37,7 @@
 > data Expr
 >     = NAry NAryExpr
 >     | Unary UnaryExpr
->     | Factor PFactor
+>     | Factor PLFactor
 >       deriving (Eq, Ord, Read, Show)
 > data NAryExpr
 >     = Concatenation [Expr]
@@ -48,6 +48,9 @@
 > data UnaryExpr
 >     = Iteration Expr
 >     | Negation Expr
+>       deriving (Eq, Ord, Read, Show)
+> data PLFactor
+>     = PLFactor Bool Bool [[SymSet]]
 >       deriving (Eq, Ord, Read, Show)
 > data PFactor
 >     = PieceFactor Sequence
@@ -63,7 +66,7 @@
 > type SymSet = Set String
 
 > readPleb :: String -> FSA Integer String
-> readPleb = maybe (error "no parse") id .
+> readPleb = maybe (error "no parse") desemantify .
 >            either (error) (makeAutomaton . fst) .
 >            doParse (parseStatements (Set.empty, Set.empty, Nothing)) .
 >            tokenize
@@ -75,50 +78,51 @@
 >     where f (x, [])  =  x
 >           f _        =  d
 
-> makeAutomaton :: Env -> Maybe (FSA Integer String)
-> makeAutomaton (dict, _, e) = normalize <$> automatonFromExpr alphabet <$> e
->     where alphabet = union (maybe Set.empty usedSymbols e)
->                      (unionAll $ tmap snd dict)
+> makeAutomaton :: Env -> Maybe (FSA Integer (Maybe String))
+> makeAutomaton (dict, _, e) = normalize <$>
+>                              semanticallyExtendAlphabetTo symsets <$>
+>                              automatonFromExpr <$> e
+>     where symsets = (unionAll $ tmap snd dict)
 
-> automatonFromExpr :: Set String -> Expr -> FSA Integer String
-> automatonFromExpr as e
+The properties of semantic automata are used here to prevent having to
+pass alphabet information to the individual constructors, which in turn
+prevents having to descend through the tree to find this information.
+
+> automatonFromExpr :: Expr -> FSA Integer (Maybe String)
+> automatonFromExpr e
 >     = case e of
 >         NAry (Concatenation es) -> f mconcat es
 >         NAry (Conjunction es)   -> f flatIntersection es
 >         NAry (Disjunction es)   -> f flatUnion es
 >         NAry (PRelation es)     -> f (mconcat .
->                                       sepBy (totalWithAlphabet as)) es
+>                                       sepBy (totalWithAlphabet (singleton Nothing)))
+>                                    es
 >         Unary (Iteration e)     -> renameStates . minimize . kleeneClosure $
->                                    automatonFromExpr as e
+>                                    automatonFromExpr e
 >         Unary (Negation e)      -> complementDeterministic $
->                                    automatonFromExpr as e
->         Factor (PieceFactor s)  -> buildLiteral as . required $
->                                    Subsequence s
->         Factor (LocalFactor x)  -> buildLiteral as . required $
->                                    g x
->     where f tl = renameStates . minimize . tl . map (automatonFromExpr as)
->           g (Word as) = Substring as True   True
->           g (Head as) = Substring as True   False
->           g (Tail as) = Substring as False  True
->           g (Free as) = Substring as False  False
+>                                    automatonFromExpr e
+>         Factor x                -> automatonFromPLFactor x
+>     where f tl = renameStates . minimize . tl . automata
+>           automata es  =  let a' = map automatonFromExpr es
+>                           in map (semanticallyExtendAlphabetTo (bigAlpha a')) a'
+>           bigAlpha     =  collapse (maybe id insert) Set.empty .
+>                           unionAll . tmap alphabet
 
-> usedSymbols :: Expr -> Set String
-> usedSymbols e = case e of
->                   NAry n    ->  usedSymbolsN n
->                   Unary u   ->  usedSymbolsU u
->                   Factor f  ->  usedSymbolsF f
->     where usedSymbolsN (Concatenation es)  =  unionAll $ tmap usedSymbols es
->           usedSymbolsN (Conjunction es)    =  unionAll $ tmap usedSymbols es
->           usedSymbolsN (Disjunction es)    =  unionAll $ tmap usedSymbols es
->           usedSymbolsN (PRelation es)      =  unionAll $ tmap usedSymbols es
->           usedSymbolsU (Iteration e)       =  usedSymbols e
->           usedSymbolsU (Negation e)        =  usedSymbols e
->           usedSymbolsF (PieceFactor pf)    =  unionAll pf
->           usedSymbolsF (LocalFactor f)     =  usedSymbolsA f
->           usedSymbolsA (Word s)            =  unionAll s
->           usedSymbolsA (Head s)            =  unionAll s
->           usedSymbolsA (Tail s)            =  unionAll s
->           usedSymbolsA (Free s)            =  unionAll s
+> automatonFromPLFactor :: PLFactor -> FSA Integer (Maybe String)
+> automatonFromPLFactor (PLFactor h t pieces)
+>     | isEmpty pieces  =  bl (Substring [] h t)
+>     | isEmpty ps      =  bl (Substring p  h t)
+>     | isPF            =  bl (Subsequence (concat (p:ps)))
+>     | otherwise       =  renameStates . minimize . mconcat $ map bl lfs
+>     where as           =  insert Nothing . tmap Just $
+>                           unionAll (unionAll pieces)
+>           bl           =  buildLiteral as . required
+>           (p:ps)       =  tmap (tmap (tmap Just)) pieces
+>           isPF         =  not h && not t && all ((== 1) . size) pieces
+>           lfs          =  Substring p h False : lfs' ps
+>           lfs' (x:[])  =  Substring x False t : lfs' []
+>           lfs' (x:xs)  =  Substring x False False : lfs' xs
+>           lfs' _       =  []
 
 > parseStatements :: Env -> Parse Env
 > parseStatements (dict, subexprs, last)
@@ -156,7 +160,7 @@
 > parseExpr dict subexprs = asum
 >                           [ NAry    <$>  parseNAryExpr dict subexprs
 >                           , Unary   <$>  parseUnaryExpr dict subexprs
->                           , Factor  <$>  parseFactor dict
+>                           , Factor  <$>  parsePLFactor dict subexprs
 >                           , Parse expandVar
 >                           ]
 >     where expandVar (TName n : ts) = fmap (flip (,) ts) $
@@ -181,10 +185,32 @@
 >                                 ] <*>
 >                                 parseExpr dict subexprs)
 
-> parseFactor :: Dictionary SymSet -> Parse PFactor
-> parseFactor dict = (eat ".." PieceFactor <*> parseSequence dict) <|>
->                    (eat "‥" PieceFactor <*> parseSequence dict) <|>
->                    (LocalFactor <$> parseAnchoredSequence dict)
+> parsePLFactor :: Dictionary SymSet -> Dictionary Expr -> Parse PLFactor
+> parsePLFactor dict subexprs = combine ".." plGap <|>
+>                               combine "." plCatenate <|>
+>                               pplf
+>     where combine s f = eat s (foldr1 f) <*>
+>                         parseDelimited ['<', '⟨']
+>                         (parseSeparated "," pplf)
+>           pplf = parseBasicPLFactor dict <|>
+>                  (Parse expandVar)
+>           expandVar (TName n : ts)
+>               = case v of
+>                   Right (Factor x) -> Right (x, ts)
+>                   _        -> Left "expression does not represent a factor"
+>               where v = definition n subexprs
+>           expandVar _              = Left "not a variable"
+
+> parseBasicPLFactor :: Dictionary SymSet -> Parse PLFactor
+> parseBasicPLFactor dict = (makeLifter
+>                            [ (["⋊⋉", "%][%"], PLFactor True True)
+>                            , (["⋊", "%]"], PLFactor True False)
+>                            , (["⋉", "[%"], PLFactor False True)
+>                            , ([""], PLFactor False False)
+>                            ] <*>
+>                            (parseDelimited ['<', '⟨']
+>                             (parseSeparated "," (some (parseSymSet dict)) <|>
+>                              Parse (\ts -> Right ([], ts)))))
 
 > parseAnchoredSequence :: Dictionary SymSet -> Parse AnchoredSequence
 > parseAnchoredSequence dict = (makeLifter
@@ -239,6 +265,32 @@
 
 > parseSeparated :: String -> Parse a -> Parse [a]
 > parseSeparated string p = (:) <$> p <*> (many (eat string [] >> p))
+
+
+
+> plCatenate :: PLFactor -> PLFactor -> PLFactor
+> plCatenate (PLFactor h _ xs) (PLFactor _ t ys) = PLFactor h t (pc xs ys)
+>     where pc [] bs          =  bs
+>           pc (a:[]) []      =  [a]
+>           pc (a:[]) (b:bs)  =  (a ++ b) : bs
+>           pc (a:as) bs      =  a : pc as bs
+
+> plGap :: PLFactor -> PLFactor -> PLFactor
+> plGap (PLFactor h _ xs) (PLFactor _ t ys) = PLFactor h t (xs ++ ys)
+
+> showPLFactor :: PLFactor -> String
+> showPLFactor (PLFactor h t xs) = (if h then "%]" else "")
+>                                  ++ showPieces xs
+>                                  ++ (if t then "[%" else "")
+>     where showPieces []     =  []
+>           showPieces (y:[]) =  showPiece y
+>           showPieces (y:ys) =  showPiece y ++ ".." ++ showPieces ys
+>           showPiece         =  concat . tmap (showSet . fromCollapsible)
+>           showSet [] = "{}"
+>           showSet (a:[]) = a
+>           showSet (a:as) = "{" ++ a ++ "," ++ showThings as ++ "}"
+>           showThings [] = ""
+>           showThings (a:as) = "," ++ show a ++ showThings as
 
 
 

@@ -10,6 +10,8 @@
 >             , tokenize
 >             )
 > import Porters ( Dot(..), formatSet, to )
+> import ExtractSL (isSL)
+> import ExtractSP (isSP)
 
 > import Control.Applicative ( Applicative(..) )
 > import Control.Monad.Trans.Class ( lift )
@@ -55,6 +57,8 @@
 >              | Unset String
 >              deriving (Eq, Read, Show)
 > data Relation = Equal Expr Expr
+>               | IsSL Expr
+>               | IsSP Expr
 >               | Subset Expr Expr
 >               | SSubset Expr Expr -- Strict Subset
 >                 deriving (Eq, Read, Show)
@@ -90,6 +94,8 @@
 >                        , (":dot",            ((L .         Dotify ) <$> pe ))
 >                        , (":equal",          ((M . uncurry Equal  ) <$> p2e))
 >                        , (":implies",        ((M . uncurry Subset ) <$> p2e))
+>                        , (":isSL",           ((M .         IsSL   ) <$> pe ))
+>                        , (":isSP",           ((M .         IsSP   ) <$> pe ))
 >                        , (":psg",            ((L .         D_PSG  ) <$> pe ))
 >                        , (":reset",          pure (L Reset))
 >                        , (":strict-subset",  ((M . uncurry SSubset) <$> p2e))
@@ -112,26 +118,26 @@
 >                putStrLn "# Expression aliases:"
 >                putStrLn (formatSet $ tmap fst subexprs)
 >                return e
->         Display expr -> (maybe err display $
+>         Display expr -> (maybe err (display . desemantify) $
 >                          makeAutomaton (dict, subexprs, Just expr)) >>
 >                         return e
 >         D_PSG expr -> (maybe err
->                        (display . renameStatesBy formatSet . powersetGraph) $
+>                        (display . renameStatesBy formatSet . powersetGraph . desemantify) $
 >                        makeAutomaton (dict, subexprs, Just expr)) >>
 >                         return e
 >         D_SM expr -> (maybe err
->                       (display . renameStatesBy f . syntacticMonoid) $
+>                       (display . renameStatesBy f . syntacticMonoid . desemantify) $
 >                       makeAutomaton (dict, subexprs, Just expr)) >>
 >                      return e
->         Dotify expr -> (maybe err p $
+>         Dotify expr -> (maybe err (p . desemantify) $
 >                         makeAutomaton (dict, subexprs, Just expr)) >>
 >                        return e
 >         DT_PSG expr -> (maybe err
->                        (p . renameStatesBy formatSet . powersetGraph) $
+>                        (p . renameStatesBy formatSet . powersetGraph . desemantify) $
 >                        makeAutomaton (dict, subexprs, Just expr)) >>
 >                         return e
 >         DT_SM expr -> (maybe err
->                        (p . renameStatesBy f . syntacticMonoid) $
+>                        (p . renameStatesBy f . syntacticMonoid . desemantify) $
 >                        makeAutomaton (dict, subexprs, Just expr)) >>
 >                       return e
 >         ErrorMsg str -> hPutStrLn stderr str >> return e
@@ -158,15 +164,22 @@
 > doRelation :: Env -> Relation -> Maybe Bool
 > doRelation e r = case r of
 >                    Equal p1 p2    ->  relate e (==) p1 p2
+>                    IsSL p         ->  isSL <$> desemantify <$> makeAutomaton (e' p)
+>                    IsSP p         ->  isSP <$> desemantify <$> makeAutomaton (e' p)
 >                    Subset p1 p2   ->  relate e isSupersetOf p1 p2
 >                    SSubset p1 p2  ->  relate e isProperSupersetOf p1 p2
+>     where e' p = (\(a, b, _) -> (a, b, Just p)) e
 
 > relate :: Env
 >        -> (FSA Integer String -> FSA Integer String -> a) -> Expr -> Expr
 >        -> Maybe a
-> relate (a,b,_) f p1 p2 = f <$> makeAutomaton e1 <*> makeAutomaton e2
+> relate (a,b,_) f p1 p2 = f' <$> makeAutomaton e1 <*> makeAutomaton e2
 >     where e1 = (a, b, Just p1)
 >           e2 = (a, b, Just p2)
+>           f' x y = let ss = collapse (maybe id insert) empty $
+>                             union (alphabet x) (alphabet y)
+>                    in f (desemantify $ semanticallyExtendAlphabetTo ss x)
+>                         (desemantify $ semanticallyExtendAlphabetTo ss y)
 
 > act :: Env -> Trither Command Relation Env -> IO Env
 > act d = trither
