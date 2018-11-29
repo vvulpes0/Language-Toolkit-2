@@ -52,16 +52,6 @@
 > data PLFactor
 >     = PLFactor Bool Bool [[SymSet]]
 >       deriving (Eq, Ord, Read, Show)
-> data PFactor
->     = PieceFactor Sequence
->     | LocalFactor AnchoredSequence
->       deriving (Eq, Ord, Read, Show)
-> data AnchoredSequence
->     = Word Sequence
->     | Head Sequence
->     | Tail Sequence
->     | Free Sequence
->       deriving (Eq, Ord, Read, Show)
 > type Sequence = [SymSet]
 > type SymSet = Set String
 
@@ -82,7 +72,8 @@
 > makeAutomaton (dict, _, e) = normalize <$>
 >                              semanticallyExtendAlphabetTo symsets <$>
 >                              automatonFromExpr <$> e
->     where symsets = (unionAll $ tmap snd dict)
+>     where symsets = either (const Set.empty) id
+>                     (definition "universe" dict)
 
 The properties of semantic automata are used here to prevent having to
 pass alphabet information to the individual constructors, which in turn
@@ -124,20 +115,32 @@ prevents having to descend through the tree to find this information.
 >           lfs' (x:xs)  =  Substring x False False : lfs' xs
 >           lfs' _       =  []
 
+> usedSymbols :: Expr -> SymSet
+> usedSymbols e = case e of
+>                   NAry n    ->  usedSymbolsN n
+>                   Unary u   ->  usedSymbolsU u
+>                   Factor f  ->  usedSymbolsF f
+>     where usedSymbolsN (Concatenation es)  =  unionAll $ tmap usedSymbols es
+>           usedSymbolsN (Conjunction es)    =  unionAll $ tmap usedSymbols es
+>           usedSymbolsN (Disjunction es)    =  unionAll $ tmap usedSymbols es
+>           usedSymbolsN (PRelation es)      =  unionAll $ tmap usedSymbols es
+>           usedSymbolsU (Iteration e)       =  usedSymbols e
+>           usedSymbolsU (Negation e)        =  usedSymbols e
+>           usedSymbolsF (PLFactor _ _ ps)   =  unionAll (unionAll ps)
+
 > parseStatements :: Env -> Parse Env
 > parseStatements (dict, subexprs, last)
 >  = asum $ [ start >> putFst <$>
->             (define <$> getName <*>
+>             (mkSyms <$> getName <*>
 >              (unionAll <$>
 >               parseDelimited ['(', '{']
 >               (parseSeparated "," (parseSymSet dict))) <*>
 >              pure dict) >>=
 >             parseStatements
->           , start >> putSnd <$>
->             (define <$> getName <*> parseExpr dict subexprs <*>
->              pure subexprs) >>=
+>           , start >>
+>             (f False <$> getName <*> (Just <$> parseExpr dict subexprs)) >>=
 >             parseStatements
->           , f <$> (Just <$> parseExpr dict subexprs)
+>           , f True "it" <$> (Just <$> parseExpr dict subexprs)
 >           , Parse $ \ts -> case ts of
 >                              [] -> Right ((dict, subexprs, last), [])
 >                              _  -> Left "not finished"
@@ -152,9 +155,20 @@ prevents having to descend through the tree to find this information.
 >          start = eat "≝" [] <|> eat "=" []
 >          putFst a = (a, subexprs, last)
 >          putSnd b = (dict, b, last)
->          f me = (dict
->                 , maybe subexprs (flip (define "it") subexprs) me
->                 , me)
+>          universe = either (const Set.empty) id (definition "universe" dict)
+>          mkSyms name value = define "universe"
+>                              (if name /= "universe"
+>                               then union universe value
+>                               else value) .
+>                              define name value
+>          f isL name me = let nd = maybe dict
+>                                   (flip (define "universe") dict .
+>                                    union universe .
+>                                    usedSymbols)
+>                                   me
+>                          in ( nd
+>                             , maybe subexprs (flip (define name) subexprs) me
+>                             , if isL then me else last)
 
 > parseExpr :: Dictionary SymSet -> Dictionary Expr -> Parse Expr
 > parseExpr dict subexprs = asum
@@ -172,8 +186,8 @@ prevents having to descend through the tree to find this information.
 >     = (makeLifter
 >        [ (["⋂", "∩", "/\\"],  Conjunction)
 >        , (["⋃", "∪", "\\/"],  Disjunction)
->        , (["‥", ".."],        PRelation)
->        , ([".", "⋄"],         Concatenation)
+>        , (["∙∙", "@@"],       PRelation)
+>        , (["∙" , "@" ],       Concatenation)
 >        ] <*>
 >        parseDelimited ['(', '{']
 >        (parseSeparated "," (parseExpr dict subexprs)))
@@ -187,6 +201,7 @@ prevents having to descend through the tree to find this information.
 
 > parsePLFactor :: Dictionary SymSet -> Dictionary Expr -> Parse PLFactor
 > parsePLFactor dict subexprs = combine ".." plGap <|>
+>                               combine "‥" plGap <|>
 >                               combine "." plCatenate <|>
 >                               pplf
 >     where combine s f = eat s (foldr1 f) <*>
@@ -203,26 +218,14 @@ prevents having to descend through the tree to find this information.
 
 > parseBasicPLFactor :: Dictionary SymSet -> Parse PLFactor
 > parseBasicPLFactor dict = (makeLifter
->                            [ (["⋊⋉", "%][%"], PLFactor True True)
->                            , (["⋊", "%]"], PLFactor True False)
->                            , (["⋉", "[%"], PLFactor False True)
+>                            [ (["⋊⋉", "%||%"], PLFactor True True)
+>                            , (["⋊", "%|"], PLFactor True False)
+>                            , (["⋉", "|%"], PLFactor False True)
 >                            , ([""], PLFactor False False)
 >                            ] <*>
 >                            (parseDelimited ['<', '⟨']
 >                             (parseSeparated "," (some (parseSymSet dict)) <|>
 >                              Parse (\ts -> Right ([], ts)))))
-
-> parseAnchoredSequence :: Dictionary SymSet -> Parse AnchoredSequence
-> parseAnchoredSequence dict = (makeLifter
->                               [ (["⋊⋉", "%][%"], Word)
->                               , (["⋊", "%]"], Head)
->                               , (["⋉", "[%"], Tail)
->                               , ([""], Free)
->                               ] <*>
->                               parseSequence dict)
-
-> parseSequence :: Dictionary SymSet -> Parse Sequence
-> parseSequence dict = parseDelimited ['<', '⟨'] (many (parseSymSet dict))
 
 > parseSymSet :: Dictionary SymSet -> Parse SymSet
 > parseSymSet dict = Parse $ \xs ->
@@ -277,20 +280,6 @@ prevents having to descend through the tree to find this information.
 
 > plGap :: PLFactor -> PLFactor -> PLFactor
 > plGap (PLFactor h _ xs) (PLFactor _ t ys) = PLFactor h t (xs ++ ys)
-
-> showPLFactor :: PLFactor -> String
-> showPLFactor (PLFactor h t xs) = (if h then "%]" else "")
->                                  ++ showPieces xs
->                                  ++ (if t then "[%" else "")
->     where showPieces []     =  []
->           showPieces (y:[]) =  showPiece y
->           showPieces (y:ys) =  showPiece y ++ ".." ++ showPieces ys
->           showPiece         =  concat . tmap (showSet . fromCollapsible)
->           showSet [] = "{}"
->           showSet (a:[]) = a
->           showSet (a:as) = "{" ++ a ++ "," ++ showThings as ++ "}"
->           showThings [] = ""
->           showThings (a:as) = "," ++ show a ++ showThings as
 
 
 

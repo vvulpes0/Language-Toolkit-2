@@ -54,9 +54,12 @@
 >              | ErrorMsg String
 >              | Read FilePath
 >              | Reset
+>              | RestoreUniverse
+>              | Show String
 >              | Unset String
 >              deriving (Eq, Read, Show)
 > data Relation = Equal Expr Expr
+>               | IsPT Expr
 >               | IsSL Expr
 >               | IsSP Expr
 >               | Subset Expr Expr
@@ -78,6 +81,9 @@
 >     | isPrefixOf str ":read"     =  case words str of
 >                                       (_:a:[]) -> L (Read a)
 >                                       _        -> R d
+>     | isPrefixOf str ":show"     =  case words str of
+>                                       (_:a:[]) -> L (Show a)
+>                                       _        -> R d
 >     | isPrefixOf str ":unset"    =  case words str of
 >                                       (_:a:[]) -> L (Unset a)
 >                                       _        -> R d
@@ -94,10 +100,12 @@
 >                        , (":dot",            ((L .         Dotify ) <$> pe ))
 >                        , (":equal",          ((M . uncurry Equal  ) <$> p2e))
 >                        , (":implies",        ((M . uncurry Subset ) <$> p2e))
+>                        , (":isPT",           ((M .         IsPT   ) <$> pe ))
 >                        , (":isSL",           ((M .         IsSL   ) <$> pe ))
 >                        , (":isSP",           ((M .         IsSP   ) <$> pe ))
 >                        , (":psg",            ((L .         D_PSG  ) <$> pe ))
 >                        , (":reset",          pure (L Reset))
+>                        , (":restore-universe", pure (L RestoreUniverse))
 >                        , (":strict-subset",  ((M . uncurry SSubset) <$> p2e))
 >                        , (":subset",         ((M . uncurry Subset ) <$> p2e))
 >                        , (":synmon",         ((L .         D_SM   ) <$> pe ))
@@ -113,7 +121,7 @@
 >         Bindings -> do
 >                putStrLn "# Symbol aliases:"
 >                mapM_ (\(n, s) ->
->                       putStrLn (n ++ " <- " ++ formatSet s)
+>                       putStrLn (n ++ " <- " ++ deescape (formatSet s))
 >                      ) dict
 >                putStrLn "# Expression aliases:"
 >                putStrLn (formatSet $ tmap fst subexprs)
@@ -150,6 +158,31 @@
 >                       ("failed to read \"" ++ file ++ "\"") >>
 >                       return e)
 >         Reset -> return (empty, empty, Nothing)
+>         --
+>         -- Note: RestoreUniverse is implemented in a probably-inefficient
+>         --       way, by making use of the side-effect that all assignments
+>         --       properly update the universe.  The code currently just
+>         --       rebinds every bound variable by creating and evaluating
+>         --       assignment statements.  This should be done differently.
+>         --
+>         RestoreUniverse -> let d' = keep ((/= "universe") . fst) dict
+>                            in return . doStatements (d', subexprs, last) .
+>                               unlines . fromCollapsible $
+>                               union
+>                               (tmap
+>                                (\(a, _) -> "= " ++ a ++ " { " ++ a ++ " } ") $
+>                                d')
+>                               (tmap
+>                                (\(a, _) -> "= " ++ a ++ " " ++ a) subexprs)
+>         Show name  -> (mapM_
+>                        (\(_,a) ->
+>                         putStrLn (name ++ " <- " ++ show a)) $
+>                        keep ((== name) . fst) subexprs) >>
+>                       (mapM_
+>                        (\(_,s) ->
+>                         putStrLn (name ++ " <- " ++ deescape (formatSet s))) $
+>                        keep ((== name) . fst) dict) >>
+>                       return e
 >         Unset name -> return ( keep ((/= name) . fst) dict
 >                              , keep ((/= name) . fst) subexprs
 >                              , if name == "it"
@@ -168,6 +201,8 @@
 > doRelation :: Env -> Relation -> Maybe Bool
 > doRelation e r = case r of
 >                    Equal p1 p2    ->  relate e (==) p1 p2
+>                    IsPT p         ->  isPT <$> normalize <$> desemantify <$>
+>                                       makeAutomaton (e' p)
 >                    IsSL p         ->  isSL <$> normalize <$> desemantify <$>
 >                                       makeAutomaton (e' p)
 >                    IsSP p         ->  isSP <$> normalize <$> desemantify <$>
@@ -175,6 +210,9 @@
 >                    Subset p1 p2   ->  relate e isSupersetOf p1 p2
 >                    SSubset p1 p2  ->  relate e isProperSupersetOf p1 p2
 >     where e' p = (\(a, b, _) -> (a, b, Just p)) e
+>           isPT f = let m = syntacticMonoid f
+>                    in renameStates m `asTypeOf` f ==
+>                       renameStates (minimizeOver jEquivalence m)
 
 > relate :: Env
 >        -> (FSA Integer String -> FSA Integer String -> a) -> Expr -> Expr
