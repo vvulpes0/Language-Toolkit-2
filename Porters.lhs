@@ -12,6 +12,7 @@
 >                  -- |In the following definitions,
 >                  -- @(Type t)@ is shorthand for @(String -> t)@.
 >                  from
+>                , fromE
 >                , to
 >                  -- *Formats
 >                  -- |We use types to create a bit of magic
@@ -47,11 +48,15 @@
 
 > -- |A type that can be read and turned into an 'FSA'.
 > class Importable t where
->     toFSA       ::  t -> FSA Integer String
+>     toFSA       ::  t -> Either String (FSA Integer String)
 
 > -- |Create an 'FSA' from a @String@ treated as the given 'Type'.
 > from :: (Importable i) => Type i -> String -> FSA Integer String
-> from ty = toFSA . ty
+> from ty = either error id . fromE ty
+
+> -- |Try to create an 'FSA' from a @String@ treated as the given 'Type'.
+> fromE :: (Importable i) => Type i -> String -> Either String (FSA Integer String)
+> fromE ty = toFSA . ty
 
 > -- |Create a @String@ from an 'FSA', formatted appropriately for
 > -- the given 'Type'.
@@ -71,7 +76,7 @@
 >     extract (Jeff s)  =  s
 
 > instance Importable Jeff where
->     toFSA  =  renameStates . readJeff . extract
+>     toFSA  =  fmap renameStates . readJeff . extract
 
 === instances for Dot format
 

@@ -323,6 +323,24 @@ harder problem.
 >     where c  = autUnion a b
 >           s  = size . keep ((/=) (State (Nothing, Nothing))) $ states c
 
+A Set of FSAs could be useful, and an Ord instance is needed for that.
+If two automata are equal, they should certainly compare EQ.
+If A is a subset of B, compare A B ought be LT and the reverse GT.
+When neither is a subset of the other, they are incomparable by this
+measure, so instead they are compared by a standard Haskell comparison
+of tuples consisting of their alphabets, transitions, initial states,
+and final states.
+
+> instance (Ord e, Ord n) => Ord (FSA n e) where
+>     compare a b
+>         | a == b                  =  EQ
+>         | isSubsetOf (f b) (f a)  =  LT
+>         | isSubsetOf (f a) (f b)  =  GT
+>         | otherwise               =  compare (g a) (g b)
+>         where f :: (Ord e, Ord n) => FSA n e -> FSA Integer e
+>               f = renameStates
+>               g x = (alphabet x, transitions x, initials x, finals x)
+
 > instance (Enum n, Ord n, Ord e) => Container (FSA n e) [e] where
 >     isEmpty              =  isNull
 >     isIn                 =  accepts

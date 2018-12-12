@@ -47,36 +47,37 @@ Then use that to parse a string in Jeff format and generate an FSA
 > -- |Import an 'FSA' from its representation in Jeff's format.
 > -- The resulting @Int@ node labels may have nothing to do with the
 > -- node labels in the source.
-> readJeff :: String -> FSA Int String
-> readJeff = transliterate . renameStates . readJeffWithoutRelabeling
+> readJeff :: String -> Either String (FSA Int String)
+> readJeff s = transliterate <$> renameStates <$> readJeffWithoutRelabeling s
 
-> readJeffStateList :: [String] -> Set (State String)
-> readJeffStateList [] = empty
+> readJeffStateList :: [String] -> Either String (Set (State String))
+> readJeffStateList [] = Right empty
 > readJeffStateList (x:xs)
 >     | not (null xs)  = parseFail "state list" (x:xs) "Invalid separator"
->     | otherwise      = Set.fromList . tmap State $ splitOn ',' x
+>     | otherwise      = Right . Set.fromList . tmap State $ splitOn ',' x
 
-> readJeffTransitionList :: [String] -> Set (Transition String String)
-> readJeffTransitionList []      = empty
-> readJeffTransitionList (a:as)  = insert
->                                  (readJeffTransition a)
+> readJeffTransitionList :: [String] -> Either String (Set (Transition String String))
+> readJeffTransitionList []      = Right empty
+> readJeffTransitionList (a:as)  = insert <$>
+>                                  (readJeffTransition a) <*>
 >                                  (readJeffTransitionList as)
 
-> readJeffTransition :: String -> Transition String String
+> readJeffTransition :: String -> Either String (Transition String String)
 > readJeffTransition s 
 >     | length xs < 3  = parseFail "Transition" s "Not enough components"
 >     | length xs > 3  = parseFail "Transition" s "Too many components"
->     | otherwise      = Transition (Symbol (xs!!2))
+>     | otherwise      = Right $
+>                        Transition (Symbol (xs!!2))
 >                        (State (xs!!0)) (State (xs!!1))
 >     where xs = splitOn ',' s
 
-> readJeffWithoutRelabeling :: String -> FSA String String
+> readJeffWithoutRelabeling :: String -> Either String (FSA String String)
 > readJeffWithoutRelabeling s 
 >     | length initialParse /= 3  = parseFail "FSA" s "Not a Jeff"
->     | otherwise                 = FSA alphabet trans inits fins False
+>     | otherwise                 = FSA <$> alphabet <*> trans <*> inits <*> fins <*> Right False
 >     where initialParse  = (tmap (keep (not . null) . splitOn '\n')
 >                           . splitOn '!') s
->           alphabet      = unsymbols $ tmap edgeLabel trans
+>           alphabet      = unsymbols <$> tmap edgeLabel <$> trans
 >           trans         = readJeffTransitionList $ initialParse!!1
 >           inits         = readJeffStateList $ initialParse!!0
 >           fins          = readJeffStateList $ initialParse!!2
@@ -84,8 +85,8 @@ Then use that to parse a string in Jeff format and generate an FSA
 Sometimes users give us input that is not what we expect.  Tell them
 that, and what we think may have gone wrong:
 
-> parseFail :: Show a => String -> a -> String -> b
-> parseFail target input reason = error message
+> parseFail :: Show a => String -> a -> String -> Either String b
+> parseFail target input reason = Left message
 >     where message = ("Failed to parse " ++ target ++ ": " ++
 >                      show input ++ ".  " ++ reason ++ ".")
 

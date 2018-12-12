@@ -3,18 +3,23 @@
 > import FSA
 > import Pleb ( Env
 >             , Expr
+>             , compileEnv
 >             , doParse
 >             , doStatements
+>             , fromAutomaton
+>             , fromSemanticAutomaton
+>             , insertExpr
 >             , makeAutomaton
 >             , parseExpr
 >             , tokenize
 >             )
-> import Porters ( Dot(..), formatSet, to )
+> import Porters ( Dot(..), Jeff(..), formatSet, to, fromE)
 > import ExtractSL (isSL)
 > import ExtractSP (isSP)
 
 > import Control.Applicative ( Applicative(..) )
 > import Control.Monad.Trans.Class ( lift )
+> import Data.Char (isSpace)
 > import Data.Functor ( (<$>) )
 > import System.Console.Haskeline ( InputT
 >                                 , defaultSettings
@@ -52,11 +57,17 @@
 >              | DT_PSG Expr -- Dotify Powerset Graph
 >              | DT_SM Expr -- Dotify Syntactic Monoid
 >              | ErrorMsg String
+>              | Import FilePath
+>              | Loadstate FilePath
 >              | Read FilePath
+>              | ReadBin FilePath
+>              | ReadJeff FilePath
 >              | Reset
 >              | RestoreUniverse
+>              | Savestate FilePath
 >              | Show String
 >              | Unset String
+>              | Write FilePath Expr
 >              deriving (Eq, Read, Show)
 > data Relation = Equal Expr Expr
 >               | IsPT Expr
@@ -78,8 +89,23 @@
 > processLine d@(dict, subexprs, last) str
 >     | null str                   =  R d
 >     | not (isPrefixOf str ":")   =  R $ doStatements d str
+>     | isPrefixOf str ":import" = case words str of
+>                                       (_:a:[]) -> L (Import a)
+>                                       _        -> R d
+>     | isPrefixOf str ":loadstate" = case words str of
+>                                       (_:a:[]) -> L (Loadstate a)
+>                                       _        -> R d
+>     | isPrefixOf str ":readBin"  =  case words str of
+>                                       (_:a:[]) -> L (ReadBin a)
+>                                       _        -> R d
+>     | isPrefixOf str ":readJeff" =  case words str of
+>                                       (_:a:[]) -> L (ReadJeff a)
+>                                       _        -> R d
 >     | isPrefixOf str ":read"     =  case words str of
 >                                       (_:a:[]) -> L (Read a)
+>                                       _        -> R d
+>     | isPrefixOf str ":savestate" = case words str of
+>                                       (_:a:[]) -> L (Savestate a)
 >                                       _        -> R d
 >     | isPrefixOf str ":show"     =  case words str of
 >                                       (_:a:[]) -> L (Show a)
@@ -87,13 +113,17 @@
 >     | isPrefixOf str ":unset"    =  case words str of
 >                                       (_:a:[]) -> L (Unset a)
 >                                       _        -> R d
+>     | isPrefixOf str ":write"    =  case words str of
+>                                       (_:a:as) -> g ((L . Write a) <$> pe)
+>                                                   (unwords as)
 >     | otherwise                  =  doOne $
 >                                     filter (isPrefixOf str . fst) commands
 >     where pe        =  parseExpr dict subexprs
 >           p2e       =  (,) <$> pe <*> pe
->           f (s, p)  =  either (const (L err)) fst .
->                        doParse p $ tokenize (drop (length s) str)
+>           f (s, p)  =  g p (drop (length s) str)
+>           g p x     =  either (L . err) fst . doParse p $ tokenize x
 >           commands  =  [ (":bindings",       pure (L Bindings))
+>                        , (":compile",        pure (R $ compileEnv d))
 >                        , (":display",        ((L .         Display) <$> pe ))
 >                        , (":dot-psg",        ((L .         DT_PSG ) <$> pe ))
 >                        , (":dot-synmon",     ((L .         DT_SM  ) <$> pe ))
@@ -112,8 +142,8 @@
 >                        ]
 >           doOne xs  = case xs of
 >                         (x:_)  ->  f x
->                         _      ->  L (ErrorMsg "unknown interpreter command")
->           err = ErrorMsg "failed to evaluate"
+>                         _      ->  L (ErrorMsg "unknown interpreter command\n")
+>           err x = ErrorMsg x -- "failed to evaluate"
 
 > doCommand :: Env -> Command -> IO Env
 > doCommand e@(dict, subexprs, last) c
@@ -152,11 +182,40 @@
 >                         normalize . desemantify) $
 >                        makeAutomaton (dict, subexprs, Just expr)) >>
 >                       return e
->         ErrorMsg str -> hPutStrLn stderr str >> return e
+>         ErrorMsg str -> hPutStr stderr str >> return e
+>         Import file -> catchIOError (importScript e =<< lines <$> readFile file)
+>                        (const $
+>                            (hPutStrLn stderr
+>                             ("failed to read \"" ++ file ++ "\"") >>
+>                             return e))
+>         Loadstate file -> catchIOError (read <$> readFile file)
+>                           (const $
+>                            (hPutStrLn stderr
+>                             ("failed to read \"" ++ file ++ "\"") >>
+>                             return e))
 >         Read file -> catchIOError (doStatements e <$> readFile file)
 >                      (const $ hPutStrLn stderr
 >                       ("failed to read \"" ++ file ++ "\"") >>
 >                       return e)
+>         ReadBin file -> catchIOError (maybe
+>                                       ((hPutStrLn stderr
+>                                         "input not a binary automaton, environment unchanged" >>
+>                                         return e))
+>                                       (return . insertExpr e . fromSemanticAutomaton) =<<
+>                                       readMaybe <$> readFile file)
+>                         (const $ hPutStrLn stderr
+>                          ("failed to read \"" ++ file ++ "\"") >>
+>                          return e)
+>         ReadJeff file -> catchIOError (either
+>                                        (const
+>                                         (hPutStrLn stderr
+>                                          "input not a Jeff, environment unchanged" >>
+>                                          return e))
+>                                        (return . insertExpr e . fromAutomaton) =<<
+>                                        fromE Jeff <$> readFile file)
+>                          (const $ hPutStrLn stderr
+>                           ("failed to read \"" ++ file ++ "\"") >>
+>                           return e)
 >         Reset -> return (empty, empty, Nothing)
 >         --
 >         -- Note: RestoreUniverse is implemented in a probably-inefficient
@@ -174,6 +233,10 @@
 >                                d')
 >                               (tmap
 >                                (\(a, _) -> "= " ++ a ++ " " ++ a) subexprs)
+>         Savestate file -> catchIOError (writeFile file . unlines $ [show e])
+>                           (const $ hPutStrLn stderr
+>                            ("failed to write \"" ++ file ++ "\"")
+>                           ) >> return e
 >         Show name  -> (mapM_
 >                        (\(_,a) ->
 >                         putStrLn (name ++ " <- " ++ show a)) $
@@ -188,6 +251,16 @@
 >                              , if name == "it"
 >                                then Nothing
 >                                else last)
+>         Write file expr -> let aut = makeAutomaton $
+>                                      insertExpr (empty, empty, Nothing) expr
+>                            in maybe
+>                               (hPutStrLn stderr "could not make automaton")
+>                               (\a ->
+>                                catchIOError (writeFile file . unlines $ [show a])
+>                                (const $ hPutStrLn stderr
+>                                 ("failed to write \"" ++ file ++ "\"")
+>                                )) aut >>
+>                               return e
 >       where err = hPutStrLn stderr "could not parse expression"
 >             f (_, xs) = '<' : f' xs ++ ">"
 >             f' [] = ""
@@ -232,6 +305,11 @@
 >         return
 >     where err = hPutStrLn stderr "could not parse relation"
 
+> importScript :: Env -> [String] -> IO Env
+> importScript e [] = return e
+> importScript e (a:as) = flip importScript as =<<
+>                         act e (processLine e a)
+
 
 
 > deescape :: String -> String
@@ -275,3 +353,8 @@
 >                     L a -> f a
 >                     M b -> g b
 >                     R c -> h c
+
+> readMaybe :: (Read a) => String -> Maybe a
+> readMaybe s = case reads s of
+>               [(x, as)] -> if all isSpace as then Just x else Nothing
+>               _ -> Nothing

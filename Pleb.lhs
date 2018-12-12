@@ -3,6 +3,10 @@
 >             , Env
 >             , Expr
 >             , SymSet
+>             , compileEnv
+>             , insertExpr
+>             , fromAutomaton
+>             , fromSemanticAutomaton
 >             , makeAutomaton
 >             , doStatements
 >             , parseExpr
@@ -38,6 +42,7 @@
 >     = NAry NAryExpr
 >     | Unary UnaryExpr
 >     | Factor PLFactor
+>     | Automaton (FSA Integer (Maybe String))
 >       deriving (Eq, Ord, Read, Show)
 > data NAryExpr
 >     = Concatenation [Expr]
@@ -55,9 +60,9 @@
 > type Sequence = [SymSet]
 > type SymSet = Set String
 
-> readPleb :: String -> FSA Integer String
-> readPleb = maybe (error "no parse") desemantify .
->            either (error) (makeAutomaton . fst) .
+> readPleb :: String -> Either String (FSA Integer String)
+> readPleb = maybe (Left "no parse") (Right . desemantify) .
+>            either (const Nothing) (makeAutomaton . fst) .
 >            doParse (parseStatements (Set.empty, Set.empty, Nothing)) .
 >            tokenize
 
@@ -67,6 +72,15 @@
 >                        tokenize str
 >     where f (x, [])  =  x
 >           f _        =  d
+
+> insertExpr :: Env -> Expr -> Env
+> insertExpr (dict, subexprs, _) e = doStatements
+>                                    (dict, define "it" e subexprs, Just e)
+>                                    "= it it"
+
+> compileEnv :: Env -> Env
+> compileEnv (dict, subexprs, e) = (dict, tmap (mapsnd f) subexprs, f <$> e)
+>     where f = Automaton . normalize . automatonFromExpr
 
 > makeAutomaton :: Env -> Maybe (FSA Integer (Maybe String))
 > makeAutomaton (dict, _, e) = normalize <$>
@@ -93,6 +107,7 @@ prevents having to descend through the tree to find this information.
 >         Unary (Negation e)      -> complementDeterministic $
 >                                    automatonFromExpr e
 >         Factor x                -> automatonFromPLFactor x
+>         Automaton x             -> x
 >     where f tl = renameStates . minimize . tl . automata
 >           automata es  =  let a' = map automatonFromExpr es
 >                           in map (semanticallyExtendAlphabetTo (bigAlpha a')) a'
@@ -117,9 +132,11 @@ prevents having to descend through the tree to find this information.
 
 > usedSymbols :: Expr -> SymSet
 > usedSymbols e = case e of
->                   NAry n    ->  usedSymbolsN n
->                   Unary u   ->  usedSymbolsU u
->                   Factor f  ->  usedSymbolsF f
+>                   NAry n       ->  usedSymbolsN n
+>                   Unary u      ->  usedSymbolsU u
+>                   Factor f     ->  usedSymbolsF f
+>                   Automaton a  ->  collapse (maybe id insert) Set.empty
+>                                    (alphabet a)
 >     where usedSymbolsN (Concatenation es)  =  unionAll $ tmap usedSymbols es
 >           usedSymbolsN (Conjunction es)    =  unionAll $ tmap usedSymbols es
 >           usedSymbolsN (Disjunction es)    =  unionAll $ tmap usedSymbols es
@@ -247,7 +264,8 @@ prevents having to descend through the tree to find this information.
 > eat :: String -> a -> Parse a
 > eat str f = Parse $ \ts -> if isPrefixOf ts (tmap TSymbol str)
 >                            then Right (f, drop (length str) ts)
->                            else Left $ "could not find " ++ show str
+>                            else Left $ ""
+>                            -- else Left $ "could not find " ++ show str
 
 > parseDelimited :: [Char] -> Parse [a] -> Parse [a]
 > parseDelimited ds pl = parseOpeningDelimiter ds >>=
@@ -310,12 +328,13 @@ prevents having to descend through the tree to find this information.
 >                      Right (g, s1) ->  fmap (mapfst g) $ doParse x s1
 
 > instance Alternative Parse where
->     empty = Parse (const (Left "no parse"))
+>     empty = Parse (const (Left {- "no parse" -} ""))
 >     p <|> q = Parse $ \ts ->
 >               let e = doParse p ts
 >               in case e of
->                    Left s -> doParse q ts
+>                    Left s -> either (Left . f s) Right (doParse q ts)
 >                    _      -> e
+>         where f s1 s2 = unlines $ concatMap (filter (/= "") . lines) [s1, s2]
 
 > instance Monad Parse where
 >     return x = Parse (Right . (,) x . id)
@@ -324,6 +343,14 @@ prevents having to descend through the tree to find this information.
 >               in case e of
 >                    Left s         ->  Left s
 >                    Right (a, s1)  ->  doParse (f a) s1
+
+
+
+> fromSemanticAutomaton :: FSA Integer (Maybe String) -> Expr
+> fromSemanticAutomaton = Automaton
+
+> fromAutomaton :: FSA Integer String -> Expr
+> fromAutomaton = fromSemanticAutomaton . renameSymbolsBy Just
 
 
 
@@ -336,6 +363,9 @@ prevents having to descend through the tree to find this information.
 
 > mapfst :: (a -> b) -> (a, c) -> (b, c)
 > mapfst f (a, c) = (f a, c)
+
+> mapsnd :: (b -> c) -> (a, b) -> (a, c)
+> mapsnd f (a, b) = (a, f b)
 
 > matchingDelimiter :: Char -> Char
 > matchingDelimiter x = head
