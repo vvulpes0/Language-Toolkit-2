@@ -18,7 +18,7 @@
 > import Data.Char (isLetter, isSpace)
 > import Data.Foldable (asum)
 > import Data.Functor ((<$>))
-> import Data.Set (Set, lookupMin)
+> import Data.Set (Set)
 > import qualified Data.Set as Set
 
 > import FSA
@@ -340,6 +340,9 @@ prevents having to descend through the tree to find this information.
 >                (Left $ "undefined variable \"" ++ a ++ "\"")
 >                Right .
 >                lookupMin . tmap snd . keep ((== a) . fst)
+>     where lookupMin xs
+>               | xs == Set.empty = Nothing
+>               | otherwise       = Just (Set.findMin xs)
 
 > newtype Parse a = Parse {
 >       doParse :: [Token] -> Either String (a, [Token])
