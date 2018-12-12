@@ -11,6 +11,7 @@
 >             , insertExpr
 >             , makeAutomaton
 >             , parseExpr
+>             , restrictUniverse
 >             , tokenize
 >             )
 > import Porters ( Dot(..), Jeff(..), formatSet, to, fromE)
@@ -64,6 +65,7 @@
 >              | ReadJeff FilePath
 >              | Reset
 >              | RestoreUniverse
+>              | RestrictUniverse
 >              | Savestate FilePath
 >              | Show String
 >              | Unset String
@@ -136,6 +138,7 @@
 >                        , (":psg",            ((L .         D_PSG  ) <$> pe ))
 >                        , (":reset",          pure (L Reset))
 >                        , (":restore-universe", pure (L RestoreUniverse))
+>                        , (":restrict-universe", pure (L RestrictUniverse))
 >                        , (":strict-subset",  ((M . uncurry SSubset) <$> p2e))
 >                        , (":subset",         ((M . uncurry Subset ) <$> p2e))
 >                        , (":synmon",         ((L .         D_SM   ) <$> pe ))
@@ -233,6 +236,7 @@
 >                                d')
 >                               (tmap
 >                                (\(a, _) -> "= " ++ a ++ " " ++ a) subexprs)
+>         RestrictUniverse -> return (restrictUniverse e)
 >         Savestate file -> catchIOError (writeFile file . unlines $ [show e])
 >                           (const $ hPutStrLn stderr
 >                            ("failed to write \"" ++ file ++ "\"")

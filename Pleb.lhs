@@ -11,6 +11,7 @@
 >             , doStatements
 >             , parseExpr
 >             , readPleb
+>             , restrictUniverse
 >             , tokenize) where
 
 > import Control.Applicative (Applicative(..), Alternative(..))
@@ -81,6 +82,34 @@
 > compileEnv :: Env -> Env
 > compileEnv (dict, subexprs, e) = (dict, tmap (mapsnd f) subexprs, f <$> e)
 >     where f = Automaton . normalize . automatonFromExpr
+
+> restrictUniverse :: Env -> Env
+> restrictUniverse (dict, subexprs, e) = ( keep (not . isEmpty . snd) $
+>                                          tmap (mapsnd restrictUniverseS) dict
+>                                        , tmap (mapsnd restrictUniverseE) subexprs
+>                                        , restrictUniverseE <$> e
+>                                        )
+>     where universe = either (const Set.empty) id (definition "universe" dict)
+>           restrictUniverseS = intersection universe
+>           restrictUniverseE e =
+>               case e of
+>                 NAry (Concatenation es)   ->  f Concatenation es
+>                 NAry (Conjunction es)     ->  f Conjunction es
+>                 NAry (Disjunction es)     ->  f Disjunction es
+>                 NAry (PRelation es)       ->  f PRelation es
+>                 Unary (Iteration e)       ->  g Iteration e
+>                 Unary (Negation e)        ->  g Negation e
+>                 Factor (PLFactor h t ps)  ->  Factor . PLFactor h t .
+>                                               keep (not . isEmpty) .
+>                                               tmap (keep (not . isEmpty)) $
+>                                               tmap (tmap restrictUniverseS)
+>                                               ps
+>                 Automaton x               ->  Automaton $
+>                                               contractAlphabetTo
+>                                               (tmap Just universe)
+>                                               x
+>           f t es = NAry (t $ tmap restrictUniverseE es)
+>           g t e  = Unary (t e)
 
 > makeAutomaton :: Env -> Maybe (FSA Integer (Maybe String))
 > makeAutomaton (dict, _, e) = normalize <$>
