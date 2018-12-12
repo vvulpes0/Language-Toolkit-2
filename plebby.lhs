@@ -138,7 +138,7 @@
 >                        , (":psg",            ((L .         D_PSG  ) <$> pe ))
 >                        , (":reset",          pure (L Reset))
 >                        , (":restore-universe", pure (L RestoreUniverse))
->                        , (":restrict-universe", pure (L RestrictUniverse))
+>                        , (":restrict",       pure (L RestrictUniverse))
 >                        , (":strict-subset",  ((M . uncurry SSubset) <$> p2e))
 >                        , (":subset",         ((M . uncurry Subset ) <$> p2e))
 >                        , (":synmon",         ((L .         D_SM   ) <$> pe ))
