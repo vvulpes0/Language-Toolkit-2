@@ -18,6 +18,7 @@
 >             ) where
 
 > import FSA
+> import Control.Applicative (Applicative(..))
 > import Data.Functor ((<$>))
 > import Data.Set (Set)
 > import qualified Data.Set as Set
