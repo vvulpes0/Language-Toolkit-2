@@ -4,6 +4,7 @@
 >             , Expr
 >             , SymSet
 >             , compileEnv
+>             , groundEnv
 >             , insertExpr
 >             , fromAutomaton
 >             , fromSemanticAutomaton
@@ -81,7 +82,15 @@
 
 > compileEnv :: Env -> Env
 > compileEnv (dict, subexprs, e) = (dict, tmap (mapsnd f) subexprs, f <$> e)
->     where f = Automaton . normalize . automatonFromExpr
+>     where f = Automaton . renameStates . minimize . automatonFromExpr
+
+> groundEnv :: Env -> Env
+> groundEnv (dict, subexprs, e) = (dict, tmap (mapsnd f) subexprs, f <$> e)
+>     where f = Automaton . renameSymbolsBy Just . renameStates . minimize .
+>               desemantify .
+>               semanticallyExtendAlphabetTo universe .
+>               automatonFromExpr
+>           universe = either (const Set.empty) id (definition "universe" dict)
 
 > restrictUniverse :: Env -> Env
 > restrictUniverse (dict, subexprs, e) = ( keep (not . isEmpty . snd) $

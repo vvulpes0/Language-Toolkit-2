@@ -8,6 +8,7 @@
 >             , doStatements
 >             , fromAutomaton
 >             , fromSemanticAutomaton
+>             , groundEnv
 >             , insertExpr
 >             , makeAutomaton
 >             , parseExpr
@@ -131,6 +132,7 @@
 >                        , (":dot-synmon",     ((L .         DT_SM  ) <$> pe ))
 >                        , (":dot",            ((L .         Dotify ) <$> pe ))
 >                        , (":equal",          ((M . uncurry Equal  ) <$> p2e))
+>                        , (":ground",         pure (R $ groundEnv d))
 >                        , (":implies",        ((M . uncurry Subset ) <$> p2e))
 >                        , (":isPT",           ((M .         IsPT   ) <$> pe ))
 >                        , (":isSL",           ((M .         IsSL   ) <$> pe ))
