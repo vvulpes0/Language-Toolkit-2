@@ -113,7 +113,7 @@
 >                                               ps
 >                 Automaton x               ->  Automaton $
 >                                               contractAlphabetTo
->                                               (tmap Just universe)
+>                                               (insert Nothing (tmap Just universe))
 >                                               x
 >           f t es = NAry (t $ tmap restrictUniverseE es)
 >           g t e  = Unary (t $ restrictUniverseE e)
