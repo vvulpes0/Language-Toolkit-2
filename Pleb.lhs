@@ -108,7 +108,7 @@
 >                 NAry (PRelation es)       ->  f PRelation es
 >                 Unary (Iteration e)       ->  g Iteration e
 >                 Unary (Negation e)        ->  g Negation e
->                 Factor (PLFactor h t ps)  ->  Factor . fixFactor h t [] $
+>                 Factor (PLFactor h t ps)  ->  fixFactor h t $
 >                                               tmap (tmap restrictUniverseS)
 >                                               ps
 >                 Automaton x               ->  Automaton $
@@ -117,10 +117,11 @@
 >                                               x
 >           f t es = NAry (t $ tmap restrictUniverseE es)
 >           g t e  = Unary (t $ restrictUniverseE e)
->           fixFactor h t ps [] = PLFactor h t ps
->           fixFactor h t ps (x:xs)
->               | isEmpty x = fixFactor False (t && not (isEmpty xs)) ps xs
->               | otherwise = fixFactor h t (ps ++ [x]) xs
+>           fixFactor h t ps
+>               | any (any isEmpty) ps
+>                   = Unary (Negation (Factor (PLFactor False False [])))
+>                     -- <> and ~<> are essentially True and False
+>               | otherwise = Factor (PLFactor h t ps)
 
 > makeAutomaton :: Env -> Maybe (FSA Integer (Maybe String))
 > makeAutomaton (dict, _, e) = normalize <$>
