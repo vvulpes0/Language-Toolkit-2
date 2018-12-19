@@ -50,7 +50,7 @@
 >     = Concatenation [Expr]
 >     | Conjunction   [Expr]
 >     | Disjunction   [Expr]
->     | PRelation     [Expr]
+>     | Domination    [Expr]
 >       deriving (Eq, Ord, Read, Show)
 > data UnaryExpr
 >     = Iteration Expr
@@ -105,7 +105,7 @@
 >                 NAry (Concatenation es)   ->  f Concatenation es
 >                 NAry (Conjunction es)     ->  f Conjunction es
 >                 NAry (Disjunction es)     ->  f Disjunction es
->                 NAry (PRelation es)       ->  f PRelation es
+>                 NAry (Domination es)      ->  f Domination es
 >                 Unary (Iteration e)       ->  g Iteration e
 >                 Unary (Negation e)        ->  g Negation e
 >                 Factor (PLFactor h t ps)  ->  fixFactor h t $
@@ -140,7 +140,7 @@ prevents having to descend through the tree to find this information.
 >         NAry (Concatenation es) -> f mconcat es
 >         NAry (Conjunction es)   -> f flatIntersection es
 >         NAry (Disjunction es)   -> f flatUnion es
->         NAry (PRelation es)     -> f (mconcat .
+>         NAry (Domination es)    -> f (mconcat .
 >                                       sepBy (totalWithAlphabet (singleton Nothing)))
 >                                    es
 >         Unary (Iteration e)     -> renameStates . minimize . kleeneClosure $
@@ -181,7 +181,7 @@ prevents having to descend through the tree to find this information.
 >     where usedSymbolsN (Concatenation es)  =  unionAll $ tmap usedSymbols es
 >           usedSymbolsN (Conjunction es)    =  unionAll $ tmap usedSymbols es
 >           usedSymbolsN (Disjunction es)    =  unionAll $ tmap usedSymbols es
->           usedSymbolsN (PRelation es)      =  unionAll $ tmap usedSymbols es
+>           usedSymbolsN (Domination es)     =  unionAll $ tmap usedSymbols es
 >           usedSymbolsU (Iteration e)       =  usedSymbols e
 >           usedSymbolsU (Negation e)        =  usedSymbols e
 >           usedSymbolsF (PLFactor _ _ ps)   =  unionAll (unionAll ps)
@@ -244,7 +244,7 @@ prevents having to descend through the tree to find this information.
 >     = (makeLifter
 >        [ (["⋂", "∩", "/\\"],  Conjunction)
 >        , (["⋃", "∪", "\\/"],  Disjunction)
->        , (["∙∙", "@@"],       PRelation)
+>        , (["∙∙", "@@"],       Domination)
 >        , (["∙" , "@" ],       Concatenation)
 >        ] <*>
 >        parseDelimited ['(', '{']

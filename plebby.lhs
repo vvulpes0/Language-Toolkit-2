@@ -21,7 +21,7 @@
 
 > import Control.Applicative ( Applicative(..) )
 > import Control.Monad.Trans.Class ( lift )
-> import Data.Char (isSpace)
+> import Data.Char (isSpace, toLower)
 > import Data.Functor ( (<$>) )
 > import System.Console.Haskeline ( InputT
 >                                 , defaultSettings
@@ -51,6 +51,10 @@
 >                    | M b
 >                    | R c
 >                      deriving (Eq, Ord, Read, Show)
+> data ArgType = ArgE
+>              | ArgF
+>              | ArgV
+>                deriving (Eq, Ord, Read, Show)
 > data Command = Bindings
 >              | D_PSG Expr -- Display Powerset Graph
 >              | D_SM Expr -- Display Syntactic Monoid
@@ -59,6 +63,7 @@
 >              | DT_PSG Expr -- Dotify Powerset Graph
 >              | DT_SM Expr -- Dotify Syntactic Monoid
 >              | ErrorMsg String
+>              | Help [(String, [ArgType], String)]
 >              | Import FilePath
 >              | Loadstate FilePath
 >              | Read FilePath
@@ -90,65 +95,112 @@
 
 > processLine :: Env -> String -> Trither Command Relation Env
 > processLine d@(dict, subexprs, last) str
->     | null str                   =  R d
->     | not (isPrefixOf str ":")   =  R $ doStatements d str
->     | isPrefixOf str ":import" = case words str of
+>     | null str                    =  R d
+>     | not (isPrefixOf str ":")    =  R $ doStatements d str
+>     | isStartOf str ":import"     = case words str of
 >                                       (_:a:[]) -> L (Import a)
 >                                       _        -> R d
->     | isPrefixOf str ":loadstate" = case words str of
+>     | isStartOf str ":loadstate"  = case words str of
 >                                       (_:a:[]) -> L (Loadstate a)
 >                                       _        -> R d
->     | isPrefixOf str ":readBin"  =  case words str of
->                                       (_:a:[]) -> L (ReadBin a)
->                                       _        -> R d
->     | isPrefixOf str ":readJeff" =  case words str of
->                                       (_:a:[]) -> L (ReadJeff a)
->                                       _        -> R d
->     | isPrefixOf str ":read"     =  case words str of
->                                       (_:a:[]) -> L (Read a)
->                                       _        -> R d
->     | isPrefixOf str ":savestate" = case words str of
->                                       (_:a:[]) -> L (Savestate a)
->                                       _        -> R d
->     | isPrefixOf str ":show"     =  case words str of
->                                       (_:a:[]) -> L (Show a)
->                                       _        -> R d
->     | isPrefixOf str ":unset"    =  case words str of
->                                       (_:a:[]) -> L (Unset a)
->                                       _        -> R d
->     | isPrefixOf str ":write"    =  case words str of
->                                       (_:a:as) -> g ((L . Write a) <$> pe)
->                                                   (unwords as)
->     | otherwise                  =  doOne $
->                                     filter (isPrefixOf str . fst) commands
+>     | isStartOf str ":readbin"    =  case words str of
+>                                        (_:a:[]) -> L (ReadBin a)
+>                                        _        -> R d
+>     | isStartOf str ":readjeff"   =  case words str of
+>                                        (_:a:[]) -> L (ReadJeff a)
+>                                        _        -> R d
+>     | isStartOf str ":read"       =  case words str of
+>                                        (_:a:[]) -> L (Read a)
+>                                        _        -> R d
+>     | isStartOf str ":savestate"  =  case words str of
+>                                        (_:a:[]) -> L (Savestate a)
+>                                        _        -> R d
+>     | isStartOf str ":show"       =  case words str of
+>                                        (_:a:as) -> L (Show (unwords (a:as)))
+>                                        _        -> R d
+>     | isStartOf str ":unset"      =  case words str of
+>                                        (_:a:[]) -> L (Unset a)
+>                                        _        -> R d
+>     | isStartOf str ":write"      =  case words str of
+>                                        (_:a:as) -> g ((L . Write a) <$> pe)
+>                                                    (unwords as)
+>     | otherwise                   =  doOne .
+>                                      filter (isStartOf str . fst) $
+>                                      p12 commands
 >     where pe        =  parseExpr dict subexprs
 >           p2e       =  (,) <$> pe <*> pe
 >           f (s, p)  =  g p (drop (length s) str)
 >           g p x     =  either (L . err) fst . doParse p $ tokenize x
->           commands  =  [ (":bindings",       pure (L Bindings))
->                        , (":compile",        pure (R $ compileEnv d))
->                        , (":display",        ((L .         Display) <$> pe ))
->                        , (":dot-psg",        ((L .         DT_PSG ) <$> pe ))
->                        , (":dot-synmon",     ((L .         DT_SM  ) <$> pe ))
->                        , (":dot",            ((L .         Dotify ) <$> pe ))
->                        , (":equal",          ((M . uncurry Equal  ) <$> p2e))
->                        , (":ground",         pure (R $ groundEnv d))
->                        , (":implies",        ((M . uncurry Subset ) <$> p2e))
->                        , (":isPT",           ((M .         IsPT   ) <$> pe ))
->                        , (":isSL",           ((M .         IsSL   ) <$> pe ))
->                        , (":isSP",           ((M .         IsSP   ) <$> pe ))
->                        , (":psg",            ((L .         D_PSG  ) <$> pe ))
->                        , (":reset",          pure (L Reset))
->                        , (":restore-universe", pure (L RestoreUniverse))
->                        , (":restrict",       pure (L RestrictUniverse))
->                        , (":strict-subset",  ((M . uncurry SSubset) <$> p2e))
->                        , (":subset",         ((M . uncurry Subset ) <$> p2e))
->                        , (":synmon",         ((L .         D_SM   ) <$> pe ))
+>           p12       =  map (\(a,b,_,_) -> (a,b))
+>           p134      =  map (\(a,_,c,d) -> (a,c,d))
+>           commands  =  [ ( ":bindings",       pure (L Bindings)
+>                           , [], "print list of variables and their bindings")
+>                        , ( ":compile",        pure (R $ compileEnv d)
+>                          , [], "convert all expr variables to automata")
+>                        , ( ":display",        ((L .         Display) <$> pe )
+>                          , [ArgE], "show expr graphically via external display program")
+>                        , ( ":dot-psg",        ((L .         DT_PSG ) <$> pe )
+>                          , [ArgE], ":dot the powerset graph of expr")
+>                        , ( ":dot-synmon",     ((L .         DT_SM  ) <$> pe )
+>                          , [ArgE], ":dot the syntactic monoid of expr")
+>                        , ( ":dot",            ((L .         Dotify ) <$> pe )
+>                          , [ArgE], "print a Dot file of expr")
+>                        , ( ":equal",          ((M . uncurry Equal  ) <$> p2e)
+>                          , [ArgE, ArgE], "compare two exprs for set-equality")
+>                        , ( ":ground",         pure (R $ groundEnv d)
+>                          , [], "convert all expr variables to grounded automata")
+>                        , ( ":help",           pure (L . Help $ p134 commands)
+>                          , [], "print this help")
+>                        , ( ":implies",        ((M . uncurry Subset ) <$> p2e)
+>                          , [ArgE, ArgE], "determine if expr1 implies expr2")
+>                        , ( ":import",         error ":import not defined here"
+>                          , [ArgF], "read file as plebby script")
+>                        , ( ":isPT",           ((M .         IsPT   ) <$> pe )
+>                          , [ArgE], "determine if expr is a Piecewise Testable set")
+>                        , ( ":isSL",           ((M .         IsSL   ) <$> pe )
+>                          , [ArgE], "determine if expr is a Strictly Local set")
+>                        , ( ":isSP",           ((M .         IsSP   ) <$> pe )
+>                          , [ArgE], "determine if expr is a Strictly Piecewise set")
+>                        , ( ":loadstate",      error ":loadstate not defined here"
+>                          , [ArgF], "restore state from file")
+>                        , ( ":psg",            ((L .         D_PSG  ) <$> pe )
+>                          , [ArgE], ":display the powerset graph of expr")
+>                        , ( ":quit",           error ":quit not defined here"
+>                          , [], "exit plebby")
+>                        , ( ":readBin",        error ":readbin not defined here"
+>                          , [ArgF], "read binary expr from file, bind to 'it'")
+>                        , ( ":readJeff",       error ":readjeff not defined here"
+>                          , [ArgF], "read Jeff format automaton file, bind to 'it'")
+>                        , ( ":read",           error ":read not defined here"
+>                          , [ArgF], "read Pleb file")
+>                        , ( ":reset",          pure (L Reset)
+>                          , [], "purge the current environment")
+>                        , ( ":restore-universe", pure (L RestoreUniverse)
+>                          , [], "set universe to all and only necessary symbols")
+>                        , ( ":restrict",       pure (L RestrictUniverse)
+>                          , [], "remove non-universe symbols from the environment")
+>                        , ( ":savestate",      error ":savestate not defined here"
+>                          , [ArgF], "write current state to file")
+>                        , ( ":show",           error ":show not defined here"
+>                          , [ArgV], "print meaning(s) of var")
+>                        , ( ":strict-subset",  ((M . uncurry SSubset) <$> p2e)
+>                          , [ArgE, ArgE], "determine if expr1 is a strict subset of expr2")
+>                        , ( ":subset",         ((M . uncurry Subset ) <$> p2e)
+>                          , [ArgE, ArgE], "determine if expr1 is a subset of expr2")
+>                        , ( ":synmon",         ((L .         D_SM   ) <$> pe )
+>                          , [ArgE], ":display the syntactic monoid of expr")
+>                        , ( ":unset",          error ":unset not defined here"
+>                          , [ArgV], "remove a single var from the environment")
+>                        , ( ":write",          error ":write not defined here"
+>                          , [ArgF, ArgE], "write binary form of expr to file")
 >                        ]
 >           doOne xs  = case xs of
 >                         (x:_)  ->  f x
 >                         _      ->  L (ErrorMsg "unknown interpreter command\n")
 >           err x = ErrorMsg x -- "failed to evaluate"
+>           isStartOf xs x = ((isPrefixOf (map toLower xs) (map toLower x)) &&
+>                             (all isSpace . take 1 $
+>                              drop (length x) xs))
 
 > doCommand :: Env -> Command -> IO Env
 > doCommand e@(dict, subexprs, last) c
@@ -188,6 +240,7 @@
 >                        makeAutomaton (dict, subexprs, Just expr)) >>
 >                       return e
 >         ErrorMsg str -> hPutStr stderr str >> return e
+>         Help xs -> hPutStr stderr (doHelp xs) >> return e
 >         Import file -> catchIOError (importScript e =<< lines <$> readFile file)
 >                        (const $
 >                            (hPutStrLn stderr
@@ -243,15 +296,19 @@
 >                           (const $ hPutStrLn stderr
 >                            ("failed to write \"" ++ file ++ "\"")
 >                           ) >> return e
->         Show name  -> (mapM_
->                        (\(_,a) ->
->                         putStrLn (name ++ " <- " ++ show a)) $
->                        keep ((== name) . fst) subexprs) >>
->                       (mapM_
->                        (\(_,s) ->
->                         putStrLn (name ++ " <- " ++ deescape (formatSet s))) $
->                        keep ((== name) . fst) dict) >>
->                       return e
+>         Show name  -> if (isNotIn (tmap fst subexprs) name &&
+>                           isNotIn (tmap fst dict) name)
+>                       then (putStrLn ("undefined variable \"" ++ name ++ "\"") >>
+>                             return e)
+>                       else ((mapM_
+>                              (\(_,a) ->
+>                               putStrLn (name ++ " <- " ++ show a)) $
+>                              keep ((== name) . fst) subexprs) >>
+>                             (mapM_
+>                              (\(_,s) ->
+>                               putStrLn (name ++ " <- " ++ deescape (formatSet s))) $
+>                              keep ((== name) . fst) dict) >>
+>                             return e)
 >         Unset name -> return ( keep ((/= name) . fst) dict
 >                              , keep ((/= name) . fst) subexprs
 >                              , if name == "it"
@@ -264,7 +321,11 @@
 >                               (\a ->
 >                                catchIOError (writeFile file . unlines $ [show a])
 >                                (const $ hPutStrLn stderr
->                                 ("failed to write \"" ++ file ++ "\"")
+>                                 ("failed to write \"" ++ file ++ "\"" ++
+>                                  if (isIn file '/')
+>                                  then "\nDoes the directory exist?"
+>                                  else ""
+>                                 )
 >                                )) aut >>
 >                               return e
 >       where err = hPutStrLn stderr "could not parse expression"
@@ -276,6 +337,28 @@
 >             f'' (Symbol x) = x
 >             p :: (Ord n, Ord e, Show n, Show e) => FSA n e -> IO ()
 >             p = putStr . to Dot
+
+> doHelp :: [(String, [ArgType], String)] -> String
+> doHelp xs = unlines s2
+>     where cs = zipWith (\a b -> a ++ b) (p1 xs) (map showArgs (p2 xs))
+>           s1 = let l = foldr max 0 $ map length cs
+>                in map (alignl (l + 2) . alignr l) cs
+>           s2 = zipWith (++) s1 (p3 xs)
+>           alignr l s = take (l - length s) (cycle " ") ++ s
+>           alignl l s = take l (s ++ cycle " ")
+>           alignc l s = alignl l (alignr (div (l + length s) 2) s)
+>           showArg ArgE  =  "<expr>"
+>           showArg ArgF  =  "<file>"
+>           showArg _     =  "<var>"
+>           showArgs []      =  ""
+>           showArgs (x:xs)  =  " " ++ showArg x ++ showArgs' xs
+>               where showArgs' []      =  ""
+>                     showArgs' (y:ys)  =  " " ++ showArg y ++ showArgs' ys
+>           map1o3 f = map (\(a,b,c) -> (f a, b, c))
+>           map2o3 f = map (\(a,b,c) -> (a, f b, c))
+>           p1       = map (\(a,b,c) -> a)
+>           p2       = map (\(a,b,c) -> b)
+>           p3       = map (\(a,b,c) -> c)
 
 > doRelation :: Env -> Relation -> Maybe Bool
 > doRelation e r = case r of
