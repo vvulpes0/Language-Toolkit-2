@@ -73,7 +73,7 @@ nav a {
 }
 
 nav a[href="/"] {
-	background-image:url('/home.svg');
+	background-image:url('img/home.svg');
 	background-size:contain;
 	background-repeat:no-repeat;
 	background-position:center;
