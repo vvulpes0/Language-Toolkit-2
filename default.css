@@ -1,0 +1,122 @@
+* {
+	margin:0;
+	padding:0;
+}
+
+html {
+	font-family:sans-serif;
+	font-size:100%;
+	linespread:1.4;
+	background-color:#333;
+	color:#fff;
+	overflow-x:hidden;
+}
+
+body {
+	background-color:#d1d1d1;
+	color:#333;
+	width:100%;
+	max-width:56em;
+	margin:0 auto 3em;
+	border-radius:0 0 1em 1em;
+	padding-top:4em;
+}
+
+.code {
+	font-family:monospace, serif;
+}
+
+div.code {
+	background-color:#333;
+	color:#fff;
+	padding:0.5em;
+	white-space:nowrap;
+	overflow:auto;
+	font-size:75%;
+}
+
+.center {
+	text-align:center;
+}
+
+.char {
+	width:1em;
+}
+
+article {
+	padding:0 3em 3em;
+}
+
+article li {
+	margin-bottom:1em;
+}
+
+nav {
+	position:fixed;
+	top:0px;
+	width:54em;
+	max-width:100%;
+	max-height:2em;
+	white-space:nowrap;
+	overflow:hidden;
+	background-color:#ee9;
+	color:#333;
+	padding:0.5em 1em;
+	margin:0 auto 1em;
+	margin-bottom:1em;
+}
+
+nav a {
+	background-color:inherit;
+	color:inherit;
+	text-decoration:none;
+}
+
+nav a[href="./"] {
+	background-image:url('https://lutras-hacking.ddns.net/ltk/scil19/img/home.svg');
+	background-size:contain;
+	background-repeat:no-repeat;
+	background-position:center;
+	display:inline-block;
+	height:100%;
+	width:1em;
+	text-indent:-9999px;
+	overflow:hidden;
+	white-space:no-wrap;
+}
+
+nav li {
+	display:inline-block;
+	padding:0 0.75em;
+}
+
+nav li.current, nav li.current:hover {
+	border-bottom:0.25em solid #553;
+}
+
+nav li:hover {
+	border-bottom:0.25em solid #774;
+}
+
+h2 {
+	text-align:left;
+	font-size:1.5em;
+	font-weight:bold;
+}
+
+p {
+	margin-top:1em;
+}
+
+dl {
+	display:inline-block;
+	margin:1em 1em 0;
+}
+
+h2+p {
+	margin-top:0;
+}
+
+dl {
+	display:inline-block;
+}

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="utf-8" />
+ <meta name="viewport" content="initial-scale=1.0" />
+ <title>Local Language Toolkit version 0.01 alpha (SCiL19)</title>
+ <link rel="stylesheet" type="text/css" href="default.css" />
+ <link rel="icon" type="image/vnd.microsoft.icon" href="img/favicon.ico" />
+</head>
+<body>
+<nav>
+<ul>
+<li class="current"><a href="./">Home</a></li>
+<li><a href="code/">Code</a></li>
+<li><a href="docs/">Docs</a></li>
+<li><a href="examples/">Examples</a></li>
+</ul>
+</nav>
+<article id="main-content">
+<h2>Installation</h2>
+<ol><li
+>Install GHC, the Haskell parallel libraries, GraphViz, and ImageMagick:<div class="code"
+>sudo apt-get install ghc libghc-parallel-dev graphviz imagemagick</div></li
+><li><span class="code">cd</span> to the directory in which you will run the toolkit.</li
+><li>Download the <a href="https://lutras-hacking.ddns.net/websvn/dl.php?repname=Language-Toolkit-2&path=%2Ftags%2F0.01a%2F&isdir=1&">current version</a> of the toolkit.</li
+><li>Unpack the tarball:<div class="code"
+>tar xzf Language-Toolkit-2-&lt;versionNumber&gt;.tar.gz</div
+>Where <span class="code">&lt;versionNumber&gt;</span>
+will be something like 0.01a.r107.
+This will create a directory named
+<span class="code">&lt;versionNumber&gt;</span>.</li
+><li><span class="code">cd &lt;versionNumber&gt;</span>.</li
+><li>Download <a href="docs/docs.tar.gz">the documentation</a> and unpack it:<div class="code"
+>tar xzf &lt;docs.tar.gz&gt;</div
+>This will create a directory <span class="code">docs</span>
+in your current directory.</li
+><li>Download <a href="examples/plebFiles.tar.gz">the example</a>
+pleb and <span class="code">plebby</span> files and unpack them:<div class="code"
+>tar xzf examples.tar.gz</div
+>This will create a directory <span class="code">plebFiles</span>
+in your current directory.</li
+><li>Compile <span class="code">plebby</span><div class="code"
+>ghc -O2 -threaded -with-rtsopts='-N -C0.001 -qg1' plebby</div></li
+><li>Optionally download <a href="http://st2.ullet.net/files/files/st2-v1-archive-0415.tar.gz">the StressTyp2 archive</a>.</li
+><li>Unpack the archive:<div class="code"
+>tar xzf st2-v1-archive-0415.tar.gz</div>
+This will create the directory <span class="code">st2-v1-archive-0415</span>
+in your current directory.</li
+><li>Run <span class="code">plebby</span> and test it<div class="code"
+>./plebby<br
+/>&gt; :import &lt;plebFiles&gt;/yidin.plebby<br
+/>&gt; :display yidin
+</div
+>Where <span class="code">&lt;plebFiles&gt;</span>
+is the path to the directory with the example files.
+This should display the automaton for Yidin, as described in the StressTyp2 database.
+<div class="code"
+>&gt; :readJeff st2-v1-archive-0415/transducers/fsasJeff/219_Yidin_SPD.fsa<br
+/>&gt; :equal it yidin</div
+>If all has gone well, this should return True.
+You may <span class="code">:quit</span> when you are done.</li
+><li>If you would like to use <span class="code">factorize</span>,
+first compile it:<div class="code"
+>ghc -O2 -threaded -with-rtsopts='-N -C0.001 -qg1' factorize</div></li
+><li>Next download the <a href="compiled.tar.gz">precompiled non-strict constraints</a>.</li
+><li>Unpack them<div class="code"
+>tar xzf compiled.tar.gz</div
+>This will create a directory <span class="code">Compiled</span>
+along with the compiled constraints
+and the file <span class="code">Compiled/constraints</span>,
+which are required for <span class="code">factorize</span>.</li
+><li
+>Run <span class="code">factorize</span
+><div class="code"
+>./factorize st2-v1-archive-0415/transducers/fsasJeff/*</div
+>(You may wish to choose a subset of the lects to start with,
+but the whole library should take less than five minutes.)
+The results will be in the directory
+<span class="code">Results</span>.</li
+></ol
+><h2>Associated writings</h2><div class="center"
+><dl><dt><a href="https://scholarworks.umass.edu/cgi/viewcontent.cgi?article=1065&context=scil"><img src="img/paper-preview.png" alt="thumbnail"></a></dt
+><dd>SCiL paper</dd></dl
+><dl><dt><a href="pdf/pl.pdf"><img src="img/pl-preview.png" alt="thumbnail"></a></dt
+><dd>PL</dd></dl
+><dl><dt><a href="pdf/factorize.pdf"><img src="img/factorize-preview.png" alt="thumbnail"></a></dt
+><dd>Factorize</dd></dl
+><dl><dt><a href="pdf/poster.pdf"><img src="img/poster-preview.png" alt="thumbnail"></a></dt
+><dd>Poster</dd></dl></div
+></article>
+</body>
+</html>

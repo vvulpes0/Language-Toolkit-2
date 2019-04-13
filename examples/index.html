@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="utf-8" />
+ <meta name="viewport" content="initial-scale=1.0" />
+ <title>Local Language Toolkit version 0.01 alpha (SCiL19)</title>
+ <link rel="stylesheet" type="text/css" href="../default.css" />
+ <link rel="icon" type="image/vnd.microsoft.icon" href="../img/favicon.ico" />
+</head>
+<body>
+<nav>
+<ul>
+<li><a href="../">Home</a></li>
+<li><a href="../code/">Code</a></li>
+<li><a href="../docs/">Docs</a></li>
+<li class="current"><a href="../examples/">Examples</a></li>
+</ul>
+</nav>
+<article id="main-content">
+<h2>Examples</h2>
+<p
+>You can download the example
+pleb and <span class="code">plebby</span> files
+as a <a href="../examples/plebFiles.tar.gz">gzipped tarball</a>,
+or you can checkout the latest development snapshot via SVN</p
+><div class="code"
+>svn checkout https://lutras-hacking.ddns.net/svn/Language-Toolkit-2/branches/examples</div
+><p
+>The pleb and <span class="code">plebby</span> files
+included here are in ASCII format for maximum compatibility.
+There is also a Unicode syntax that may or may not be more readable.
+For example, the Cheremis Meadow lect (described on the poster presented at SCiL 2019)
+can be written in ASCII format:</p
+><div class="code"
+ >= sigma {/L, /H, /S}<br
+/>= sigma' {/L', /H', /S'}<br
+/>= sigma* {sigma, sigma'}<br
+/>= heavy* {/H, /S, /H', /S'}<br
+/>= obligatoriness &lt;sigma'&gt;<br
+/>= culminativity ~&lt;sigma',sigma'&gt;<br
+/>= d1 ~&lt;sigma',/S&gt;<br
+/>= d2 ~&lt;sigma',/H,sigma*&gt;<br
+/>= d3 ~&lt;/L' sigma*&gt;<br
+/>= d4 /\{~&lt;/L',heavy*&gt;, ~&lt;heavy*,/L'&gt;}<br
+/>= d5 ~|%&lt;heavy*,/H'&gt;<br
+/>= cheremis-meadow /\{obligatoriness, culminativity, d1, d2, d3, d4, d5}<br
+/>cheremis-meadow</div><p
+>or in Unicode format:</p
+><div class="code"
+ >= L {/L} = H {/H} = S {/S}
+  = &#x2c8;L {/L'} = &#x2c8;H {/H'} = &#x2c8;S {/S'}<br
+/>= &#x3c3; {L, H, S}<br
+/>= &#x2c8;&#x3c3; {&#x2c8;L, &#x2c8;H, &#x2c8;S}<br
+/>= &#x2e3;&#x3c3; {&#x3c3;, &#x2c8;&#x3c3;}<br
+/>= &#x2e3;heavy {H, S, &#x2c8;H, &#x2c8;S}<br
+/>= obligatoriness &#x27e8;&#x2c8;&#x3c3;&#x27e9;<br
+/>= culminativity &#xac;&#x27e8;&#x2c8;&#x3c3;,&#x2c8;&#x3c3;&#x27e9;<br
+/>= d1 &#xac;&#x27e8;&#x2c8;&#x3c3;,S&#x27e9;<br
+/>= d2 &#xac;&#x27e8;&#x2c8;&#x3c3;,H,&#x2e3;&#x3c3;&#x27e9;<br
+/>= d3 &#xac;&#x27e8;&#x2c8;L &#x2e3;&#x3c3;&#x27e9;<br
+/>= d4 &#x22c2;{&#xac;&#x27e8;&#x2c8;L,&#x2e3;heavy&#x27e9;,
+                &#xac;&#x27e8;&#x2e3;heavy,&#x2c8;L&#x27e9;}<br
+/>= d5 &#xac;&#x22c9;&#x27e8;&#x2e3;heavy,&#x2c8;H&#x27e9;<br
+/>= cheremis-meadow &#x22c2;{obligatoriness, culminativity, d1, d2, d3, d4, d5}<br
+/>cheremis-meadow</div><p
+>Note that the trick of defining singleton sets to eliminate the slashes
+works in both variants of the syntax, and that nothing prevents a user from
+mixing both types of syntax in the same file.
+The prefix marker for primary stress used here is
+&ldquo;MODIFIER LETTER VERTICAL LINE&rdquo; (u02C8) while the suffix version is
+&ldquo;APOSTROPHE&rdquo; (u0027) &mdash;
+attempting to use the apostrophe in prefix position will fail
+because that character is not a letter.</p
+><p
+>A <a href="../constraints.ods">spreadsheet</a> containing a
+(sometimes-incorrect) list of factorizations that predates
+the <span class="code">factorize</span> program is available
+in Open Document format.  This can be used with
+<span class="code">stressConstraints.plebby</span>,
+as shown in the other provided example files,
+though it should be noted that the output of
+<span class="code">factorize</span> is definitive.</p
+></article>
+</body>
+</html>
