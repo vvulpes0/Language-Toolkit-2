@@ -72,8 +72,8 @@ nav a {
 	text-decoration:none;
 }
 
-nav a[href="./"], nav a[href="../"] {
-	background-image:url('https://lutras-hacking.ddns.net/ltk/scil19/img/home.svg');
+nav a[href="/"] {
+	background-image:url('/home.svg');
 	background-size:contain;
 	background-repeat:no-repeat;
 	background-position:center;
