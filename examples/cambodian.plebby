@@ -1,0 +1,6 @@
+:import plebFiles/stressConstraints.plebby
+# Note: As an SL lect, cambodian is not factored in constraints.ods.
+= universe {c7}
+:restrict
+= cambodian /\{~|%<sigma->,~%||%<>,~<sigma' sigma*>,~<L* L*>,~%|<L*>}
+cambodian

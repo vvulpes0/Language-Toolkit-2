@@ -1,0 +1,5 @@
+:import plebFiles/stressConstraints.plebby
+= universe {c6}
+:restrict
+= amele /\{c29, c83, c89, c99, c104}
+amele

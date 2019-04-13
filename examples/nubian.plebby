@@ -1,0 +1,7 @@
+:import plebFiles/stressConstraints.plebby
+# Note: ~|%<H` H`> is not present in the constraints.ods.
+# Note: constraints.ods lists an incorrect factorization for this lect.
+= universe {c7}
+:restrict
+= nubian /\{obligatoriness,culminativity,c29,c72,c88,c115,~|%<H` H`>}
+nubian

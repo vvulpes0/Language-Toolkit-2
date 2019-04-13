@@ -1,0 +1,12 @@
+## yidin.plebby
+## yidin from extracted factors
+## ascii syntax
+
+:import plebFiles/stressConstraints.plebby
+
+= universe  {c9}
+:restrict
+
+= yidin /\{noAdjSecondary,noAdjUnstressed,noAdjPrimarySecondary,noNonInitialLPrimary,noFinalLPrimary,noLPrimaryWithAnyH,obligatoriness,culminativity,noHBeforeHPrimary}
+
+yidin

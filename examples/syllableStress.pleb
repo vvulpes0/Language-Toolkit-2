@@ -1,0 +1,35 @@
+#### Alphabet and symbolsets for syllable stress
+= sigma* {/L, /L`, /L', /H, /H`, /H', /S, /S`, /S', /X, /X`, /X', /Y, /Y`, /Y'}
+= sigma {/L, /H, /S, /X, /Y}
+= sigma` {/L`, /H`, /S`, /X`, /Y`}
+= sigma' {/L', /H', /S', /X', /Y'}
+
+## These are defined solely to allow uniform notation for single syllables
+= L {/L}
+= L` {/L`}
+= L' {/L'}
+= H {/H}
+= H` {/H`}
+= H' {/H'}
+= S {/S}
+= S` {/S`}
+= S' {/S'}
+= X {/X}
+= X` {/X`}
+= X' {/X'}
+= Y {/Y}
+= Y` {/Y`}
+= Y' {/Y'}
+
+= L* {/L, /L`, /L'}
+= H* {/H, /H`, /H'}
+= S* {/S, /S`, /S'}
+= X* {/X, /X`, /X'}
+= Y* {/Y, /Y`, /Y'}
+= sigma+ {/L', /L`, /H', /H`, /S', /S`, /X', /X`, /Y', /Y`}
+= sigma- {/L, /L`, /H, /H`, /S, /S`, /X, /X`, /Y, /Y`}
+
+= heavy-plus {/H, /S, /X, /Y}
+= heavy-plus` {/H`, /S`, /X`, /Y`}
+= heavy-plus' {/H', /S, /X', /Y'}
+= heavy-plus* {H*,S*,X*,Y*}

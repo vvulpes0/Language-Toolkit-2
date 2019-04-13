@@ -1,0 +1,267 @@
+Plebby Guide
+
+Plebby is an interactive front-end to the pleb Piecewise-Local Logic
+interpreter.  Details on pleb are given in the plebSyntax document.
+
+Plebby is built on the Haskell Hierarchical Library's System.Console.Haskeline
+runInputT command line interface using defaultSettings. (See https://downloads.haskell.org/~ghc/latest/docs/html/libraries/haskeline-0.7.4.3/System-Console-Haskeline.html#v:runInputT)
+This provides bash-like command line history and editing along with filename
+completion.
+
+Unlike pleb files, newlines are significant. Unlike bash, they cannot be
+escaped.  Thus, expressions cannot be continued on multiple lines in plebby
+scripts.
+
+Plebby commands are either ordinary pleb assignments or expressions or built-in
+commands.  
+
+On Semantics
+------------
+Symbol set variables are bound to sets of symbols.
+Expression variables are bound to expression trees (Pleb.Expr), which remain
+unevaluated until they are passed to a meta-level command, a display command
+or until the environment is compiled or grounded.
+
+Automata are generally in "semantic automaton" form, which means that they
+express constraints relative to whatever the current universal alphabet is.
+In this form, the alphabet can be expanded or restricted and, as long as the
+restricted alphabet includes the alphabet of the constraint, the automaton
+will still represent the same constraint.  This is accomplished internally by
+augmenting the automaton with "anything else" edges, which are transitions
+labeled with (Symbol Nothing) where Nothing the atomic value of the Haskell
+Maybe type.  The alphabet of a semantic automaton can be extended by adding
+edges for the new symbols in parallel to the Nothing edges.
+
+The alternative is to ground the alphabet in which case the Nothing edges are
+removed (equivalent to directing them to a non-accepting sink state).
+Grounded automata express stringsets rather than constraints.  If the
+universal alphabet is expanded, a grounded automaton will no longer be
+equivalent to its semantic version.
+
+[plebbyily]
+> :reset
+> :import plebFiles/yidin.plebby
+> :ground
+> = yidinGround it
+> :import plebFiles/yidin.plebby
+> :equal it yidinGround
+True
+> :show universe
+universe <- {H, H', H`, L, L', L`}
+> = universe {universe,/S'}
+> :equal it yidinGround
+False
+
+Pleb meta-level commands
+------------------------
+These display True if the predicate is true.  The automata semantics of the
+expressions are grounded prior to testing.
+
+:equal Expr Expr -- Exprs define the same stringset.
+:implies Expr1 Expr2 -- Expr1 logically implies Expr2
+                        This a synonym for :subset 
+:subset Expr1 Expr2  -- Extension of Expr1 is a subset of extension of Expr2
+:strict-subset Expr1 Expr2 -- is a strict subset of Expr2
+:isPT Expr -- Extension of Expr is Piecewise Testable
+:isSL Expr -- Extension of Expr is Strictly Local
+:isSP Expr -- Extension of Expr is Strictly Piecewise
+
+Note that arguments must be expressions, not symbol sets.
+
+Manipulation of semantic structures
+-----------------------------------
+:compile -- turn all expressions in the current environment into
+            automata expressions.
+:ground  -- :compile and also ground them wrt the current universe.
+
+Interaction with environment
+----------------------------
+:bindings -- display current variable bindings
+             This does not expand expression variables, only indicates that
+             they are bound.
+:show Var -- display value of Var
+             If Var is a symbol set variable it displays the set
+             If Var is an expression the expression tree is displayed.
+             In the case of Automaton nodes, the FSA is shown as a Haskell
+             expression.
+:unset Var -- clear binding for Var
+:reset  -- clear all bindings
+:restore-universe -- sets universe to include all symbols mentioned in current
+                     bindings. 
+:restrict  -- restricts all symbol sets, expressions and automata to the
+              current universe 
+              Restricting a symbol set to a universe that is disjoint with it
+              will reduce it to emptyset, which may not be what was intended.
+              Conceptually, in a factor, </H /L> will become </H \emptyset>
+              which is unsatisfiable, but if this factor is compiled into an
+              automaton, the /H edge _would_ be satisfiable -- the factor
+              would be partially satisfiable.  In practice, such degenerate
+              factors are uniformly replaced with ~<>, which is never
+              satisfiable.  [Our current thinking is that this replacement is,
+              in fact, never necessary -- the /H edge in the automaton is
+              either present in another factor or is useless.  But for the
+              time being, we are neither proving this nor changing the code.]
+
+Display commands
+----------------
+:display Expr  -- Display the grounded and trimmed automaton semantics of Expr
+                  using ImageMagick, if installed. 
+:psg Expr  -- Displays powerset graph of automaton semantics of Expr.
+:synmon Expr -- Displays syntactic monoid of automaton semantics of Expr
+
+I/O commands
+------------
+:import File -- read a plebby script. Plebby scripts can :import other
+                plebby scripts, but there is no occurs-check.  If they
+                actually recur they will not terminate.
+:read File -- read a plebFile.  Add bindings to environment and, if it
+              includes a bare expression, bind `it' to it.
+:savestate File  -- dump current environment to a file.
+:loadstate  File -- revert to a previously saved environment.
+:write file Expr -- output the extension of Expr as Haskell to a file.
+                    If the Expr contains a single Automaton node, it is
+                    written in standard Haskell show syntax for an FSA, which
+                    can be imported into any Haskell environment that imports
+                    the module FSA from LanguageToolkit2.
+                    Otherwise it is written in standard Haskell show syntax
+                    for a pleb expression tree, which is defined in the Pleb
+                    module. 
+:readBin File -- import a Haskell expression tree as written by :write
+                 and bind 'it' to it.
+:readJeff File -- import a Jeff-format automaton and bind 'it' to it.
+                  Jeff-format is a (deprecated) format of the automata in
+                  StressTyp2.  It was the only format provided by the Stress
+                  Pattern Database which is one of the progenitors of
+                  StressTyp2.  It is supported because this line of research
+                  started before the evolution of StressTyp2.  It is the only
+                  supported format because it suffices.
+                  See the note below on the alphabet of syllable symbols of
+                  the resulting automata.
+:dot Expr -- write the grounded and trimmed automaton semantics of Expr as
+             a dot file to stdout.
+:dot-psg Expr  -- write powerset graph as a dot file to stdout.
+:dot-synmon Expr -- write syntactic monoid as a dot file to stdout.
+
+
+Command summary
+---------------
+:help --
+                   :bindings  print list of variables and their bindings
+                    :compile  convert all expr variables to automata
+             :display <expr>  show expr graphically via external display program
+             :dot-psg <expr>  :dot the powerset graph of expr
+          :dot-synmon <expr>  :dot the syntactic monoid of expr
+                 :dot <expr>  print a Dot file of expr
+        :equal <expr> <expr>  compare two exprs for set-equality
+                     :ground  convert all expr variables to grounded automata
+                       :help  print this help
+      :implies <expr> <expr>  determine if expr1 implies expr2
+              :import <file>  read file as plebby script
+                :isPT <expr>  determine if expr is a Piecewise Testable set
+                :isSL <expr>  determine if expr is a Strictly Local set
+                :isSP <expr>  determine if expr is a Strictly Piecewise set
+           :loadstate <file>  restore state from file
+                 :psg <expr>  :display the powerset graph of expr
+                       :quit  exit plebby
+             :readBin <file>  read binary expr from file, bind to 'it'
+            :readJeff <file>  read Jeff format automaton file, bind to 'it'
+                :read <file>  read Pleb file
+                      :reset  purge the current environment
+           :restore-universe  set universe to all and only necessary symbols
+                   :restrict  remove non-universe symbols from the environment
+           :savestate <file>  write current state to file
+                 :show <var>  print meaning(s) of var
+:strict-subset <expr> <expr>  determine if expr1 is a strict subset of expr2
+       :subset <expr> <expr>  determine if expr1 is a subset of expr2
+              :synmon <expr>  :display the syntactic monoid of expr
+                :unset <var>  remove a single var from the environment
+        :write <file> <expr>  write binary form of expr to file
+
+
+A NOTE ON SYMBOL ALPHABETS
+--------------------------
+For the most part, the symbol alphabets of the expressions and automata
+manipulated by plebby is arbitrary.  These will, in fact, be gathered from the
+expressions encountered so far (since the start of the session or since the
+most recent :reset) in the variable `universe'.  Means of manipulating the
+universe and gathering it from the bindings of the symbol set and expression
+variable in the current environment are described above.
+
+The only exception to full generality is a consequence of the :readJeff
+command.  Jeff format files available in the StressTyp2 database use symbols
+of the form 'wX.sY' where X and Y are positive integers representing the
+syllable weight and the stress level, respectively.  It is a rational and
+flexible format, although it suggests a level of abstraction that is not
+currently supported in pleb/plebby.  More important, for us, is the fact
+that strings of syllables in this format are impenetrable by our
+linguistically na\"ive eyes.  :readJeff transliterates these symbols into a
+weight in the set {L,H,S,X,Y} (corresponding to weights 0--4) inflected by a
+stress marking, either none, grave or acute (corresponding to stress levels
+0--2).  The transliteration is defined in the module Factors.lhs.
+
+EXAMPLES
+--------
+We have included examples of plebby files for a few StressTyp2 lects in the
+plebFiles/directory:
+o syllableStress.pleb is a pleb file that defines syllable sets for the
+  symbols as read by readJeff, including singleton symbols: `H' is bound to
+  the singleton symbol set {/H}, `sigma' to {/L, /H, /S, /X, /Y}, `heavy-plus'
+  to {/H, /S, /X, /Y}.  This is a pleb file (with no continued lines) and may
+  be read into the plebby environment with either :read or :import.
+o stressConstraints.plebby defines all the constraints listed in the
+  constraints.ods spreadsheet which has been built over the course of exploring
+  the StressTyp2 (and SPD) constraints.  The constraints are named for the row
+  number in the spreadsheet: `c99' expresses culminativity (and is also
+  bound to the variable `culminativity'). This is a plebby file and must be
+  :imported.
+o Note that the constraints.ods spreadsheet from which stressConstraints.plebby
+  was derived is the product of many hands over a large period of time.  With
+  that in mind, we cannot guarantee that its contents are wholly accurate.
+  Now that we have the tools to create and test factorizations automatically,
+  we have indeed found instances where the spreadsheet is incorrect.
+  The definitive factorizations are produced by the factorize program.
+o yidin.plebby defines the lect 219_Yidin_SPD:
+===============
+## yidin.plebby
+## yidin from extracted factors
+## ascii syntax
+
+:import plebFiles/stressConstraints.plebby
+
+= universe  {c9}
+:restrict
+
+= yidin /\{noAdjSecondary,noAdjUnstressed,noAdjPrimarySecondary,noNonInitialLPrimary,noFinalLPrimary,noLPrimaryWithAnyH,obligatoriness,culminativity,noHBeforeHPrimary}
+
+yidin
+===============
+The lines "= universe {c9}" and ":restrct" restrict the universe to light and
+heavy syllables with each stress level.  The next line defines the variable
+"yidin" to be the conjunction of the constraints listed in the corresponding
+column in the spreadsheet (DJ).  The final line, just "yidin" by itself, binds
+the variable `it' to the value of "yidin", which is convenient in interactive
+environments. In the following, :readJeff binds `it' to the automaton defined
+in 219_Yidin_SPD.fsa.
+
+[plebyily]
+> :import plebFiles/yidin.plebby 
+> :display yidin
+> :readJeff ../../../st2-v1-archive-0415/transducers/fsasJeff/219_Yidin_SPD.fsa 
+> :equal it yidin
+True
+
+
+FREQUENTLY AGGRAVATING COMPLAINTS
+---------------------------------
+(Just the FACs. In random order.)
+
+o Newlines are just whitespace in pleb files, so expressions can be continued
+  on multiple lines, but newline is distinct from whitespace in plebby files
+  and there is no line-continuation syntax.
+o There is no warning if the rhs of an assignment fails to parse.  Worse, if
+  the variable already has a binding, that binding does not change.  Hence,
+  correcting a binding with a new expression that fails to parse will leave
+  the value equal to the old value rather than the expected value.
+o There is no :accepts String Expr.  :subset <String-as-Factor> Expr works.
+o It would be nice to include pleb syntax that would allow for explicit
+  Automata.  This would allow arbitrary FSA valued Haskell expressions. 

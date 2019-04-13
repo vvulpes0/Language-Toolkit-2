@@ -1,0 +1,6 @@
+:import plebFiles/stressConstraints.plebby
+# Note: as an SL lect, alawa is not factored in constraints.ods.
+= universe {c3}
+:restrict
+= alawa /\{~|%<L L>,~<L' L* L*>,~|%<L* L'>,~%||%<L>,~%||%<>}
+alawa

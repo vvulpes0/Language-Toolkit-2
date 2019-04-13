@@ -1,0 +1,269 @@
+##### Stress constraints
+## harvested from the StressTyp2 database
+
+:read plebFiles/syllableStress.pleb
+
+## Constraints are numbered with row number in the spreadheet constraints.ods
+## There are no constraints in the first two rows.
+
+## Warning, the constraints are roughly literal interpretations of the
+##  "Shorthand" notation (Column B in the spreadsheet) in which the distinction
+##  between "\sig" (some unstressed syllable) and "\sig*" (arbitrary syllable)
+##  is not consistently enforced.  So some of these constraints may be overly
+##  specific.
+
+## Syllable type constraints
+## These are enforced by, for example,
+##   = universe {c3}
+##   :restrict
+
+= c3 {/L,/L'}
+= c4 {/L,/L`,/L',/H`,/H'}
+= c5 {/L,/L',/H'}
+= c6 {/L,/L',/H,/H'}
+= c7 {/L,/L',/H`,/H'}
+= c8 {/L,/H,/H'}
+= c9 {/L,/L`,/L',/H,/H`,/H'}
+= c10 {/L,/L',/H,/H',/S,/S'}
+= c11 {/L,/L',/H,/H`,/H',/S,/S`,/S'}
+= c12 {/L,/L`,/L',/H`,/H',/S`,/S'}
+= c13 {/L,/L`,/L',/H,/H`,/H',/S,/S`,/S'}
+
+= positivity ~%||%<>
+= c139 positivity
+
+= c14 ~<sigma` sigma`>
+= noAdjSecondary c14
+
+= c15 ~<sigma sigma>
+= noAdjUnstressed c15
+
+= c16 ~<sigma' sigma`>
+= noPrimarySecondary c16
+
+= c17 ~<sigma` sigma'>
+= noSecondaryPrimary c17
+
+# c16 and c17 only occur together
+= noAdjPrimarySecondary /\(c16, c17)
+
+# c18--c22 are not necessary
+= c18 ~<L L>
+= noAdjLUnstressed c18
+
+= c19 ~<L` L`>
+= noAdjLSecondary c19
+
+= c20 ~<L` L'>
+= noLSecondayLPrimary c20
+
+= c21 ~<L' L`>
+= noLPrimaryLSecondray c21
+
+= c22 ~%|<L'>
+= noInitialLPrimary c22
+
+= c23 ~%|<L>
+= noInitialLUnstressed c23
+
+# c24 is unnecessary
+= c24 ~%|<H>
+= noInitialHUnstressed c23
+
+= c25 ~%|<H`>
+= noInitialHSecondary c25
+
+= c26 ~%|<S`>
+= noInitialSSecondary c26
+
+= c27  ~%|<sigma>
+= noInitialUnstressed c27
+
+= c28  <sigma L`>
+= noNonInitialLSecondary c28
+
+= c29 ~<sigma* L'>
+= noNonInitialLPrimary c29
+
+# c30 & c31 are unnecessary
+= c30 ~<sigma* S'>
+= noNonInitialSPrimary c30
+
+= c31 ~<L` sigma*>
+= noNonFinalLSecondary c31
+
+= c32 ~<L' sigma>
+= noNonFinalLPrimary c32
+
+= c33 ~<L' H>
+= noLPrimaryHUnstressed c33
+
+= c34 ~<L* H`>
+= noLHSecondary c34
+
+= c35 ~<L* S`>
+= noLSSecondary c35
+
+= c36 ~<H* H`>
+= noHHSecondary c36
+
+= c37 ~<H* S`>
+= noHSSecondary c37
+
+= c38 ~<H* L'>
+= noHLPrimary c38
+
+= c39 ~<S* L'>
+= noSLPrimary c39
+
+= c40 ~<H* L`>
+= noHLSecondary c40
+
+= c41 ~<S* L`>
+= noSLSecondary c41
+
+= c42 ~|%<L'>
+= noFinalLPrimary c42
+
+= c43 ~|%<H'>
+= noFinalHPrimary c43
+
+= c44 ~|%<H`>
+= noFinalHSecondary c44
+
+= c45 ~|%<S>
+= noFinalSUnstressed c45
+
+= c46 ~|%<S`>
+= noFinalSSecondary c46
+
+= c48 ~<H sigma'>
+= c49 ~<H` sigma'>
+= c50 ~<sigma' H>
+= c51 ~%|<L L'>          # not necessary
+= c52 ~%|<L' sigma*>
+= c53 ~%|<L sigma*>       # not necessary
+
+= c54 ~%||%<L'>           # not necessary
+= noLMonosyllables c54
+
+= c55 ~<L' L L>         # not necessary
+= c56 ~<L' sigma* sigma*>
+= c57 ~<H' sigma* sigma*>
+= c58 ~<sigma' L L>
+= c59 ~<sigma* sigma* L'>
+= c60 ~<sigma* sigma* H>  # not necessary
+= c61 ~<sigma* H sigma*>  # not necessary
+
+= c62 ~<H sigma* sigma*>  # not necessary
+= c63 ~<H` sigma* sigma*>
+= c64 ~<S` sigma* sigma*>
+= c65 ~<sigma* sigma* S>   # not necessary
+= c66 ~<sigma* S sigma*>  # not necessary
+= c67 ~<S sigma* sigma*>  # not necessary
+= c68 ~|%<L L>  # not necessary
+= c69 ~|%<L' sigma*>
+= c70 ~<sigma* L` sigma'>
+= c71 ~<sigma' L` H>
+= c72 ~|%<sigma* H'>
+= c73 ~%|<sigma* L'>
+= c74 ~%|<sigma* S'>
+= c75 ~%||%<sigma' H>
+= c76 ~<L' sigma* sigma* sigma*>
+= c77 ~<H' sigma* sigma* sigma*>
+= c78 ~<sigma' sigma* sigma* sigma*>
+= c79 ~%|<sigma* sigma* L'>
+= c80 ~%|<sigma* sigma* H'>
+= c81 ~%|<sigma' H* sigma*>
+= c82 ~%|<sigma' S* sigma*>
+
+= c83 ~/\{<L'>, <H*>}
+= noLPrimaryWithAnyH c83
+
+= c84 ~/\{<L'>, <H`>}
+= c85 ~/\{<H>,<S*>}
+
+= c86 ~/\{~<L'>, ~<S*>}
+= noLPrimaryWithAnyS c86
+
+= c87 ~/\{<H'>, <S*>}
+= c88 ~/\{<L'>, <H'>} # This is either unnecessary or incorrect.  It appears in 199 Nubian Dongloese
+
+= obligatoriness <sigma'>
+= c89 obligatoriness
+
+= c90 ~/\{<H>, |%<H'>}
+= c91 ~/\{<H`>, |%<H'>}
+= c92 ~/\{<S>, |%<H'>}
+
+= c9x ~|%<heavy-plus, H'> # Subsumes c90 and c92
+
+= c93 ~/\{%|<L>, |%<H'>} # Not necessary
+= c94 ~/\{%|<H>, |%<H'>} # Not necessary
+= c95 ~/\{%|<H`>, |%<H'>} # Not necessary
+= c96 ~/\{%|<S>, |%<H'>} # Not necessary
+
+= c97 ~\/{<H'>,|%<sigma'>}  # Not necessary
+
+= c98 ~\/{<L'>,<H* sigma*>}
+
+= c99 ~<sigma',sigma'>
+= culminativity c99
+
+= c100 ~<sigma`,sigma`>
+= c101 ~<sigma',S>
+= c102 ~<sigma',H>
+= c103 ~<sigma',H`>
+= c104 ~<H,sigma'>
+
+= c105 ~<L,L'>
+= c106 ~<H,L'>
+= c107 ~<S,L'>
+
+= c108 ~<H*, H'>
+= noHBeforeHPrimary c108
+
+= c109 ~<S, H'>
+= c110 ~<H', S*>
+= c111 ~<H`, sigma> # not necessary
+
+#################
+= c112 ~<S*, S'>
+= c113 ~<S', S*>
+= c114 ~<H*, H'> # not necessary
+
+= c115 ~<sigma', H*, sigma> # should this be sigma*>?
+= c116 ~<sigma', H, sigma> # should this be sigma*>?
+= c117 ~<sigma', H`, sigma> # should this be sigma*>?
+= c118 ~<L', H, sigma> # should this be sigma*>?
+= c119 ~<L', S, sigma>  # should this be sigma*>?
+= c120 ~<H', H*, sigma*>
+= c121 ~<H', H`, sigma>  # should this be sigma*>?
+= c122 ~<S', S`, sigma*>
+= c123 ~<S', H*, sigma*>
+= c124 ~<S', H*, sigma*>
+= c125 ~<H', S, sigma>   # should this be sigma*>?
+= c126 ~<sigma', sigma*, sigma`>
+= c127 ~<sigma*, sigma`, sigma*, sigma'>
+
+= c128 ~<sigma' sigma'>
+= c129 ~<sigma' sigma sigma'>
+= c130 ~<sigma' sigma` sigma'> # not necessary
+
+= c131 ~|%<sigma sigma sigma>
+= c132 ~|%<sigma sigma sigma`> # not necessary
+= c133 ~|%<sigma sigma` sigma> # not necessary
+= c134 ~|%<sigma` sigma sigma> # not necessary
+= c135 ~|%<sigma` sigma` sigma> # not necessary
+= c136 ~|%<sigma` sigma sigma`> # not necessary
+= c137 ~|%<sigma sigma` sigma`> # not necessary
+= c138 ~|%<sigma` sigma` sigma`> # not necessary
+
+= c140 ~%||%<sigma>
+= c141 ~%||%<sigma`>
+= c142 ~%||%<sigma sigma>
+= c143 ~%||%<sigma` sigma*>
+= c144 ~%||%<sigma* sigma`>
+
+= c145 ~@{~|%<L>, *%||%<L L>, %|<L'>} # note regexp wants anchors
+= c146 \/{~<L'>, @{~|%<L>, *%||%<L L>, %||%<L>, %|<L'>}, %||%<L'>}
