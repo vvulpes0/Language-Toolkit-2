@@ -1,0 +1,8 @@
+*.hi
+*.o
+accepts
+dotify
+factorize
+make-non-strict-constraints
+plebby
+slFactorize
