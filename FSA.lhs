@@ -49,6 +49,7 @@
 >            -- ** Alphabetic Transformations
 >            , extendAlphabetTo
 >            , semanticallyExtendAlphabetTo
+>            , tierify
 >            , contractAlphabetTo
 >            , forceAlphabetTo
 >            , desemantify
@@ -1200,6 +1201,24 @@ alphabets unified.
 >                   contractAlphabetTo
 >                   (Set.delete Nothing (alphabet fsa))
 >                   fsa
+
+> -- |Convert a semantic automaton that represents a Local constraint
+> -- into a new one that represents the same constraint in the associated
+> -- Tier-Local class.
+> tierify :: (Ord a, Ord b) => Set b -> FSA a (Maybe b) -> FSA a (Maybe b)
+> tierify t fsa = f'' { alphabet = alphabet f'
+>                     , transitions = union ts ts'}
+>     where f'   =  semanticallyExtendAlphabetTo t fsa
+>           f''  =  contractAlphabetTo
+>                   (Set.delete Nothing (alphabet f'))
+>                   f'
+>           ts   =  transitions f''
+>           ts'  =  Set.mapMonotonic l (states f'')
+>           l q  =  Transition {
+>                     edgeLabel    =  Symbol Nothing
+>                   , source       =  q
+>                   , destination  =  q
+>                   }
 
 > -- |Remove symbols from the alphabet of an automaton.
 > contractAlphabetTo :: (Ord a, Ord b) => Set b -> FSA a b ->

@@ -18,6 +18,7 @@
 > import Porters ( Dot(..), Jeff(..), formatSet, to, fromE)
 > import ExtractSL (isSL)
 > import ExtractSP (isSP)
+> import Tiers     (project)
 
 > import Control.Applicative ( Applicative(..) )
 > import Control.Monad.Trans.Class ( lift )
@@ -81,6 +82,7 @@
 >               | IsPT Expr
 >               | IsSL Expr
 >               | IsSP Expr
+>               | IsTSL Expr
 >               | Subset Expr Expr
 >               | SSubset Expr Expr -- Strict Subset
 >                 deriving (Eq, Read, Show)
@@ -161,6 +163,8 @@
 >                          , [ArgE], "determine if expr is a Strictly Local set")
 >                        , ( ":isSP",           ((M .         IsSP   ) <$> pe )
 >                          , [ArgE], "determine if expr is a Strictly Piecewise set")
+>                        , ( ":isTSL",          ((M .         IsTSL  ) <$> pe )
+>                          , [ArgE], "determine if expr is a Tier-Based Strictly Local set")
 >                        , ( ":loadstate",      error ":loadstate not defined here"
 >                          , [ArgF], "restore state from file")
 >                        , ( ":psg",            ((L .         D_PSG  ) <$> pe )
@@ -368,6 +372,9 @@
 >                    IsSL p         ->  isSL <$> normalize <$> desemantify <$>
 >                                       makeAutomaton (e' p)
 >                    IsSP p         ->  isSP <$> normalize <$> desemantify <$>
+>                                       makeAutomaton (e' p)
+>                    IsTSL p        ->  isSL <$> normalize <$>
+>                                       project <$> desemantify <$>
 >                                       makeAutomaton (e' p)
 >                    Subset p1 p2   ->  relate e isSupersetOf p1 p2
 >                    SSubset p1 p2  ->  relate e isProperSupersetOf p1 p2

@@ -55,6 +55,7 @@
 > data UnaryExpr
 >     = Iteration Expr
 >     | Negation Expr
+>     | Tierify [SymSet] Expr
 >       deriving (Eq, Ord, Read, Show)
 > data PLFactor
 >     = PLFactor Bool Bool [[SymSet]]
@@ -108,6 +109,10 @@
 >                 NAry (Domination es)      ->  f Domination es
 >                 Unary (Iteration e)       ->  g Iteration e
 >                 Unary (Negation e)        ->  g Negation e
+>                 Unary (Tierify ts e)      ->  g
+>                                               (Tierify
+>                                                (tmap restrictUniverseS ts))
+>                                               e
 >                 Factor (PLFactor h t ps)  ->  fixFactor h t $
 >                                               tmap (tmap restrictUniverseS)
 >                                               ps
@@ -147,6 +152,8 @@ prevents having to descend through the tree to find this information.
 >                                    automatonFromExpr e
 >         Unary (Negation e)      -> complementDeterministic $
 >                                    automatonFromExpr e
+>         Unary (Tierify ts e)    -> tierify (unionAll ts) $
+>                                    automatonFromExpr e
 >         Factor x                -> automatonFromPLFactor x
 >         Automaton x             -> x
 >     where f tl = renameStates . minimize . tl . automata
@@ -184,6 +191,8 @@ prevents having to descend through the tree to find this information.
 >           usedSymbolsN (Domination es)     =  unionAll $ tmap usedSymbols es
 >           usedSymbolsU (Iteration e)       =  usedSymbols e
 >           usedSymbolsU (Negation e)        =  usedSymbols e
+>           usedSymbolsU (Tierify ts e)      =  union (unionAll ts)
+>                                               (usedSymbols e)
 >           usedSymbolsF (PLFactor _ _ ps)   =  unionAll (unionAll ps)
 
 > parseStatements :: Env -> Parse Env
@@ -255,7 +264,9 @@ prevents having to descend through the tree to find this information.
 >                                 [ (["*", "∗"],       Iteration)
 >                                 , (["¬", "~", "!"],  Negation)
 >                                 ] <*>
->                                 parseExpr dict subexprs)
+>                                 parseExpr dict subexprs) <|>
+>                                (Tierify <$> pt <*> parseExpr dict subexprs)
+>     where pt = parseDelimited ['['] (parseSeparated "," (parseSymSet dict))
 
 > parsePLFactor :: Dictionary SymSet -> Dictionary Expr -> Parse PLFactor
 > parsePLFactor dict subexprs = combine ".." plGap <|>
