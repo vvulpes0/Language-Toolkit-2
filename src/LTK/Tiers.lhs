@@ -1,7 +1,6 @@
-> module Tiers (tier, project) where
+> module LTK.Tiers (tier, project) where
 
-> import FSA
-> import Containers
+> import LTK.FSA
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 

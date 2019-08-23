@@ -6,8 +6,8 @@
 >   Trustworthy
 >   #-}
 > {-|
-> Module    : FSA
-> Copyright : (c) 2014-2018 Dakotah Lambert
+> Module    : LTK.FSA
+> Copyright : (c) 2014-2019 Dakotah Lambert
 > License   : BSD-style, see LICENSE
 
 > The purpose of this module is to define an interface to a generic,
@@ -16,60 +16,60 @@
 > in a linguistic context, although the nature of the project should 
 > allow more general use.
 > -}
-> module FSA ( FSA(..)
->            , states
->            , isNull
->            -- * Constructing simple automata
->            , totalWithAlphabet
->            , emptyWithAlphabet
->            , emptyLanguage
->            , singletonWithAlphabet
->            , singletonLanguage
->            -- * Derived automata
->            , kleeneClosure
->            , powersetGraph
->            , syntacticMonoid
->            , residue
->            , coresidue
->            -- * Transformations
->            , flatIntersection
->            , flatUnion
->            , FSA.reverse
->            , complement
->            , complementDeterministic
->            , determinize
->            -- ** Minimization
->            , minimize
->            , minimizeDeterministic
->            , normalize
->            -- *** Equivalence Classes
->            , minimizeOver
->            , nerode
->            , jEquivalence
->            -- ** Alphabetic Transformations
->            , extendAlphabetTo
->            , semanticallyExtendAlphabetTo
->            , tierify
->            , contractAlphabetTo
->            , forceAlphabetTo
->            , desemantify
->            , renameSymbolsBy
->            -- ** Transformations of 'State' labels
->            , renameStatesBy
->            , renameStates
->            -- * Miscellaneous
->            , State(..)
->            , Symbol(..)
->            , unsymbols
->            , Transition(..)
->            , module Containers
->            ) where
+> module LTK.FSA ( FSA(..)
+>                , states
+>                , isNull
+>                -- * Constructing simple automata
+>                , totalWithAlphabet
+>                , emptyWithAlphabet
+>                , emptyLanguage
+>                , singletonWithAlphabet
+>                , singletonLanguage
+>                -- * Derived automata
+>                , kleeneClosure
+>                , powersetGraph
+>                , syntacticMonoid
+>                , residue
+>                , coresidue
+>                -- * Transformations
+>                , flatIntersection
+>                , flatUnion
+>                , LTK.FSA.reverse
+>                , complement
+>                , complementDeterministic
+>                , determinize
+>                -- ** Minimization
+>                , minimize
+>                , minimizeDeterministic
+>                , normalize
+>                -- *** Equivalence Classes
+>                , minimizeOver
+>                , nerode
+>                , jEquivalence
+>                -- ** Alphabetic Transformations
+>                , extendAlphabetTo
+>                , semanticallyExtendAlphabetTo
+>                , tierify
+>                , contractAlphabetTo
+>                , forceAlphabetTo
+>                , desemantify
+>                , renameSymbolsBy
+>                -- ** Transformations of 'State' labels
+>                , renameStatesBy
+>                , renameStates
+>                -- * Miscellaneous
+>                , State(..)
+>                , Symbol(..)
+>                , unsymbols
+>                , Transition(..)
+>                , module LTK.Containers
+>                ) where
 
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 > import Data.Map.Lazy (Map)
 > import qualified Data.Map.Lazy as Map
-> import Containers
+> import LTK.Containers
 > import Control.DeepSeq (NFData, rnf)
 > import Control.Parallel (par, pseq)
 
@@ -855,7 +855,7 @@ the FSA.
 >           reverseTransitions = tmap reverseTransition . transitions
 
 > trimFailStates :: (Ord e, Ord n) => FSA n e -> FSA n e
-> trimFailStates = FSA.reverse . trimUnreachables . FSA.reverse
+> trimFailStates = LTK.FSA.reverse . trimUnreachables . LTK.FSA.reverse
 
 > -- |Returns a normal form of the input.
 > -- An FSA is in normal form if it is minimal and deterministic,

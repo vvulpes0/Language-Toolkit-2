@@ -1,20 +1,20 @@
 > {-# OPTIONS_HADDOCK hide,show-extensions #-}
 > {-|
-> Module    : Dot
-> Copyright : (c) 2017-2018 Dakotah Lambert
+> Module    : LTK.Porters.Dot
+> Copyright : (c) 2017-2019 Dakotah Lambert
 > License   : BSD-style, see LICENSE
 > 
 > This module provides methods to convert automata to the GraphViz
 > Dot format.  At the moment, only export is supported.
 > -}
-> module Dot ( -- *Exporting
->              exportDot
->            , exportDotWithName
->              -- *Miscellaneous
->            , formatSet
->            ) where
+> module LTK.Porters.Dot ( -- *Exporting
+>                          exportDot
+>                        , exportDotWithName
+>                        -- *Miscellaneous
+>                        , formatSet
+>                        ) where
 
-> import FSA
+> import LTK.FSA
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 

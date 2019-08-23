@@ -29,10 +29,10 @@
 
 > module Main (main) where
 
-> import FSA
-> import Porters
-> import Factors
-> import Traversals
+> import LTK.FSA
+> import LTK.Porters
+> import LTK.Factors
+> import LTK.Traversals
 
 > import qualified Data.Set as Set
 > import qualified Data.List as List
