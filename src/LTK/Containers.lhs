@@ -18,6 +18,8 @@
 >                       , chooseOne
 >                       , discardOne
 >                       , Collapsible(..)
+>                       , isize
+>                       , zsize
 >                       , fromCollapsible
 >                       -- *Combining multiple Containers
 >                       , unionAll
@@ -155,10 +157,18 @@ The first and second parts of this pair may be returned alone by
 >     collapse :: (a -> b -> b) -> b -> c a -> b
 >     size :: (Integral a) => c b -> a
 
->     collapse f = curry (fst . until ((== 0) . size . snd) continue)
->         where continue (a, bs) = let (x, xs) = choose bs in (f x a, xs)
+>     collapse f = curry (fst . until ((== (0::Integer)) . size . snd) cont)
+>         where cont (a, bs) = let (x, xs) = choose bs in (f x a, xs)
 >     size = collapse (const succ) 0
 >     {-# MINIMAL collapse | size #-}
+
+> -- |Analogue to @isEmpty@ for Collapsible structures
+> zsize :: Collapsible c => c b -> Bool
+> zsize = (== (0 :: Integer)) . size
+
+> -- |The size of the input as an integer
+> isize :: Collapsible c => c b -> Integer
+> isize = size
 
 
 Consequences
@@ -175,9 +185,9 @@ container with either unions or intersections:
 > -- An empty source yields an empty result.
 > intersectAll :: (Container c a, Collapsible s) => s c -> c
 > intersectAll xs
->     | size xs == 0  = empty
->     | otherwise     = collapse intersection x xs'
->     where (x, xs')  = choose xs
+>     | size xs == (0 :: Integer)  = empty
+>     | otherwise                  = collapse intersection x xs'
+>     where (x, xs')               = choose xs
 
 It is nice to have tests for existential and universal satisfaction of
 predicates:
@@ -345,7 +355,7 @@ lookup-time logarithmic in the number of distinct elements.
 >         where hasX = keep ((== x) . fst) xs
 >               noX  = difference xs hasX
 >               newX = Set.fold add (x, 1) hasX
->               add (a, c1) (b, c2) = (a, c1 + c2)
+>               add (a, c1) (_, c2) = (a, c1 + c2)
 >     empty = Multiset empty
 >     union (Multiset xs) (Multiset ys) =
 >         Multiset (Set.fromDistinctAscList zs)
@@ -430,14 +440,14 @@ Subsets sorted by increasing and decreasing size
 
 > instance (Collapsible x, Ord (x a)) => Ord (IncreasingSize (x a)) where
 >     compare (IncreasingSize x) (IncreasingSize y)
->         = case compare (size x) (size y) of
+>         = case compare (size x :: Integer) (size y) of
 >             LT  ->  LT
 >             GT  ->  GT
 >             _   ->  compare x y
 
 > instance (Collapsible x, Ord (x a)) => Ord (DecreasingSize (x a)) where
 >     compare (DecreasingSize x) (DecreasingSize y)
->         = case compare (size x) (size y) of
+>         = case compare (size x :: Integer) (size y) of
 >             LT  ->  GT
 >             GT  ->  LT
 >             _   ->  compare x y
@@ -468,5 +478,5 @@ Miscellaneous functions
 >     where translate x = snd . last . ((x, x) :) . keep ((== x) . fst) $
 >                         zip search (makeInfinite replace)
 >           makeInfinite []      =  []
->           makeInfinite (x:[])  =  repeat x
->           makeInfinite (x:xs)  =  x : makeInfinite xs
+>           makeInfinite (y:[])  =  repeat y
+>           makeInfinite (y:ys)  =  y : makeInfinite ys

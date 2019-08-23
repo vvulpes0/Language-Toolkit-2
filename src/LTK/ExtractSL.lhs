@@ -78,7 +78,6 @@ MoL'17 as is the notion of an $\SL$ approximation of a non-$\SL$ stringset.
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 > import qualified Data.List as List
-> import qualified Data.Map as Map
 
 \section*{Determining $\SL{k}$}
 This is an implementation of the powerset graph based algorithm given in
@@ -123,7 +122,7 @@ former case it evaluates to $0$.
 >                       -> Integer
 > slTraversal psg ps k
 >     | (Set.null ps) = k + 1
->     | cycle = 0
+>     | hasCycle = 0
 >     | someSingle = slTraversal psg (union live restps) (max k ((depth thisp)+1))
 >     | otherwise = slTraversal psg (union live restps) k
 >     where
@@ -137,7 +136,8 @@ former case it evaluates to $0$.
 >              (maybe False
 >               ((1 <) . Set.size . nodeLabel) . endstate)
 >              exts
->       cycle = anyS (maybe False (isIn (stateMultiset thisp)) . endstate) live
+>       hasCycle = anyS (maybe False (isIn (stateMultiset thisp)) . endstate)
+>                  live
 
 \section*{Extracting Forbidden Factors}
 The algorithms for gathering Forbidden Initial, Free and Final Factors all
@@ -262,12 +262,6 @@ type of a singleton set.
 >              , forbiddenFinals = f (forbiddenFinals a) (forbiddenFinals b)
 >              }
 
-> -- |forbiddenUnits relative to a domain alphabet
-> forbiddenUnitsWithAlphabet :: (Ord e) => 
->                                 Set e -> ForbiddenSubstrings e -> Set e
-> forbiddenUnitsWithAlphabet a fs = difference a (attestedUnits fs)
-
-
 ForbiddenPaths are the internal structure gathered by the PSG traversals.
 This structure does not include attested units or forbidden units or words,
 which are computable separately from the FSA and the forbidden paths and are
@@ -288,20 +282,6 @@ are fixed.  Labels of paths are (Symbol e).  Note that since these are paths in 
 > factorsFromPaths :: (Ord e, Ord n) =>
 >                       Set (Path n e) -> Set [Symbol e]
 > factorsFromPaths = tmap labels
-
-> -- |Convert Set of Paths to Set of Substrings of alphabet type
-> stringsFromPaths :: (Ord e, Ord n) =>
->                      Set(Path n e) -> Set [e]
-> stringsFromPaths = tmap (unsymbols . labels)
-
-> -- |Convert path to Set of states visited by path
-> pathToStateSet :: (Ord a, Ord b) => Path b a -> Set (State b)
-> pathToStateSet = setFromMultiset . stateMultiset
-
-> -- visitedStateSets paths is the set of sets of states visited in each path
-> --  in paths
-> visitedStateSets :: (Ord a, Ord b) => Set (Path b a) -> Set (Set (State b))
-> visitedStateSets = tmap pathToStateSet
 
 > -- a tractable version of unsymbol
 > emancipate :: (Symbol e) -> e
@@ -360,9 +340,10 @@ are fixed.  Labels of paths are (Symbol e).  Note that since these are paths in 
 > forbiddenPathsWithAlphabet alph fsa =
 >     ForbiddenPaths fInitP fFreeP fFinP
 >     where
->        psg = powersetGraph fsa
+>        f' = fsa {alphabet = union alph $ alphabet fsa}
+>        psg = powersetGraph f'
 >        k = slPSGQ psg
->        fInitP = initialFPs fsa (max 0 (k-1))
+>        fInitP = initialFPs f' (max 0 (k-1))
 >        fFreeP = freeFPsPSG psg k
 >        fFinP = finalFPsPSG psg (max 0 (k-1))
 
@@ -379,14 +360,11 @@ are fixed.  Labels of paths are (Symbol e).  Note that since these are paths in 
 >                              -> ForbiddenPaths (Set (Set n)) e
 > forbiddenNDPathsWithAlphabet alph fsa =
 >     ForbiddenPaths fInitP fFreeP fFinP
->         where psg     =  powersetGraph fsa
->               fInitP  =  initialNDFPs fsa
+>         where f'      =  fsa {alphabet = union alph $ alphabet fsa}
+>               psg     =  powersetGraph f'
+>               fInitP  =  initialNDFPs f'
 >               fFreeP  =  freeNDFPsPSG psg
 >               fFinP   =  finalNDFPsPSG psg
-
-> forbiddenNDPaths :: (Ord e, Ord n, Enum n) =>
->                     FSA n e -> ForbiddenPaths (Set (Set n)) e
-> forbiddenNDPaths fsa = forbiddenNDPathsWithAlphabet (alphabet fsa) fsa
 
 %% Bounded search for forbidden factors.
 
@@ -400,8 +378,6 @@ are fixed.  Labels of paths are (Symbol e).  Note that since these are paths in 
 %% 0, no forbidden words will be gathered.  If either is equal to 0 then, at
 %% most, \epsilon will be gathered.
 
-
-
 > -- |The forbidden paths of the given 'FSA',
 > -- the alphabet of which must be a subset of the
 > -- provided alphabet.  Takes at most bound-1 many
@@ -414,11 +390,11 @@ are fixed.  Labels of paths are (Symbol e).  Note that since these are paths in 
 > forbiddenPathsWithAlphabetWithBound alph bnd fsa = 
 >     ForbiddenPaths fInitP fFreeP fFinP
 > -- (uFFs, fWs, iFFs, frFFs, fiFFs)
->     where
->        psg = powersetGraph fsa
->        fInitP = initialFPs fsa bnd
->        fFreeP = freeFPsPSG psg bnd
->        fFinP = finalFPsPSG psg bnd
+>     where f' = fsa {alphabet = union alph $ alphabet fsa}
+>           psg = powersetGraph f'
+>           fInitP = initialFPs f' bnd
+>           fFreeP = freeFPsPSG psg bnd
+>           fFinP = finalFPsPSG psg bnd
 
 > -- |The forbidden substrings of the given 'FSA'.
 > -- Takes at most bound-1 many iterations of each
@@ -493,10 +469,6 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 >                    finalNDFPsPSG (powersetGraph rFSA)
 > -- See note in initialFPs
 >         where rFSA = renameStates . normalize $ LTK.FSA.reverse fsa
-
-> freeFPs :: (Ord e, Ord n, Enum n) =>
->            (FSA n e) -> Integer -> Set(Path(Set n) e)
-> freeFPs fsa bound = freeFPsPSG (powersetGraph fsa) bound
 
 > -- if bound >= 0 then take cycles up to bound+1 times
 > -- otherwise take cycles arbitrarily many times
@@ -634,7 +606,7 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 >                   -> [Path (Set n) e]        -- frontier
 >                   -> Set (Path (Set n) e)    -- FPs so far
 >                   -> Set (Path (Set n) e)    -- FPs
-> gatherFPs psg bound goal [] fps = fps
+> gatherFPs _ _ _ [] fps = fps
 > gatherFPs psg bound goal front fps
 >     = gatherFPs psg bound goal nextFront (union nextFPs fps)
 >     where
@@ -678,7 +650,7 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 >                               -> Set (Path (Set n) e)  -- k-FPs so far
 >                               -> ([Path (Set n) e], Set (Path (Set n) e))
 >                                                  -- (front, k-FPs)
-> passK goals [] front fps = (front, fps)
+> passK _ [] front fps = (front, fps)
 > passK goals (p:ps) front fps 
 >     | contains (labels p) (tmap labels fps)    -- extends known fp
 >         = passK goals ps front fps
@@ -698,7 +670,7 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 >                       -> Set (Path (Set (Set n)) e)    -- k-FPs so far
 >                       -> ([Path (Set (Set n)) e],
 >                           Set (Path (Set (Set n)) e))  -- (front, k-FPs)
-> nondeterministicPassK goals [] front fps = (front, fps)
+> nondeterministicPassK _ [] front fps = (front, fps)
 > nondeterministicPassK goals (p:ps) front fps
 >     | contains (labels p) (tmap labels fps)    -- extends known fp
 >         = nondeterministicPassK goals ps front fps
@@ -715,19 +687,6 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 
 %% verification 
 
-buildFSAs FFs -> tuple of lists of FSAs for each FF
-
-
-> buildFSAs :: (NFData e, Ord e)
->              => FSA Integer e
->              -> ( Set e           -- alphabet
->                 , [FSA Integer e] -- words
->                 , [FSA Integer e] -- initials
->                 , [FSA Integer e] -- free
->                 , [FSA Integer e] -- finals
->                 )
-> buildFSAs = buildFSAsFromFFs . forbiddenSubstrings
-
 > buildFSAsFromFFs :: (NFData e, Ord e) =>
 >                     ForbiddenSubstrings e
 >                  -> ( Set e    -- alphabet
@@ -742,11 +701,11 @@ buildFSAs FFs -> tuple of lists of FSAs for each FF
 >       f hanchor tanchor = (buildLiteral alphs) . forbidden .
 >               (\x -> Substring x hanchor tanchor)        .
 >               tmap singleton 
->       build hanchor tanchor = tmap (f hanchor tanchor) . Set.toList
->       was = build True True (forbiddenWords fs)
->       ias = build True False (forbiddenInitials fs)
->       fras = build False False (forbiddenFrees fs)
->       fias = build False True (forbiddenFinals fs)
+>       buildHT hanchor tanchor = tmap (f hanchor tanchor) . Set.toList
+>       was = buildHT True True (forbiddenWords fs)
+>       ias = buildHT True False (forbiddenInitials fs)
+>       fras = buildHT False False (forbiddenFrees fs)
+>       fias = buildHT False True (forbiddenFinals fs)
 
 %% build FSA from FSAs
 

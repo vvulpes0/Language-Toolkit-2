@@ -25,8 +25,8 @@
 >               Container (t a) a, Container (t (t a)) (t a), Eq b) =>
 >              (a -> b) -> t a -> t (t a)
 > collectBy f xs
->     | size xs == 0  = empty
->     | otherwise     = insert firstKind . collectBy f $
+>     | zsize xs   = empty
+>     | otherwise  = insert firstKind . collectBy f $
 >                       difference xs firstKind
 >     where first      = chooseOne xs
 >           firstKind  = keep ((==) (f first) . f) xs
@@ -39,9 +39,9 @@
 
 > commaSeparateList :: (Collapsible c) => c String -> String
 > commaSeparateList xs
->     | size xs == 0  = ""
->     | size xs == 1  = x
->     | otherwise     = x ++ ", " ++ commaSeparateList xs'
+>     | zsize xs       = ""
+>     | isize xs == 1  = x
+>     | otherwise      = x ++ ", " ++ commaSeparateList xs'
 >     where (x, xs') = choose xs
 
 > -- |Return value is in the range \([0 .. n]\),
@@ -50,16 +50,16 @@
 > -- not in the input.
 > shortLabelIn :: (Collapsible s, Eq n) => s n -> n -> Int
 > shortLabelIn xs x
->     | size xs == 0 = 0
->     | a == x       = 0
->     | otherwise    = 1 + shortLabelIn as x
+>     | zsize xs   = 0
+>     | a == x     = 0
+>     | otherwise  = 1 + shortLabelIn as x
 >     where (a, as) = choose xs
 
 > dotifyTransitionSet :: (Collapsible c, Eq e, Show e) =>
 >                        c (Symbol e, Int, Int) -> String
 > dotifyTransitionSet ts
->     | size ts == 0  = ""
->     | otherwise     = (show src) ++ " -> " ++ (show dest) ++
+>     | zsize ts   = ""
+>     | otherwise  = (show src) ++ " -> " ++ (show dest) ++
 >                       " [label=\"" ++ syms ++ "\"];"
 >     where (_, src, dest)  = chooseOne ts
 >           first (a,_,_)   = a
@@ -74,9 +74,9 @@
 >                       tmap (dotifyTransitionSet .
 >                             tmap (remakeTransition)) $
 >                       transitionClasses f
->     where remakeTransition tr  = (edgeLabel tr,
->                                   shortLabelIn sts (source tr),
->                                   shortLabelIn sts (destination tr))
+>     where remakeTransition t  = ( edgeLabel t
+>                                 , shortLabelIn sts (source t)
+>                                 , shortLabelIn sts (destination t))
 >           sts                  = states f
 
 > dotifyInitial :: Int -> [String]

@@ -22,6 +22,7 @@
 %format q_0 = "q_0"
 %format (Set (a)) = "\{" a "\}"
 %format size (a) = "\left\|" a "\right\|"
+%format isize (a) = "\left\|" a "\right\|"
 %format sortBy f = sort "_{" f "}"
 %format ssigma = "\Sigma"
 %format subsequenceClosure' = subsequenceClosure
@@ -210,8 +211,8 @@ wherever a transition occurred in $\delta$.
 
 
 > subsequenceClosure' :: (Ord n, Ord e) => FSAt n e -> FSAt n e
-> subsequenceClosure' (FSA ssigma delta q_0 qf d)  =  FSA ssigma (delta `union` delta_prime) q_0 qf False
->     where  delta_prime  =  tmap (\(Transition x a b) -> (Transition Epsilon a b)) delta
+> subsequenceClosure' (FSA ssigma delta q_0 qf _)  =  FSA ssigma (delta `union` delta_prime) q_0 qf False
+>     where  delta_prime  =  tmap (\(Transition _ a b) -> (Transition Epsilon a b)) delta
 
 %if false
 
@@ -338,10 +339,10 @@ minimal forbidden subsequence.
 
 
 > collectMinimalFSSQs :: (Ord n, Ord e) => FSAt n e -> Set [e]
-> collectMinimalFSSQs  =  Set.fromList             .
->                         filterAbsorbed           .
->                         sortBy (comparing size)  .
->                         Set.toList               .
+> collectMinimalFSSQs  =  Set.fromList              .
+>                         filterAbsorbed            .
+>                         sortBy (comparing isize)  .
+>                         Set.toList                .
 >                         collectFSSQs
 >     where  filterAbsorbed (x:xs)  =  x : filterAbsorbed (keep (\y -> x `isNotSSQ` y) xs)
 >            filterAbsorbed _       =  []

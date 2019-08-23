@@ -60,7 +60,6 @@
 > data PLFactor
 >     = PLFactor Bool Bool [[SymSet]]
 >       deriving (Eq, Ord, Read, Show)
-> type Sequence = [SymSet]
 > type SymSet = Set String
 
 > readPleb :: String -> Either String (FSA Integer String)
@@ -94,10 +93,10 @@
 >           universe = either (const Set.empty) id (definition "universe" dict)
 
 > restrictUniverse :: Env -> Env
-> restrictUniverse (dict, subexprs, e) = ( keep (not . isEmpty . snd) $
+> restrictUniverse (dict, subexprs, v) = ( keep (not . isEmpty . snd) $
 >                                          tmap (mapsnd restrictUniverseS) dict
 >                                        , tmap (mapsnd restrictUniverseE) subexprs
->                                        , restrictUniverseE <$> e
+>                                        , restrictUniverseE <$> v
 >                                        )
 >     where universe = either (const Set.empty) id (definition "universe" dict)
 >           restrictUniverseS = intersection universe
@@ -107,12 +106,12 @@
 >                 NAry (Conjunction es)     ->  f Conjunction es
 >                 NAry (Disjunction es)     ->  f Disjunction es
 >                 NAry (Domination es)      ->  f Domination es
->                 Unary (Iteration e)       ->  g Iteration e
->                 Unary (Negation e)        ->  g Negation e
->                 Unary (Tierify ts e)      ->  g
+>                 Unary (Iteration ex)      ->  g Iteration ex
+>                 Unary (Negation ex)       ->  g Negation ex
+>                 Unary (Tierify ts ex)     ->  g
 >                                               (Tierify
 >                                                (tmap restrictUniverseS ts))
->                                               e
+>                                               ex
 >                 Factor (PLFactor h t ps)  ->  fixFactor h t $
 >                                               tmap (tmap restrictUniverseS)
 >                                               ps
@@ -148,12 +147,12 @@ prevents having to descend through the tree to find this information.
 >         NAry (Domination es)    -> f (mconcat .
 >                                       sepBy (totalWithAlphabet (singleton Nothing)))
 >                                    es
->         Unary (Iteration e)     -> renameStates . minimize . kleeneClosure $
->                                    automatonFromExpr e
->         Unary (Negation e)      -> complementDeterministic $
->                                    automatonFromExpr e
->         Unary (Tierify ts e)    -> tierify (unionAll ts) $
->                                    automatonFromExpr e
+>         Unary (Iteration ex)    -> renameStates . minimize . kleeneClosure $
+>                                    automatonFromExpr ex
+>         Unary (Negation ex)     -> complementDeterministic $
+>                                    automatonFromExpr ex
+>         Unary (Tierify ts ex)   -> tierify (unionAll ts) $
+>                                    automatonFromExpr ex
 >         Factor x                -> automatonFromPLFactor x
 >         Automaton x             -> x
 >     where f tl = renameStates . minimize . tl . automata
@@ -172,7 +171,8 @@ prevents having to descend through the tree to find this information.
 >                           unionAll (unionAll pieces)
 >           bl           =  buildLiteral as . required
 >           (p:ps)       =  tmap (tmap (tmap Just)) pieces
->           isPF         =  not h && not t && all ((== 1) . size) pieces
+>           isPF         =  not h && not t &&
+>                           all ((== (1 :: Integer)) . size) pieces
 >           lfs          =  Substring p h False : lfs' ps
 >           lfs' (x:[])  =  Substring x False t : lfs' []
 >           lfs' (x:xs)  =  Substring x False False : lfs' xs
@@ -189,14 +189,14 @@ prevents having to descend through the tree to find this information.
 >           usedSymbolsN (Conjunction es)    =  unionAll $ tmap usedSymbols es
 >           usedSymbolsN (Disjunction es)    =  unionAll $ tmap usedSymbols es
 >           usedSymbolsN (Domination es)     =  unionAll $ tmap usedSymbols es
->           usedSymbolsU (Iteration e)       =  usedSymbols e
->           usedSymbolsU (Negation e)        =  usedSymbols e
->           usedSymbolsU (Tierify ts e)      =  union (unionAll ts)
->                                               (usedSymbols e)
+>           usedSymbolsU (Iteration ex)      =  usedSymbols ex
+>           usedSymbolsU (Negation ex)       =  usedSymbols ex
+>           usedSymbolsU (Tierify ts ex)     =  union (unionAll ts)
+>                                               (usedSymbols ex)
 >           usedSymbolsF (PLFactor _ _ ps)   =  unionAll (unionAll ps)
 
 > parseStatements :: Env -> Parse Env
-> parseStatements (dict, subexprs, last)
+> parseStatements (dict, subexprs, prev)
 >  = asum $ [ start >> putFst <$>
 >             (mkSyms <$> getName <*>
 >              (unionAll <$>
@@ -209,7 +209,7 @@ prevents having to descend through the tree to find this information.
 >             parseStatements
 >           , f True "it" <$> (Just <$> parseExpr dict subexprs)
 >           , Parse $ \ts -> case ts of
->                              [] -> Right ((dict, subexprs, last), [])
+>                              [] -> Right ((dict, subexprs, prev), [])
 >                              _  -> Left "not finished"
 >           ]
 >    where getName = Parse $ \ts ->
@@ -220,8 +220,7 @@ prevents having to descend through the tree to find this information.
 >                                         showParen True (shows x) ""
 >                      _               -> Left "end of input looking for name"
 >          start = eat "≝" [] <|> eat "=" []
->          putFst a = (a, subexprs, last)
->          putSnd b = (dict, b, last)
+>          putFst a = (a, subexprs, prev)
 >          universe = either (const Set.empty) id (definition "universe" dict)
 >          mkSyms name value = define "universe"
 >                              (if name /= "universe"
@@ -235,7 +234,7 @@ prevents having to descend through the tree to find this information.
 >                                   me
 >                          in ( nd
 >                             , maybe subexprs (flip (define name) subexprs) me
->                             , if isL then me else last)
+>                             , if isL then me else prev)
 
 > parseExpr :: Dictionary SymSet -> Dictionary Expr -> Parse Expr
 > parseExpr dict subexprs = asum
@@ -303,7 +302,7 @@ prevents having to descend through the tree to find this information.
 >                          fmap (flip (,) ts) (definition n dict)
 >                      (TSymbol '/' : TName n : ts) ->
 >                          Right . flip (,) ts $ singleton n
->                      (a:as) ->
+>                      (a:_) ->
 >                            Left $ "cannot start a SymSet with " ++
 >                            showParen True (shows a) ""
 >                      _ -> Left "unexpected end of input in SymSet"
@@ -436,4 +435,4 @@ prevents having to descend through the tree to find this information.
 
 > sepBy :: a -> [a] -> [a]
 > sepBy x (a:b:as) = a : x : sepBy x (b:as)
-> sepBy x as       = as
+> sepBy _ as       = as

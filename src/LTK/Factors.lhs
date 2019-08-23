@@ -26,7 +26,7 @@
 >                    , w2s0, w2s1, w2s2, w2plus, w2minus, w2
 >                    , w3s0, w3s1, w3s2, w3plus, w3minus, w3
 >                    , w4s0, w4s1, w4s2, w4plus, w4minus, w4
->                    , wpluss0, wpluss1, wpluss2, wplusminus, wplus
+>                    , wpluss0, wpluss1, wpluss2, wplusplus, wplusminus, wplus
 >                    , wxs0, wxs1, wxs2, wxplus, wxminus, wx
 >                    ) where
 
@@ -117,12 +117,6 @@
 > -- and form a 'Conjunction' of the results.
 > makeConstraint :: (Ord e) => [[Literal e]] -> Conjunction e
 > makeConstraint = Conjunction . Set.fromList . tmap (Disjunction . Set.fromList)
-> makeConstraintList :: (Ord e) => [[[Literal e]]] -> Set (Conjunction e)
-> makeConstraintList = Set.fromList . tmap makeConstraint
-> buildFromList :: (Enum n, NFData n, Ord n, NFData e, Ord e) =>
->                  Set e -> [[[Literal e]]] -> FSA n e
-> buildFromList alpha = build alpha . makeConstraintList
-
 > w0s0, w0s1, w0s2, w1s0, w1s1, w1s2 :: Set String
 > w2s0, w2s1, w2s2, w3s0, w3s1, w3s2 :: Set String
 > w4s0, w4s1, w4s2, wxs0, wxs1, wxs2 :: Set String
@@ -192,7 +186,7 @@
 >                                 FSA alpha trans
 >                                 (singleton (State 0))
 >                                 fin False
->     where tagged         = zip symseq [0..]
+>     where tagged         = zip symseq [0 :: Integer ..]
 >           trans'         = unionAll $
 >                            tmap
 >                            (\(symset, st) ->
@@ -258,7 +252,7 @@ negative).  Making these from NFAs is cheaper, it seems.
 >                                       then id
 >                                       else complementDeterministic) $
 >                                      determinize fsa
->     where tagged = zip symseq [0..]
+>     where tagged = zip symseq [0 :: Integer ..]
 >           trans'         = unionAll $
 >                            tmap
 >                            (\(symset, st) ->
@@ -281,7 +275,7 @@ negative).  Making these from NFAs is cheaper, it seems.
 >                                  then id
 >                                  else complementDeterministic) $
 >                                 determinize fsa
->     where tagged = zip symseq [0..]
+>     where tagged = zip symseq [0 :: Integer ..]
 >           trans'         = unionAll $
 >                            tmap
 >                            (\(symset, st) ->
