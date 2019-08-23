@@ -1,8 +1,26 @@
+> {-|
+> Module:    LTK.Porters.Pleb
+> Copyright: (c) 2018-2019 Dakotah Lambert
+> License:   BSD-style, see LICENSE
+
+> The (P)iecewise / (L)ocal (E)xpression (B)uilder.
+> This module defines a parser for a representation of
+> logical formulae over subsequence- and adjacency-factors,
+> as well as a mechanism for evaluating (creating an 'FSA' from)
+> the resulting expression tree.
+
+> There are two special variables:
+> 
+> * @it@ describes the most recent expression, and
+> 
+> * @universe@ collects all symbols used.
+> -}
 > module LTK.Porters.Pleb ( Dictionary
 >                         , Parse(..)
 >                         , Env
 >                         , Expr
 >                         , SymSet
+>                         , Token()
 >                         , compileEnv
 >                         , groundEnv
 >                         , insertExpr
@@ -25,10 +43,12 @@
 > import LTK.FSA
 > import LTK.Factors (buildLiteral, Factor(..), required)
 
+> -- |A syntactic unit.
 > data Token = TSymbol Char
 >            | TName String
 >              deriving (Eq, Ord, Read, Show)
 
+> -- |Convert a string into a stream of tokens ready for parsing.
 > tokenize  :: String -> [Token]
 > tokenize "" = []
 > tokenize (x:xs)
@@ -39,35 +59,51 @@
 >     | otherwise   =  TSymbol x : tokenize xs
 >     where isDelim c = matchingDelimiter c /= c
 
+> -- |The environment: defined sets of symbols, defined expressions, and
+> -- possibly a value for the special variable @(it)@.
 > type Env = (Dictionary SymSet, Dictionary Expr, Maybe Expr)
+
+> -- |An expression, the root of an expression tree.
 > data Expr
 >     = NAry NAryExpr
 >     | Unary UnaryExpr
 >     | Factor PLFactor
 >     | Automaton (FSA Integer (Maybe String))
 >       deriving (Eq, Ord, Read, Show)
+
+> -- |A subexpression that consists of an n-ary operator and its operands.
 > data NAryExpr
 >     = Concatenation [Expr]
 >     | Conjunction   [Expr]
 >     | Disjunction   [Expr]
 >     | Domination    [Expr]
 >       deriving (Eq, Ord, Read, Show)
+
+> -- |A subexpression that consists of a unary operator and its operand.
 > data UnaryExpr
 >     = Iteration Expr
 >     | Negation Expr
 >     | Tierify [SymSet] Expr
 >       deriving (Eq, Ord, Read, Show)
+
+> -- |A subexpression representing a single Piecewise-Local factor.
 > data PLFactor
 >     = PLFactor Bool Bool [[SymSet]]
 >       deriving (Eq, Ord, Read, Show)
+
+> -- |A set of symbols.
 > type SymSet = Set String
 
+> -- |Parse an input string and create a stringset-automaton from the result.
+> -- If there is an error while parsing, the result is the string "no parse".
 > readPleb :: String -> Either String (FSA Integer String)
 > readPleb = maybe (Left "no parse") (Right . desemantify) .
 >            either (const Nothing) (makeAutomaton . fst) .
 >            doParse (parseStatements (Set.empty, Set.empty, Nothing)) .
 >            tokenize
 
+> -- |Parse an input string and update the environment
+> -- according to the result of the parse.
 > doStatements :: Env -> String -> Env
 > doStatements d str  =  either (const d) f .
 >                        doParse (parseStatements d) $
@@ -75,15 +111,21 @@
 >     where f (x, [])  =  x
 >           f _        =  d
 
+> -- |Add a new expression to the environment, call it "@(it)@".
 > insertExpr :: Env -> Expr -> Env
 > insertExpr (dict, subexprs, _) e = doStatements
 >                                    (dict, define "it" e subexprs, Just e)
 >                                    "= it it"
 
+> -- |Transform all saved expressions into automata to prevent reevaluation.
 > compileEnv :: Env -> Env
 > compileEnv (dict, subexprs, e) = (dict, tmap (mapsnd f) subexprs, f <$> e)
 >     where f = Automaton . renameStates . minimize . automatonFromExpr
 
+> -- |Convert saved automata from descriptions of constraints to
+> -- descriptions of stringsets.
+> -- This action effectively removes metadata describing constraint types
+> -- from the environment.
 > groundEnv :: Env -> Env
 > groundEnv (dict, subexprs, e) = (dict, tmap (mapsnd f) subexprs, f <$> e)
 >     where f = Automaton . renameSymbolsBy Just . renameStates . minimize .
@@ -92,6 +134,7 @@
 >               automatonFromExpr
 >           universe = either (const Set.empty) id (definition "universe" dict)
 
+> -- |Remove any symbols not present in @(universe)@ from the environment.
 > restrictUniverse :: Env -> Env
 > restrictUniverse (dict, subexprs, v) = ( keep (not . isEmpty . snd) $
 >                                          tmap (mapsnd restrictUniverseS) dict
@@ -117,7 +160,8 @@
 >                                               ps
 >                 Automaton x               ->  Automaton $
 >                                               contractAlphabetTo
->                                               (insert Nothing (tmap Just universe))
+>                                               (insert Nothing
+>                                                (tmap Just universe))
 >                                               x
 >           f t es = NAry (t $ tmap restrictUniverseE es)
 >           g t e  = Unary (t $ restrictUniverseE e)
@@ -127,6 +171,8 @@
 >                     -- <> and ~<> are essentially True and False
 >               | otherwise = Factor (PLFactor h t ps)
 
+> -- |Create an 'FSA' from an expression tree and environment,
+> -- complete with metadata regarding the constraint(s) it represents.
 > makeAutomaton :: Env -> Maybe (FSA Integer (Maybe String))
 > makeAutomaton (dict, _, e) = normalize <$>
 >                              semanticallyExtendAlphabetTo symsets <$>
@@ -138,6 +184,8 @@ The properties of semantic automata are used here to prevent having to
 pass alphabet information to the individual constructors, which in turn
 prevents having to descend through the tree to find this information.
 
+> -- |Create an 'FSA' from an expression tree,
+> -- complete with metadata regarding the constraint(s) it represents.
 > automatonFromExpr :: Expr -> FSA Integer (Maybe String)
 > automatonFromExpr e
 >     = case e of
@@ -236,6 +284,7 @@ prevents having to descend through the tree to find this information.
 >                             , maybe subexprs (flip (define name) subexprs) me
 >                             , if isL then me else prev)
 
+> -- |Parse an expression from a 'Token' stream.
 > parseExpr :: Dictionary SymSet -> Dictionary Expr -> Parse Expr
 > parseExpr dict subexprs = asum
 >                           [ NAry    <$>  parseNAryExpr dict subexprs
@@ -352,6 +401,7 @@ prevents having to descend through the tree to find this information.
 
 
 
+> -- |An association between names and values.
 > type Dictionary a = Set (String, a)
 
 > define :: (Ord a) => String -> a -> Dictionary a -> Dictionary a
@@ -366,6 +416,7 @@ prevents having to descend through the tree to find this information.
 >               | xs == Set.empty = Nothing
 >               | otherwise       = Just (Set.findMin xs)
 
+> -- |The base type for a combinatorial parser.
 > newtype Parse a = Parse {
 >       doParse :: [Token] -> Either String (a, [Token])
 >     }
@@ -400,9 +451,12 @@ prevents having to descend through the tree to find this information.
 
 
 
+> -- |Generate an expression (sub)tree from an 'FSA' that
+> -- contains metadata regarding the constraint(s) it represents.
 > fromSemanticAutomaton :: FSA Integer (Maybe String) -> Expr
 > fromSemanticAutomaton = Automaton
 
+> -- |Generate an expression (sub)tree from an 'FSA'.
 > fromAutomaton :: FSA Integer String -> Expr
 > fromAutomaton = fromSemanticAutomaton . renameSymbolsBy Just
 

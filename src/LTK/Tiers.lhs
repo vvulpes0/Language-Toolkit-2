@@ -1,3 +1,13 @@
+> {-|
+> Module:     LTK.Tiers
+> Copyright:  (c) 2019 Dakotah Lambert
+> Licence:    BSD-style, see LICENSE
+
+> If an FSA defines a stringset that is the preprojection
+> of some other stringset over a smaller alphabet,
+> the functions in this module can determine what that alphabet is
+> and return the appropriate projective automaton.
+> -}
 > module LTK.Tiers (tier, project) where
 
 > import LTK.FSA

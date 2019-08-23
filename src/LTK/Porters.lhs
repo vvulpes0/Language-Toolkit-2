@@ -18,6 +18,7 @@
 >                    -- |We use types to create a bit of magic
 >                    -- in order to read and write automata in
 >                    -- various formats.
+>                    , Type()
 >                    , Dot(Dot)
 >                    , Jeff(Jeff)
 >                    , Pleb(Pleb)
@@ -27,8 +28,8 @@
 >                    , transliterateString
 >                    , untransliterate
 >                    , untransliterateString
->                    , Importable
->                    , Exportable
+>                    , Importable(..)
+>                    , Exportable(..)
 >                    ) where
 
 > import LTK.FSA          (FSA, renameStates)
@@ -64,6 +65,7 @@
 >       Type x -> FSA n e -> String
 > to ty = extract . flip asTypeOf (ty "") . fromFSA
 
+> -- |An importable or exportable format.
 > type Type t = String -> t
 
 === Instances for Jeff's format
@@ -89,6 +91,7 @@
 
 === instances for Pleb format
 
+> -- |The format defined by the (P)iecewise / (L)ocal (E)xpression (B)uilder.
 > newtype Pleb = Pleb String
 
 > instance Importable Pleb where

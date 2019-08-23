@@ -1,4 +1,13 @@
 > {-# OPTIONS_HADDOCK show-extensions, not-home #-}
+> {-|
+> Module:    LTK
+> Copyright: (c) 2019 Dakotah Lambert
+> License:   BSD-style, see LICENSE
+
+> The entire Language Toolkit.
+> Generally this is more than one will need,
+> so several smaller modules are exposed indivually as well.
+> -}
 
 > module LTK ( module LTK.ExtractSL
 >            , module LTK.ExtractSP

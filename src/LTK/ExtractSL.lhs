@@ -212,6 +212,7 @@ type of a singleton set.
 >                         }
 >     deriving (Eq, Ord, Show, Read)
 
+> -- |A sequence of symbols, possibly annotated with end-markers.
 > data TaggedSubstring e = Free [e] | Initial [e] | Final [e] | Word [e]
 >                          deriving (Eq, Ord, Read, Show)
 
@@ -262,12 +263,14 @@ type of a singleton set.
 >              , forbiddenFinals = f (forbiddenFinals a) (forbiddenFinals b)
 >              }
 
-ForbiddenPaths are the internal structure gathered by the PSG traversals.
-This structure does not include attested units or forbidden units or words,
-which are computable separately from the FSA and the forbidden paths and are
-not relevant until the optimal set of initial, free and final forbidden paths
-are fixed.  Labels of paths are (Symbol e).  Note that since these are paths in the powerset graph `n' here is `Set n' for the `n' of the FSA.
-
+> -- |The internal structure gathered by the PSG traversals.
+> -- This structure does not include attested units or forbidden units or
+> -- words, which are computable separately from the FSA and the forbidden
+> -- paths and are not relevant until the optimal set of initial, free and
+> -- final forbidden paths are fixed.  Labels of paths are (Symbol e).
+> -- Note that, since these are paths in the powerset graph, the states of
+> -- each path are labelled by elements of type @Set n@ if @n@ is
+> -- the type that labels states in the underlying FSA.
 > data ForbiddenPaths n e = 
 >           ForbiddenPaths { -- |Paths witnessing forbidden initial factors
 >                             initialPaths :: Set (Path n e)

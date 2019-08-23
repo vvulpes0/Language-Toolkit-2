@@ -104,10 +104,16 @@
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
+%if false
+
+> -- | A convenience-type for declaring collections of forbidden subsequences.
+> -- The member types are (lists of) the raw alphabet type (not (Symbol .))
 > data ForbiddenSubsequences e = ForbiddenSubsequences {
 >       attestedAlphabet  ::  Set e
 >     , getSubsequences   ::  Set [e]
 >     } deriving (Eq, Ord, Read, Show)
+
+%endif
 
 > instance Ord e => Container (ForbiddenSubsequences e) [e] where
 >     isEmpty c     =  isEmpty (getSubsequences c)

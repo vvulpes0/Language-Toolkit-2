@@ -128,6 +128,7 @@ Acyclic extensions of a path are extensions other than back-edges
 >                                   (stateMultiset p))) $
 >                            transitions fsa)
 
+> -- |The extensions of a non-deterministic path other than back-edges
 > nondeterministicAcyclicExtensions :: (Ord e, Ord n) =>
 >                                      FSA n e -> Path (Set n) e
 >                                   -> Set (Path (Set n) e)
@@ -162,6 +163,7 @@ visited have multiplicity 0.
 > initialsPaths = tmap iPath . initials
 >     where iPath s = Path [] (Just s) (singleton s) 0
 
+> -- |Initial open list for non-deterministic traversal from initial states.
 > initialsNDPath :: (Ord e, Ord n) => FSA n e -> Path (Set n) e
 > initialsNDPath fsa = Path {
 >                        labels = empty
