@@ -1,10 +1,10 @@
 > module Main where
 
-> import ConstraintCompiler
-> import Porters
+> import LTK.ConstraintCompiler
+> import LTK.Porters
 
-> import Factors
-> import FSA
+> import LTK.Factors
+> import LTK.FSA
 
 > import Control.DeepSeq
 > import Control.Parallel.Strategies

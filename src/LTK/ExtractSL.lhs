@@ -46,33 +46,33 @@ MoL'17 as is the notion of an $\SL$ approximation of a non-$\SL$ stringset.
 >   MultiParamTypeClasses
 >   #-}
 > {-|
-> Module    : ExtractSL
-> Copyright : (c) 2017-2018 Jim Rogers and Dakotah Lambert
+> Module    : LTK.ExtractSL
+> Copyright : (c) 2017-2019 Jim Rogers and Dakotah Lambert
 > License   : BSD-style, see LICENSE
 > 
 > Find forbidden substrings of an automaton.
 > -}
-> module ExtractSL ( ForbiddenSubstrings(..)
->                  , ForbiddenPaths(..)
->                  , TaggedSubstring(..)
->                  -- *Extracting forbidden substrings
->                  , factorsFromPaths
->                  , forbiddenSubstrings
->                  , forbiddenPaths
->                  , forbiddenPathsWithBound
->                  -- *Building automata
->                  , buildFSA
->                  -- *Determining SL
->                  , isSL
->                  , slQ
->                  -- *...with precomputed PSG
->                  , isSLPSG
->                  , slPSGQ
->                  ) where
+> module LTK.ExtractSL ( ForbiddenSubstrings(..)
+>                      , ForbiddenPaths(..)
+>                      , TaggedSubstring(..)
+>                      -- *Extracting forbidden substrings
+>                      , factorsFromPaths
+>                      , forbiddenSubstrings
+>                      , forbiddenPaths
+>                      , forbiddenPathsWithBound
+>                      -- *Building automata
+>                      , buildFSA
+>                      -- *Determining SL
+>                      , isSL
+>                      , slQ
+>                      -- *...with precomputed PSG
+>                      , isSLPSG
+>                      , slPSGQ
+>                      ) where
 
-> import FSA
-> import Traversals  -- for initialsPaths, rejectingPaths
-> import Factors
+> import LTK.FSA
+> import LTK.Traversals  -- for initialsPaths, rejectingPaths
+> import LTK.Factors
 
 > import Control.DeepSeq
 > import Data.Set (Set)
@@ -484,7 +484,7 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 > -- hmmm. can't really just reverse labels, can we?  Does endstate matter?
 > -- if it is potentially so, then it should be (states rFSA), but these are not
 > --   related in any meaningful way with the initials of fsa
->         where rFSA = renameStates . normalize $ FSA.reverse fsa
+>         where rFSA = renameStates . normalize $ LTK.FSA.reverse fsa
 
 > initialNDFPs :: (Ord a, Ord b, Enum b) =>
 >                 FSA b a
@@ -492,7 +492,7 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 > initialNDFPs fsa = tmap (\p -> p {labels = word p}) $
 >                    finalNDFPsPSG (powersetGraph rFSA)
 > -- See note in initialFPs
->         where rFSA = renameStates . normalize $ FSA.reverse fsa
+>         where rFSA = renameStates . normalize $ LTK.FSA.reverse fsa
 
 > freeFPs :: (Ord e, Ord n, Enum n) =>
 >            (FSA n e) -> Integer -> Set(Path(Set n) e)
@@ -608,7 +608,7 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 %%    note that such edges are necessarily self-edges
 
 > trimRevPSG :: (Ord e, Ord n, Enum n) => FSA (Set n) e -> FSA (Set n) e
-> trimRevPSG psg = FSA.reverse $
+> trimRevPSG psg = LTK.FSA.reverse $
 >                  psg {
 >                    transitions = keep
 >                                  (\t -> (destination t /= psgQ psg

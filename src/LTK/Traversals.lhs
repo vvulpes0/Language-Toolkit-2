@@ -1,23 +1,23 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : Traversals
-> Copyright : (c) 2017-2018 Jim Rogers and Dakotah Lambert
+> Copyright : (c) 2017-2019 Jim Rogers and Dakotah Lambert
 > License   : BSD-style, see LICENSE
 >
 > Find paths through an automaton.
 > -}
-> module Traversals ( Path(..)
->                   , word
->                   , initialsPaths
->                   , initialsNDPath
->                   , rejectingPaths
->                   , acyclicPaths
->                   , extensions
->                   , boundedCycleExtensions
->                   , nondeterministicAcyclicExtensions
->                   ) where
+> module LTK.Traversals ( Path(..)
+>                       , word
+>                       , initialsPaths
+>                       , initialsNDPath
+>                       , rejectingPaths
+>                       , acyclicPaths
+>                       , extensions
+>                       , boundedCycleExtensions
+>                       , nondeterministicAcyclicExtensions
+>                       ) where
 
-> import FSA
+> import LTK.FSA
 > import Data.Semigroup (Semigroup(..))
 > import Data.Monoid (Monoid(..))
 > import Data.Set (Set)

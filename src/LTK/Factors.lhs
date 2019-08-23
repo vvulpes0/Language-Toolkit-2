@@ -1,36 +1,36 @@
-> module Factors ( -- *Constructions
->                  required
->                , forbidden
->                , buildLiteral
->                , build
->                , makeConstraint
->                  -- *Logical Expressions
->                , Factor(..)
->                , Literal(..)
->                , Disjunction(..)
->                , Conjunction(..)
->                  -- *Symbols
->                  -- |@w/n/s/x/@ is a syllable whose weight is level \(n\)
->                  -- and whose stress is level \(s\).
->                  -- Stress ranges from 0-2,
->                  -- while weight is in theory not limited.
->                  -- Here, only weights up to level 4 are defined.
->                  -- For both weight and stress,
->                  -- \"plus\" means \"greater than zero\".
->                  -- For stress, \"minus\" means \"less than two\".
->                  -- Arbitrary weight is indicated by using @x@ for \(n\).
->                  -- Arbitrary stress is indicated by omission of @s/x/@.
->                , defaultAlphabet
->                , w0s0, w0s1, w0s2, w0plus, w0minus, w0
->                , w1s0, w1s1, w1s2, w1plus, w1minus, w1
->                , w2s0, w2s1, w2s2, w2plus, w2minus, w2
->                , w3s0, w3s1, w3s2, w3plus, w3minus, w3
->                , w4s0, w4s1, w4s2, w4plus, w4minus, w4
->                , wpluss0, wpluss1, wpluss2, wplusminus, wplus
->                , wxs0, wxs1, wxs2, wxplus, wxminus, wx
->                ) where
+> module LTK.Factors ( -- *Constructions
+>                      required
+>                    , forbidden
+>                    , buildLiteral
+>                    , build
+>                    , makeConstraint
+>                    -- *Logical Expressions
+>                    , Factor(..)
+>                    , Literal(..)
+>                    , Disjunction(..)
+>                    , Conjunction(..)
+>                    -- *Symbols
+>                    -- |@w/n/s/x/@ is a syllable whose weight is level \(n\)
+>                    -- and whose stress is level \(s\).
+>                    -- Stress ranges from 0-2,
+>                    -- while weight is in theory not limited.
+>                    -- Here, only weights up to level 4 are defined.
+>                    -- For both weight and stress,
+>                    -- \"plus\" means \"greater than zero\".
+>                    -- For stress, \"minus\" means \"less than two\".
+>                    -- Arbitrary weight is indicated by using @x@ for \(n\).
+>                    -- Arbitrary stress is indicated by omission of @s/x/@.
+>                    , defaultAlphabet
+>                    , w0s0, w0s1, w0s2, w0plus, w0minus, w0
+>                    , w1s0, w1s1, w1s2, w1plus, w1minus, w1
+>                    , w2s0, w2s1, w2s2, w2plus, w2minus, w2
+>                    , w3s0, w3s1, w3s2, w3plus, w3minus, w3
+>                    , w4s0, w4s1, w4s2, w4plus, w4minus, w4
+>                    , wpluss0, wpluss1, wpluss2, wplusminus, wplus
+>                    , wxs0, wxs1, wxs2, wxplus, wxminus, wx
+>                    ) where
 
-> import FSA
+> import LTK.FSA
 
 > import Control.DeepSeq (NFData)
 > import Data.Set (Set)

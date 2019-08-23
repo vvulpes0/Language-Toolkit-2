@@ -1,24 +1,24 @@
 > module Main where
 
-> import FSA
-> import Pleb ( Env
->             , Expr
->             , compileEnv
->             , doParse
->             , doStatements
->             , fromAutomaton
->             , fromSemanticAutomaton
->             , groundEnv
->             , insertExpr
->             , makeAutomaton
->             , parseExpr
->             , restrictUniverse
->             , tokenize
->             )
-> import Porters ( Dot(..), Jeff(..), formatSet, to, fromE)
-> import ExtractSL (isSL)
-> import ExtractSP (isSP)
-> import Tiers     (project)
+> import LTK.FSA
+> import LTK.Porters.Pleb ( Env
+>                         , Expr
+>                         , compileEnv
+>                         , doParse
+>                         , doStatements
+>                         , fromAutomaton
+>                         , fromSemanticAutomaton
+>                         , groundEnv
+>                         , insertExpr
+>                         , makeAutomaton
+>                         , parseExpr
+>                         , restrictUniverse
+>                         , tokenize
+>                         )
+> import LTK.Porters      (Dot(..), Jeff(..), formatSet, to, fromE)
+> import LTK.ExtractSL    (isSL)
+> import LTK.ExtractSP    (isSP)
+> import LTK.Tiers        (project)
 
 > import Control.Applicative ( Applicative(..) )
 > import Control.Monad.Trans.Class ( lift )

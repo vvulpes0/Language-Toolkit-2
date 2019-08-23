@@ -61,9 +61,9 @@ slFactorize Name < fsa (in Jeff's format)
 
 > module Main (main) where
 
-> import ExtractSL
-> import FSA
-> import Porters
+> import LTK.ExtractSL
+> import LTK.FSA
+> import LTK.Porters
 > 
 > import Data.Set (Set)
 > import System.Environment as Env
@@ -130,7 +130,7 @@ Q: Why does generatePowerSetGraph fix elt type of stateset as Int?
 >             (FSA b a) -> String
 > chkValid res
 >     | (isNull res) = "valid"
->     | otherwise = (show . size . FSA.states) res
+>     | otherwise = (show . size . LTK.FSA.states) res
 
 > main = do
 >          name <- getName

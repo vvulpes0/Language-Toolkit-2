@@ -1,7 +1,7 @@
-> module ConstraintCompiler where
+> module LTK.ConstraintCompiler where
 
-> import Factors
-> import FSA
+> import LTK.Factors
+> import LTK.FSA
 
 > import Control.DeepSeq (NFData)
 > import Data.Set (Set)

@@ -1,7 +1,7 @@
 > module Main where
 
-> import FSA
-> import Porters (to, from, Dot(Dot), Jeff(Jeff), untransliterateString)
+> import LTK.FSA
+> import LTK.Porters (to, from, Dot(Dot), Jeff(Jeff), untransliterateString)
 
 > import System.Console.GetOpt
 > import System.Environment (getArgs)

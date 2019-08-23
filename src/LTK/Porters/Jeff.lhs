@@ -1,23 +1,23 @@
 > {-# OPTIONS_HADDOCK hide,show-extensions #-}
 > {-|
-> Module : Jeff
+> Module : LTK.Porters.Jeff
 > Copyright : (c) 2016-2018 Dakotah Lambert
 > LICENSE : BSD-style, see LICENSE
 > 
 > This module provides methods to convert automata to and from
 > Jeff's format.
 > -}
-> module Jeff ( -- *Importing
->               readJeff
->             , transliterate
->             , transliterateString
->               -- *Exporting
->             , exportJeff
->             , untransliterate
->             , untransliterateString
->             ) where
+> module LTK.Porters.Jeff ( -- *Importing
+>                           readJeff
+>                         , transliterate
+>                         , transliterateString
+>                         -- *Exporting
+>                         , exportJeff
+>                         , untransliterate
+>                         , untransliterateString
+>                         ) where
 
-> import FSA
+> import LTK.FSA
 > import Control.Applicative (Applicative(..))
 > import Data.Functor ((<$>))
 > import Data.Set (Set)

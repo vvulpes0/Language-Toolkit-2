@@ -6,46 +6,46 @@
 >   Trustworthy
 >   #-}
 > {-|
-> Module      : Containers
-> Copyright   : (c) 2016-2018 Dakotah Lambert
+> Module      : LTK.Containers
+> Copyright   : (c) 2016-2019 Dakotah Lambert
 > License     : BSD-style, see LICENSE
 > 
 > Containers: a uniform way to work with entities that may
 > contain other entities.
 > -}
-> module Containers ( Container(..)
->                   , Linearizable(..)
->                   , chooseOne
->                   , discardOne
->                   , Collapsible(..)
->                   , fromCollapsible
->                     -- *Combining multiple Containers
->                   , unionAll
->                   , intersectAll
->                     -- *Generic versions of Prelude functions and similar
->                   , anyS
->                   , allS
->                   , tmap
->                   , keep
->                   , groupBy
->                     -- *Multisets
->                   , Multiset
->                   , multiplicity
->                   , multisetFromList
->                   , setFromMultiset
->                     -- *Set of Set with alternate ordering
->                     -- |The 'choose' instance for 'Set' will always pick
->                     -- the least available element.
->                     -- If one wants to process elements
->                     -- in a different order,
->                     -- one can simply wrap the elements in such a way
->                     -- that they sort in the intended order of processing.
->                     -- This section contains some such wrapper types.
->                   , IncreasingSize(..)
->                   , DecreasingSize(..)
->                     -- *Miscellaneous functions
->                   , tr
->                   ) where
+> module LTK.Containers ( Container(..)
+>                       , Linearizable(..)
+>                       , chooseOne
+>                       , discardOne
+>                       , Collapsible(..)
+>                       , fromCollapsible
+>                       -- *Combining multiple Containers
+>                       , unionAll
+>                       , intersectAll
+>                       -- *Generic versions of Prelude functions and similar
+>                       , anyS
+>                       , allS
+>                       , tmap
+>                       , keep
+>                       , groupBy
+>                       -- *Multisets
+>                       , Multiset
+>                       , multiplicity
+>                       , multisetFromList
+>                       , setFromMultiset
+>                       -- *Set of Set with alternate ordering
+>                       -- |The 'choose' instance for 'Set' will always pick
+>                       -- the least available element.
+>                       -- If one wants to process elements
+>                       -- in a different order,
+>                       -- one can simply wrap the elements in such a way
+>                       -- that they sort in the intended order of processing.
+>                       -- This section contains some such wrapper types.
+>                       , IncreasingSize(..)
+>                       , DecreasingSize(..)
+>                       -- *Miscellaneous functions
+>                       , tr
+>                       ) where
 
 > import safe Data.Semigroup (Semigroup(..))
 > import safe Data.Monoid (Monoid(..))

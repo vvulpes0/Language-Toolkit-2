@@ -1,19 +1,19 @@
-> module Pleb ( Dictionary
->             , Parse(..)
->             , Env
->             , Expr
->             , SymSet
->             , compileEnv
->             , groundEnv
->             , insertExpr
->             , fromAutomaton
->             , fromSemanticAutomaton
->             , makeAutomaton
->             , doStatements
->             , parseExpr
->             , readPleb
->             , restrictUniverse
->             , tokenize) where
+> module LTK.Porters.Pleb ( Dictionary
+>                         , Parse(..)
+>                         , Env
+>                         , Expr
+>                         , SymSet
+>                         , compileEnv
+>                         , groundEnv
+>                         , insertExpr
+>                         , fromAutomaton
+>                         , fromSemanticAutomaton
+>                         , makeAutomaton
+>                         , doStatements
+>                         , parseExpr
+>                         , readPleb
+>                         , restrictUniverse
+>                         , tokenize) where
 
 > import Control.Applicative (Applicative(..), Alternative(..))
 > import Data.Char (isLetter, isSpace)
@@ -22,8 +22,8 @@
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
-> import FSA
-> import Factors (buildLiteral, Factor(..), required)
+> import LTK.FSA
+> import LTK.Factors (buildLiteral, Factor(..), required)
 
 > data Token = TSymbol Char
 >            | TName String

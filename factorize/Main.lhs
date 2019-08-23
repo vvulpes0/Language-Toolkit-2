@@ -1,10 +1,10 @@
 > module Main where
 
-> import ExtractSL
-> import ExtractSP
-> import Factors
-> import FSA
-> import Porters
+> import LTK.ExtractSL
+> import LTK.ExtractSP
+> import LTK.Factors
+> import LTK.FSA
+> import LTK.Porters
 
 > import Control.Concurrent ( MVar
 >                           , ThreadId
