@@ -16,6 +16,7 @@ license-file:        LICENSE
 author:              Dakotah Lambert, James Rogers
 maintainer:          49007668+vvulpes0@users.noreply.github.com
 build-type:          Simple
+extra-source-files:  man/dotify.1
 
 -- Extra files to be distributed with the package, such as examples or a
 -- README.
