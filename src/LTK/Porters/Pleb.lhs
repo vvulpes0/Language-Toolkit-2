@@ -20,7 +20,7 @@
 >                         , Env
 >                         , Expr
 >                         , SymSet
->                         , Token()
+>                         , Token
 >                         , compileEnv
 >                         , groundEnv
 >                         , insertExpr
@@ -33,7 +33,8 @@
 >                         , restrictUniverse
 >                         , tokenize) where
 
-> import Control.Applicative (Applicative(..), Alternative(..))
+> import Control.Applicative ( Applicative, Alternative
+>                            , empty, many, pure, some, (<*>), (<|>))
 > import Data.Char (isLetter, isSpace)
 > import Data.Foldable (asum)
 > import Data.Functor ((<$>))

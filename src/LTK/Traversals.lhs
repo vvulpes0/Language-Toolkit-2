@@ -18,8 +18,8 @@
 >                       ) where
 
 > import LTK.FSA
-> import Data.Semigroup (Semigroup(..))
-> import Data.Monoid (Monoid(..))
+> import Data.Semigroup (Semigroup, (<>))
+> import Data.Monoid (Monoid, mempty, mappend)
 > import Data.Set (Set)
 
 A Path is

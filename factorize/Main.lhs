@@ -23,7 +23,7 @@
 > import System.Environment (getArgs)
 > import System.Exit (die)
 > import System.FilePath ((</>), takeBaseName)
-> import System.IO ( IOMode (..)
+> import System.IO ( IOMode(ReadMode, WriteMode)
 >                  , hGetContents
 >                  , hPutStrLn
 >                  , stderr

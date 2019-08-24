@@ -74,7 +74,7 @@ MoL'17 as is the notion of an $\SL$ approximation of a non-$\SL$ stringset.
 > import LTK.Traversals  -- for initialsPaths, rejectingPaths
 > import LTK.Factors
 
-> import Control.DeepSeq
+> import Control.DeepSeq (NFData)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 > import qualified Data.List as List

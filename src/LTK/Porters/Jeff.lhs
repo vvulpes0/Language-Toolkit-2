@@ -18,7 +18,7 @@
 >                         ) where
 
 > import LTK.FSA
-> import Control.Applicative (Applicative(..))
+> import Control.Applicative ((<*>))
 > import Data.Functor ((<$>))
 > import Data.Set (Set)
 > import qualified Data.Set as Set

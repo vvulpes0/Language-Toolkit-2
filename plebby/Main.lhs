@@ -36,8 +36,8 @@
 >                  , stderr
 >                  )
 > import System.IO.Error ( catchIOError )
-> import System.Process ( CreateProcess(..)
->                       , StdStream(..)
+> import System.Process ( CreateProcess(std_err, std_in, std_out)
+>                       , StdStream(CreatePipe, NoStream, UseHandle)
 >                       , createProcess
 >                       , proc
 >                       , waitForProcess
