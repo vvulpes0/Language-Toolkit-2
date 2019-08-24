@@ -72,9 +72,9 @@
 > import Control.DeepSeq (NFData, rnf)
 > import Control.Parallel (par, pseq)
 
-> import Control.Applicative (Applicative(..))
-> import Data.Semigroup (Semigroup(..))
-> import Data.Monoid (Monoid(..))
+> import Control.Applicative (Applicative, pure, (<*>))
+> import Data.Semigroup (Semigroup, (<>))
+> import Data.Monoid (Monoid, mempty, mappend)
 
 
 Data Structures

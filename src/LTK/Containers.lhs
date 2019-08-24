@@ -49,8 +49,8 @@
 >                       , tr
 >                       ) where
 
-> import safe Data.Semigroup (Semigroup(..))
-> import safe Data.Monoid (Monoid(..))
+> import safe Data.Semigroup (Semigroup, (<>))
+> import safe Data.Monoid (Monoid, mempty, mappend)
 > import safe Data.Set (Set)
 > import safe qualified Data.Set as Set
 

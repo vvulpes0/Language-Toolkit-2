@@ -1,13 +1,16 @@
 > module Main where
 
-> import LTK.FSA
+> import LTK.FSA (difference, renameSymbolsBy, tr)
 > import LTK.Porters (to, from, Dot(Dot), Jeff(Jeff), untransliterateString)
 
-> import System.Console.GetOpt
+> import System.Console.GetOpt ( ArgDescr(NoArg, ReqArg)
+>                              , ArgOrder(RequireOrder)
+>                              , OptDescr(Option)
+>                              , getOpt, usageInfo)
 > import System.Environment (getArgs)
 > import System.Exit (exitFailure)
-> import System.IO (IOMode(ReadMode, WriteMode),
->                   hFlush, hGetContents, hPutStr, stdin, stdout, withFile)
+> import System.IO ( IOMode(ReadMode, WriteMode)
+>                  , hFlush, hGetContents, hPutStr, stdin, stdout, withFile)
 
 > import Data.Functor ((<$>))
 
