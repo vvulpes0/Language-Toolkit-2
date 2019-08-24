@@ -10,18 +10,45 @@ name:                LTK
 version:             0.1.0.0
 
 synopsis:            A set of tools for analyzing languages via logic and automata
+category:            Formal Languages
+description:         This provides the Language Toolkit (LTK) library
+                     and associated executables.
+                     There are three main components:
+                     .
+                     * @factorize@,
+                       which takes as input a set of finite-state automata
+                       and writes out for each one a set of constraints
+                       that approximates (or, if possible, defines) it.
+                     .
+                     * @plebby@,
+                       an interactive theorem-prover in which one can
+                       define languages via logical constraints
+                       or import finite-state automata
+                       and get information about the languages so defined.
+                     .
+                     * And the @LTK@ library,
+                       which includes the functions used by
+                       @factorize@ and @plebby@
+                       as well as several other useful tools.
+                     .
+                     This project began as a simple tool for working with
+                     finite-state automata, and has grown considerably more
+                     useful in working specifically with sub-regular languages
+                     as it has matured.
 homepage:            https://github.com/vvulpes0/Language-Toolkit-2
 license:             MIT
 license-file:        LICENSE
 author:              Dakotah Lambert, James Rogers
 copyright:           (c) 2014-2019 Dakotah Lambert
 maintainer:          49007668+vvulpes0@users.noreply.github.com
+tested-with:         GHC ==8.6.3
 build-type:          Simple
 extra-source-files:  man/dotify.1
 
--- Extra files to be distributed with the package, such as examples or a
--- README.
--- extra-source-files:  dotify.1
+source-repository head
+  type:      git
+  location:  git://github.com/vvulpes0/Language-Toolkit-2.git
+  branch:    develop
 
 library
   -- Modules exported by the library.
