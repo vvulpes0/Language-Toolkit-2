@@ -1,7 +1,5 @@
 *.hi
 *.o
-accepts
-slFactorize
 .cabal-sandbox
 cabal.sandbox.config
 dist
