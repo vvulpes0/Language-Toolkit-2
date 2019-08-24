@@ -1,28 +1,27 @@
 > {-# OPTIONS_HADDOCK hide,show-extensions #-}
 > {-|
-> Module : Jeff
+> Module : LTK.Porters.Jeff
 > Copyright : (c) 2016-2018 Dakotah Lambert
 > LICENSE : BSD-style, see LICENSE
 > 
 > This module provides methods to convert automata to and from
 > Jeff's format.
 > -}
-> module Jeff ( -- *Importing
->               readJeff
->             , transliterate
->             , transliterateString
->               -- *Exporting
->             , exportJeff
->             , untransliterate
->             , untransliterateString
->             ) where
+> module LTK.Porters.Jeff ( -- *Importing
+>                           readJeff
+>                         , transliterate
+>                         , transliterateString
+>                         -- *Exporting
+>                         , exportJeff
+>                         , untransliterate
+>                         , untransliterateString
+>                         ) where
 
-> import FSA
+> import LTK.FSA
 > import Control.Applicative (Applicative(..))
 > import Data.Functor ((<$>))
 > import Data.Set (Set)
 > import qualified Data.Set as Set
-> import System.IO
 
 
 Reading from Jeff's format
@@ -75,10 +74,11 @@ Then use that to parse a string in Jeff format and generate an FSA
 > readJeffWithoutRelabeling :: String -> Either String (FSA String String)
 > readJeffWithoutRelabeling s 
 >     | length initialParse /= 3  = parseFail "FSA" s "Not a Jeff"
->     | otherwise                 = FSA <$> alphabet <*> trans <*> inits <*> fins <*> Right False
+>     | otherwise                 = FSA <$> alpha <*>
+>                                   trans <*> inits <*> fins <*> Right False
 >     where initialParse  = (tmap (keep (not . null) . splitOn '\n')
 >                           . splitOn '!') s
->           alphabet      = unsymbols <$> tmap edgeLabel <$> trans
+>           alpha         = unsymbols <$> tmap edgeLabel <$> trans
 >           trans         = readJeffTransitionList $ initialParse!!1
 >           inits         = readJeffStateList $ initialParse!!0
 >           fins          = readJeffStateList $ initialParse!!2
@@ -179,7 +179,7 @@ Writing to Jeff's format
 
 > commaSeparateList :: (Collapsible c, Show b) => c b -> String
 > commaSeparateList xs
->     | size xs == 0  = ""
->     | size xs == 1  = show x
->     | otherwise     = show x ++ ", " ++ commaSeparateList xs'
+>     | zsize xs       = ""
+>     | isize xs == 1  = show x
+>     | otherwise      = show x ++ ", " ++ commaSeparateList xs'
 >     where (x, xs') = choose xs

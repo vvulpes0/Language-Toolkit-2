@@ -1,7 +1,16 @@
-> module Tiers (tier, project) where
+> {-|
+> Module:     LTK.Tiers
+> Copyright:  (c) 2019 Dakotah Lambert
+> Licence:    BSD-style, see LICENSE
 
-> import FSA
-> import Containers
+> If an FSA defines a stringset that is the preprojection
+> of some other stringset over a smaller alphabet,
+> the functions in this module can determine what that alphabet is
+> and return the appropriate projective automaton.
+> -}
+> module LTK.Tiers (tier, project) where
+
+> import LTK.FSA
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 

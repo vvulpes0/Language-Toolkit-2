@@ -1,36 +1,47 @@
-> module Factors ( -- *Constructions
->                  required
->                , forbidden
->                , buildLiteral
->                , build
->                , makeConstraint
->                  -- *Logical Expressions
->                , Factor(..)
->                , Literal(..)
->                , Disjunction(..)
->                , Conjunction(..)
->                  -- *Symbols
->                  -- |@w/n/s/x/@ is a syllable whose weight is level \(n\)
->                  -- and whose stress is level \(s\).
->                  -- Stress ranges from 0-2,
->                  -- while weight is in theory not limited.
->                  -- Here, only weights up to level 4 are defined.
->                  -- For both weight and stress,
->                  -- \"plus\" means \"greater than zero\".
->                  -- For stress, \"minus\" means \"less than two\".
->                  -- Arbitrary weight is indicated by using @x@ for \(n\).
->                  -- Arbitrary stress is indicated by omission of @s/x/@.
->                , defaultAlphabet
->                , w0s0, w0s1, w0s2, w0plus, w0minus, w0
->                , w1s0, w1s1, w1s2, w1plus, w1minus, w1
->                , w2s0, w2s1, w2s2, w2plus, w2minus, w2
->                , w3s0, w3s1, w3s2, w3plus, w3minus, w3
->                , w4s0, w4s1, w4s2, w4plus, w4minus, w4
->                , wpluss0, wpluss1, wpluss2, wplusminus, wplus
->                , wxs0, wxs1, wxs2, wxplus, wxminus, wx
->                ) where
+> {-|
+> Module:    LTK.Factors
+> Copyright: (c) 2017-2019 Dakotah Lambert
+> License:   BSD-Style, see LICENSE
 
-> import FSA
+> This module provides a means to define
+> positive and negative factors
+> over the adjacency or precedence relations,
+> as well as unions and intersections thereof.
+> -}
+
+> module LTK.Factors ( -- *Constructions
+>                      required
+>                    , forbidden
+>                    , buildLiteral
+>                    , build
+>                    , makeConstraint
+>                    -- *Logical Expressions
+>                    , Factor(..)
+>                    , Literal(..)
+>                    , Disjunction(..)
+>                    , Conjunction(..)
+>                    -- *Symbols
+>                    -- |@w/n/s/x/@ is a syllable whose weight is level \(n\)
+>                    -- and whose stress is level \(s\).
+>                    -- Stress ranges from 0-2,
+>                    -- while weight is in theory not limited.
+>                    -- Here, only weights up to level 4 are defined.
+>                    -- For both weight and stress,
+>                    -- \"plus\" means \"greater than zero\".
+>                    -- For stress, \"minus\" means \"less than two\".
+>                    -- Arbitrary weight is indicated by using @x@ for \(n\).
+>                    -- Arbitrary stress is indicated by omission of @s/x/@.
+>                    , defaultAlphabet
+>                    , w0s0, w0s1, w0s2, w0plus, w0minus, w0
+>                    , w1s0, w1s1, w1s2, w1plus, w1minus, w1
+>                    , w2s0, w2s1, w2s2, w2plus, w2minus, w2
+>                    , w3s0, w3s1, w3s2, w3plus, w3minus, w3
+>                    , w4s0, w4s1, w4s2, w4plus, w4minus, w4
+>                    , wpluss0, wpluss1, wpluss2, wplusplus, wplusminus, wplus
+>                    , wxs0, wxs1, wxs2, wxplus, wxminus, wx
+>                    ) where
+
+> import LTK.FSA
 
 > import Control.DeepSeq (NFData)
 > import Data.Set (Set)
@@ -117,66 +128,102 @@
 > -- and form a 'Conjunction' of the results.
 > makeConstraint :: (Ord e) => [[Literal e]] -> Conjunction e
 > makeConstraint = Conjunction . Set.fromList . tmap (Disjunction . Set.fromList)
-> makeConstraintList :: (Ord e) => [[[Literal e]]] -> Set (Conjunction e)
-> makeConstraintList = Set.fromList . tmap makeConstraint
-> buildFromList :: (Enum n, NFData n, Ord n, NFData e, Ord e) =>
->                  Set e -> [[[Literal e]]] -> FSA n e
-> buildFromList alpha = build alpha . makeConstraintList
-
 > w0s0, w0s1, w0s2, w1s0, w1s1, w1s2 :: Set String
 > w2s0, w2s1, w2s2, w3s0, w3s1, w3s2 :: Set String
 > w4s0, w4s1, w4s2, wxs0, wxs1, wxs2 :: Set String
+> -- |Light, unstressed
 > w0s0 = singleton "L"
+> -- |Light, secondary stress
 > w0s1 = singleton "L`"
+> -- |Light, primary stress
 > w0s2 = singleton "L'"
+> -- |Heavy, unstressed
 > w1s0 = singleton "H"
+> -- |Heavy, secondary stress
 > w1s1 = singleton "H`"
+> -- |Heavy, primary stress
 > w1s2 = singleton "H'"
+> -- |Superheavy, unstressed
 > w2s0 = singleton "S"
+> -- |Superheavy, secondary stress
 > w2s1 = singleton "S`"
+> -- |Superheavy, primary stress
 > w2s2 = singleton "S'"
+> -- |Weight 3, unstressed
 > w3s0 = singleton "X"
+> -- |Weight 3, secondary stress
 > w3s1 = singleton "X`"
+> -- |Weight 3, primary stress
 > w3s2 = singleton "X'"
+> -- |Weight 4, unstressed
 > w4s0 = singleton "Y"
+> -- |Weight 4, secondary stress
 > w4s1 = singleton "Y`"
+> -- |Weight 5, primary stress
 > w4s2 = singleton "Y'"
+> -- |Unstressed
 > wxs0 = unionAll [w0s0, w1s0, w2s0, w3s0, w4s0]
+> -- |Secondary stress
 > wxs1 = unionAll [w0s1, w1s1, w2s1, w3s1, w4s1]
+> -- |Primary stress
 > wxs2 = unionAll [w0s2, w1s2, w2s2, w3s2, w4s2]
 
 > w0, w1, w2, w3, w4, wx, defaultAlphabet :: Set String
+> -- |Light, any stress
 > w0 = unionAll [w0s0, w0s1, w0s2]
+> -- |Heavy, any stress
 > w1 = unionAll [w1s0, w1s1, w1s2]
+> -- |Superheavy, any stress
 > w2 = unionAll [w2s0, w2s1, w2s2]
+> -- |Weight 3, any stress
 > w3 = unionAll [w3s0, w3s1, w3s2]
+> -- |Weight 4, any stress
 > w4 = unionAll [w4s0, w4s1, w4s2]
+> -- |Any weight or stress
 > wx = unionAll [w0, w1, w2, w3, w4]
 > -- |Equivalent to 'wx'.
 > defaultAlphabet = wx
 
 > w0plus, w1plus, w2plus, w3plus, w4plus, wxplus :: Set String
+> -- |Light, some stress
 > w0plus = unionAll [w0s1, w0s2]
+> -- |Heavy, some stress
 > w1plus = unionAll [w1s1, w1s2]
+> -- |Superheavy, some stress
 > w2plus = unionAll [w2s1, w2s2]
+> -- |Weight 3, some stress
 > w3plus = unionAll [w3s1, w3s2]
+> -- |Weight 4, some stress
 > w4plus = unionAll [w4s1, w4s2]
+> -- |Some stress
 > wxplus = unionAll [w0plus, w1plus, w2plus, w3plus, w4plus]
 
 > w0minus, w1minus, w2minus, w3minus, w4minus, wxminus :: Set String
+> -- |Light, non-primary stress
 > w0minus = unionAll [w0s0, w0s1]
+> -- |Heavy, non-primary stress
 > w1minus = unionAll [w1s0, w1s1]
+> -- |Superheavy, non-primary stress
 > w2minus = unionAll [w2s0, w2s1]
+> -- |Weight 3, non-primary stress
 > w3minus = unionAll [w3s0, w3s1]
+> -- |Weight 4, non-primary stress
 > w4minus = unionAll [w4s0, w4s1]
+> -- |Non-primary stress
 > wxminus = unionAll [w0minus, w1minus, w2minus, w3minus, w4minus]
 
 > wplus, wpluss0, wpluss1, wpluss2, wplusplus, wplusminus :: Set String
+> -- |Non-light, any stress
 > wplus = wx `difference` w0
+> -- |Non-light, unstressed
 > wpluss0 = wxs0 `difference` w0
+> -- |Non-light, secondary stress
 > wpluss1 = wxs1 `difference` w0
+> -- |Non-light, primary stress
 > wpluss2 = wxs2 `difference` w0
+> -- |Non-light, some-stress
 > wplusplus = wxplus `difference` w0
+> -- |Non-light, non-primary stress
 > wplusminus = wxminus `difference` w0
 
 > word :: (Enum a, Ord a, Ord b) =>
@@ -192,7 +239,7 @@
 >                                 FSA alpha trans
 >                                 (singleton (State 0))
 >                                 fin False
->     where tagged         = zip symseq [0..]
+>     where tagged         = zip symseq [0 :: Integer ..]
 >           trans'         = unionAll $
 >                            tmap
 >                            (\(symset, st) ->
@@ -258,7 +305,7 @@ negative).  Making these from NFAs is cheaper, it seems.
 >                                       then id
 >                                       else complementDeterministic) $
 >                                      determinize fsa
->     where tagged = zip symseq [0..]
+>     where tagged = zip symseq [0 :: Integer ..]
 >           trans'         = unionAll $
 >                            tmap
 >                            (\(symset, st) ->
@@ -281,7 +328,7 @@ negative).  Making these from NFAs is cheaper, it seems.
 >                                  then id
 >                                  else complementDeterministic) $
 >                                 determinize fsa
->     where tagged = zip symseq [0..]
+>     where tagged = zip symseq [0 :: Integer ..]
 >           trans'         = unionAll $
 >                            tmap
 >                            (\(symset, st) ->

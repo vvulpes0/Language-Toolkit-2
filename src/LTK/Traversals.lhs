@@ -1,27 +1,26 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : Traversals
-> Copyright : (c) 2017-2018 Jim Rogers and Dakotah Lambert
+> Copyright : (c) 2017-2019 Jim Rogers and Dakotah Lambert
 > License   : BSD-style, see LICENSE
 >
 > Find paths through an automaton.
 > -}
-> module Traversals ( Path(..)
->                   , word
->                   , initialsPaths
->                   , initialsNDPath
->                   , rejectingPaths
->                   , acyclicPaths
->                   , extensions
->                   , boundedCycleExtensions
->                   , nondeterministicAcyclicExtensions
->                   ) where
+> module LTK.Traversals ( Path(..)
+>                       , word
+>                       , initialsPaths
+>                       , initialsNDPath
+>                       , rejectingPaths
+>                       , acyclicPaths
+>                       , extensions
+>                       , boundedCycleExtensions
+>                       , nondeterministicAcyclicExtensions
+>                       ) where
 
-> import FSA
+> import LTK.FSA
 > import Data.Semigroup (Semigroup(..))
 > import Data.Monoid (Monoid(..))
 > import Data.Set (Set)
-> import qualified Data.Set as Set
 
 A Path is
 * a sequence of labels in inverse order of edges in the path
@@ -96,8 +95,7 @@ path are sets.
 > nondeterministicExtend p ts
 >     | isEmpty ts  = singleton p
 >     | otherwise   = tmap (\xs ->
->                           let label     =  chooseOne (tmap edgeLabel xs)
->                               newState  =  State .
+>                           let newState  =  State .
 >                                            tmap (nodeLabel . destination) $
 >                                            keep (maybe
 >                                                  (const False)
@@ -119,16 +117,6 @@ path are sets.
 > extensions fsa p = extend p $
 >                    keep ((== endstate p) . Just . source) (transitions fsa)
 
-The non-trivial extensions of a path are extensions other than self-loops
-
-> ntExtensions :: (Ord e, Ord n) =>
->                 FSA n e -> Path n e -> Set (Path n e)
-> ntExtensions fsa p = extend p
->                      (keep (\t ->
->                             (Just (source t) == endstate p) &&
->                             (Just (destination t) /= endstate p)) $
->                       transitions fsa)
-
 Acyclic extensions of a path are extensions other than back-edges
 
 > acyclicExtensions       :: (Ord e, Ord n) =>
@@ -140,6 +128,7 @@ Acyclic extensions of a path are extensions other than back-edges
 >                                   (stateMultiset p))) $
 >                            transitions fsa)
 
+> -- |The extensions of a non-deterministic path other than back-edges
 > nondeterministicAcyclicExtensions :: (Ord e, Ord n) =>
 >                                      FSA n e -> Path (Set n) e
 >                                   -> Set (Path (Set n) e)
@@ -169,30 +158,12 @@ visited have multiplicity 0.
 >                                             (destination t)))) $
 >                                 transitions fsa)
 
-Augmented acyclic extensions are extensions other than back-edges and
-those that follow transitions that satisfy the predicate of the second
-argument.  This is primarily for finding extensions that are acyclic
-except for self-edges on singleton states, as is needed in traversing
-the powerset graph in finding free forbidden factors.
-
-> augAcExtensions :: (Ord e, Ord n) =>
->                    FSA n e ->
->                    (Transition n e -> Bool) ->
->                    Path n e ->
->                    Set (Path n e)
-> augAcExtensions fsa q p = extend p
->                           (keep (\t ->
->                                  (q t) ||
->                                  ((Just (source t) == endstate p) &&
->                                   (doesNotContain (destination t)
->                                    (stateMultiset p)))) $
->                            transitions fsa)
-
 > -- |Initial open list for traversal from initial states.
 > initialsPaths :: (Ord e, Ord n) => FSA n e -> Set (Path n e)
 > initialsPaths = tmap iPath . initials
 >     where iPath s = Path [] (Just s) (singleton s) 0
 
+> -- |Initial open list for non-deterministic traversal from initial states.
 > initialsNDPath :: (Ord e, Ord n) => FSA n e -> Path (Set n) e
 > initialsNDPath fsa = Path {
 >                        labels = empty
@@ -230,20 +201,6 @@ traversalQDFS:
 >               | qf fsa p   = insert p closed
 >               | otherwise  = closed
 
-traversalDFS fsa bound open closed
-= closed plus all (possibly trivial) extensions of paths in open
-  that are of length <= bound
-
-> traversalDFS :: (Ord e, Ord n) => FSA n e -> Integer ->
->                 Set (Path n e) -> Set (Path n e) -> Set (Path n e)
-> traversalDFS = traversalQDFS truth
-
-traversal fsa bound
-initialsPaths plus all their extensions that are of length <= bound
-
-> traversal :: (Ord e, Ord n) => FSA n e -> Integer -> Set (Path n e)
-> traversal fsa bound = traversalDFS fsa bound (initialsPaths fsa) empty
-
 acyclicPathsQ
 all paths from the initial open list that are acyclic / and are restricted to
 nodes that satisfy the given predicate
@@ -269,55 +226,6 @@ nodes that satisfy the given predicate
 > acyclicPaths :: (Ord e, Ord n) => FSA n e -> Set (Path n e)
 > acyclicPaths fsa = acyclicPathsQ truth fsa (initialsPaths fsa) empty
 
-> nondeterministicAcyclicPathsQ :: (Ord e, Ord n) =>
->                                  (FSA n e -> Path (Set n) e -> Bool) -- predicate
->                               -> FSA n e              -- graph
->                               -> Set (Path (Set n) e) -- open
->                               -> Set (Path (Set n) e) -- closed
->                               -> Set (Path (Set n) e)
-> nondeterministicAcyclicPathsQ qf fsa open closed
->     | isEmpty open = closed
->     | otherwise    = nondeterministicAcyclicPathsQ qf fsa
->                      (union ps $ nondeterministicAcyclicExtensions fsa p)
->                      addIf
->     where (p, ps) = choose open
->           addIf
->               | qf fsa p   =  insert p closed
->               | otherwise  =  closed
-
-> nondeterministicAcyclicPaths :: (Ord e, Ord n) =>
->                                 FSA n e -> Set (Path (Set n) e)
-> nondeterministicAcyclicPaths fsa = nondeterministicAcyclicPathsQ truth fsa
->                                    (singleton (initialsNDPath fsa)) empty
-
-boundedCyclePaths
-initialsPaths plus all paths that take no cycle more than bound times
-
-boundedCyclePathsQ
-all paths that take no cycle more than bound times/and are restricted to nodes
-that satisfy the given predicate
-
-> boundedCyclePathsQ :: (Ord e, Ord n) =>
->                  (FSA n e -> Path n e -> Bool) ->  -- predicate
->                  FSA n e ->                        -- graph
->                  Integer ->                        -- Bound
->                  Set (Path n e) ->                 -- open
->                  Set (Path n e) ->                 -- closed
->                  Set (Path n e)
-> boundedCyclePathsQ qf fsa bnd open closed
->     | open == empty  = closed
->     | otherwise      = boundedCyclePathsQ qf fsa bnd
->                        (union ps $ boundedCycleExtensions fsa bnd p)
->                        addIf
->     where (p, ps) = choose open
->           addIf
->               | qf fsa p   = insert p closed
->               | otherwise  = closed
-
-> boundedCyclePaths :: (Ord e, Ord n) => FSA n e -> Integer -> Set (Path n e)
-> boundedCyclePaths fsa bnd =
->     boundedCyclePathsQ truth fsa bnd (initialsPaths fsa) empty
-
 rejectingPaths fsa bound
 = all rejecting Paths of length <= bound
 
@@ -326,38 +234,4 @@ rejectingPaths fsa bound
 > rejectingPaths :: (Ord e, Ord n) => FSA n e -> Integer -> Set (Path n e)
 > rejectingPaths fsa bound = traversalQDFS rejecting
 >                            fsa bound (initialsPaths fsa) empty
->     where rejecting fsa p = doesNotContain (endstate p) . tmap Just $ finals fsa
-
-Jim thinks this does not work correctly, at least with non-total FSAs.
-He is not doing anything about that now.
-
-> traversalRejects :: Ord n => FSA n String -> Integer ->
->                     Set (Path n String) -> Set (Path n String) ->
->                     Set (Path n String)
-> traversalRejects fsa bound open closed
->     | open == empty     = closed
->     | exts == empty     = traversalRejects fsa bound ps addDead
->     | depth p >= bound  = traversalRejects fsa bound ps addLive
->     | otherwise         = traversalRejects fsa bound
->                           (union ps exts) addLive
->     where (p, ps) = choose open
->           exts = extensions fsa p
->           rejecting = doesNotContain (endstate p) . tmap Just $ finals fsa
->           addDead
->               | rejecting  = insert
->                              (Path
->                               (Symbol "*" : labels p)
->                               (endstate p)
->                               (stateMultiset p)
->                               (depth p + 1))
->                              closed
->               | otherwise  = insert
->                              (Path
->                               (Symbol "+" : labels p)
->                               (endstate p)
->                               (stateMultiset p)
->                               (depth p + 1))
->                              closed
->           addLive
->               | rejecting = insert p closed
->               | otherwise = closed
+>     where rejecting f p = doesNotContain (endstate p) . tmap Just $ finals f

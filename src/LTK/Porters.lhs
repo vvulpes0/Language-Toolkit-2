@@ -1,45 +1,46 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
-> Module : Porters
-> Copyright : (c) 2018 Dakotah Lambert
+> Module : LTK.Porters
+> Copyright : (c) 2018-2019 Dakotah Lambert
 > License   : BSD-style, see LICENSE
 > 
 > This module provides methods to convert automata to and from
 > various formats.
 > -}
 
-> module Porters ( -- *Conversions
->                  -- |In the following definitions,
->                  -- @(Type t)@ is shorthand for @(String -> t)@.
->                  from
->                , fromE
->                , to
->                  -- *Formats
->                  -- |We use types to create a bit of magic
->                  -- in order to read and write automata in
->                  -- various formats.
->                , Dot(Dot)
->                , Jeff(Jeff)
->                , Pleb(Pleb)
->                  -- *Miscellaneous
->                , formatSet
->                , transliterate
->                , transliterateString
->                , untransliterate
->                , untransliterateString
->                , Importable
->                , Exportable
->                ) where
+> module LTK.Porters ( -- *Conversions
+>                      -- |In the following definitions,
+>                      -- @(Type t)@ is shorthand for @(String -> t)@.
+>                      from
+>                    , fromE
+>                    , to
+>                    -- *Formats
+>                    -- |We use types to create a bit of magic
+>                    -- in order to read and write automata in
+>                    -- various formats.
+>                    , Type()
+>                    , Dot(Dot)
+>                    , Jeff(Jeff)
+>                    , Pleb(Pleb)
+>                    -- *Miscellaneous
+>                    , formatSet
+>                    , transliterate
+>                    , transliterateString
+>                    , untransliterate
+>                    , untransliterateString
+>                    , Importable(..)
+>                    , Exportable(..)
+>                    ) where
 
-> import FSA  (FSA, renameStates)
-> import Dot  (exportDot, formatSet)
-> import Jeff ( readJeff
->             , exportJeff
->             , transliterate
->             , transliterateString
->             , untransliterate
->             , untransliterateString)
-> import Pleb ( readPleb )
+> import LTK.FSA          (FSA, renameStates)
+> import LTK.Porters.Dot  (exportDot, formatSet)
+> import LTK.Porters.Jeff ( readJeff
+>                         , exportJeff
+>                         , transliterate
+>                         , transliterateString
+>                         , untransliterate
+>                         , untransliterateString)
+> import LTK.Porters.Pleb ( readPleb )
 
 > -- |A type that can be written from an 'FSA'.
 > class Exportable t where
@@ -64,6 +65,7 @@
 >       Type x -> FSA n e -> String
 > to ty = extract . flip asTypeOf (ty "") . fromFSA
 
+> -- |An importable or exportable format.
 > type Type t = String -> t
 
 === Instances for Jeff's format
@@ -89,6 +91,7 @@
 
 === instances for Pleb format
 
+> -- |The format defined by the (P)iecewise / (L)ocal (E)xpression (B)uilder.
 > newtype Pleb = Pleb String
 
 > instance Importable Pleb where
