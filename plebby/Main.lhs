@@ -43,6 +43,7 @@
 >                       , waitForProcess
 >                       )
 
+> main :: IO ()
 > main = runInputT defaultSettings (processLines (empty, empty, Nothing))
 
 > prompt :: String
@@ -88,15 +89,15 @@
 >                 deriving (Eq, Read, Show)
 
 > processLines :: Env -> InputT IO ()
-> processLines env = do
+> processLines e = do
 >   minput <- getInputLine prompt
 >   case minput of
 >     Nothing -> return ()
 >     Just ":quit" -> return ()
->     Just line -> lift (act env (processLine env line)) >>= processLines
+>     Just line -> lift (act e (processLine e line)) >>= processLines
 
 > processLine :: Env -> String -> Trither Command Relation Env
-> processLine d@(dict, subexprs, last) str
+> processLine d@(dict, subexprs, _) str
 >     | null str                    =  R d
 >     | not (isPrefixOf str ":")    =  R $ doStatements d str
 >     | isStartOf str ":import"     = case words str of
@@ -126,6 +127,7 @@
 >     | isStartOf str ":write"      =  case words str of
 >                                        (_:a:as) -> g ((L . Write a) <$> pe)
 >                                                    (unwords as)
+>                                        _        -> R d
 >     | otherwise                   =  doOne .
 >                                      filter (isStartOf str . fst) $
 >                                      p12 commands
@@ -134,7 +136,7 @@
 >           f (s, p)  =  g p (drop (length s) str)
 >           g p x     =  either (L . err) fst . doParse p $ tokenize x
 >           p12       =  map (\(a,b,_,_) -> (a,b))
->           p134      =  map (\(a,_,c,d) -> (a,c,d))
+>           p134      =  map (\(w,_,y,z) -> (w,y,z))
 >           commands  =  [ ( ":bindings",       pure (L Bindings)
 >                           , [], "print list of variables and their bindings")
 >                        , ( ":compile",        pure (R $ compileEnv d)
@@ -207,7 +209,7 @@
 >                              drop (length x) xs))
 
 > doCommand :: Env -> Command -> IO Env
-> doCommand e@(dict, subexprs, last) c
+> doCommand e@(dict, subexprs, ex) c
 >     = case c of
 >         Bindings -> do
 >                putStrLn "# Symbol aliases:"
@@ -287,7 +289,7 @@
 >         --       assignment statements.  This should be done differently.
 >         --
 >         RestoreUniverse -> let d' = keep ((/= "universe") . fst) dict
->                            in return . doStatements (d', subexprs, last) .
+>                            in return . doStatements (d', subexprs, ex) .
 >                               unlines . fromCollapsible $
 >                               union
 >                               (tmap
@@ -317,7 +319,7 @@
 >                              , keep ((/= name) . fst) subexprs
 >                              , if name == "it"
 >                                then Nothing
->                                else last)
+>                                else ex)
 >         Write file expr -> let aut = makeAutomaton $
 >                                      insertExpr (empty, empty, Nothing) expr
 >                            in maybe
@@ -350,19 +352,16 @@
 >           s2 = zipWith (++) s1 (p3 xs)
 >           alignr l s = take (l - length s) (cycle " ") ++ s
 >           alignl l s = take l (s ++ cycle " ")
->           alignc l s = alignl l (alignr (div (l + length s) 2) s)
 >           showArg ArgE  =  "<expr>"
 >           showArg ArgF  =  "<file>"
 >           showArg _     =  "<var>"
 >           showArgs []      =  ""
->           showArgs (x:xs)  =  " " ++ showArg x ++ showArgs' xs
+>           showArgs (y:ys)  =  " " ++ showArg y ++ showArgs' ys
 >               where showArgs' []      =  ""
->                     showArgs' (y:ys)  =  " " ++ showArg y ++ showArgs' ys
->           map1o3 f = map (\(a,b,c) -> (f a, b, c))
->           map2o3 f = map (\(a,b,c) -> (a, f b, c))
->           p1       = map (\(a,b,c) -> a)
->           p2       = map (\(a,b,c) -> b)
->           p3       = map (\(a,b,c) -> c)
+>                     showArgs' (z:zs)  =  " " ++ showArg z ++ showArgs' zs
+>           p1       = map (\(a,_,_) -> a)
+>           p2       = map (\(_,b,_) -> b)
+>           p3       = map (\(_,_,c) -> c)
 
 > doRelation :: Env -> Relation -> Maybe Bool
 > doRelation e r = case r of
@@ -424,17 +423,17 @@
 >                  , std_out = CreatePipe
 >                  , std_err = NoStream
 >                  }
->   (Just std_in, Just pipe, _, dot_ph) <- createProcess dotP
+>   (Just p_stdin, Just pipe, _, dot_ph) <- createProcess dotP
 >   hSetBinaryMode pipe True
 >   let displayP = (proc "display" []) {
 >                    std_in = UseHandle pipe
 >                  , std_out = NoStream
 >                  , std_err = NoStream
 >                  }
->   createProcess displayP
->   hPutStr std_in (to Dot fsa)
->   hClose std_in
->   waitForProcess dot_ph
+>   _ <- createProcess displayP
+>   hPutStr p_stdin (to Dot fsa)
+>   hClose p_stdin
+>   _ <- waitForProcess dot_ph
 >   return ()
 
 > isPrefixOf :: (Eq a) => [a] -> [a] -> Bool

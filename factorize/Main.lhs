@@ -17,22 +17,18 @@
 > import Control.DeepSeq (NFData, ($!!))
 > import Data.Functor ((<$>))
 > import Data.List (sortBy)
-> import Data.Ord (comparing)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 > import System.Directory (createDirectoryIfMissing, doesFileExist)
 > import System.Environment (getArgs)
 > import System.Exit (die)
-> import System.FilePath ((</>), (<.>), takeBaseName)
+> import System.FilePath ((</>), takeBaseName)
 > import System.IO ( IOMode (..)
 >                  , hGetContents
 >                  , hPutStrLn
 >                  , stderr
 >                  , withFile
 >                  )
-
-> import Debug.Trace (trace)
-> import System.IO (hFlush, stdout)
 
 > continue :: IO ()
 > continue = pure () -- do nothing; carry on
@@ -101,9 +97,6 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >     where bn = takeBaseName fp
 >           lect = takeWhile (isIn "0123456789") bn
 >           name = tr "_" " " $ dropWhile (isIn "0123456789_") bn
->           getFSA (a,_,_) = a
->           getFFs (_,b,_) = unlines $ formatForbiddenSubstrings b
->           getFQs (_,_,c) = unlines $ formatForbiddenSubsequences c
 
 
 Return type of factorization is (Strict Approximation, Costrict Approximation, X)
@@ -287,18 +280,18 @@ those sets that are known to be non-productive.
 >                        , ForbiddenSubstrings e
 >                        , ForbiddenSubsequences e
 >                        )
-> reformApproximation alphabet literals
->     | isEmpty literals  =  (totalWithAlphabet alphabet, empty, empty)
+> reformApproximation alpha literals
+>     | isEmpty literals  =  (totalWithAlphabet alpha, empty, empty)
 >     | otherwise         =
 >         ( complementDeterministic .
->           build alphabet . singleton .
+>           build alpha . singleton .
 >           makeConstraint .
 >           tmap singleton $
 >           Set.toAscList literals
 >         , collapse (insert . makeTag)
->           (empty {attestedUnits = alphabet}) substrings
+>           (empty {attestedUnits = alpha}) substrings
 >         , ForbiddenSubsequences {
->                 attestedAlphabet = alphabet
+>                 attestedAlphabet = alpha
 >               , getSubsequences  = tmap (\(Subsequence xs) -> singlify xs) $
 >                 difference factors substrings
 >               }
@@ -312,6 +305,7 @@ those sets that are known to be non-productive.
 >           makeTag (Substring xs False True)   =  Final (singlify xs)
 >           makeTag (Substring xs True False)   =  Initial (singlify xs)
 >           makeTag (Substring xs True True)    =  Word (singlify xs)
+>           makeTag (Subsequence _)             =  error "No subsequences here"
 
 
 Formatting output
@@ -358,7 +352,6 @@ Formatting output
 >                       ]
 >     where formatBool True = "yes"
 >           formatBool _    = "no"
->           f a = trace a a
 
 > formatForbiddenSubsequences :: ForbiddenSubsequences String -> [String]
 > formatForbiddenSubsequences = formatSequences . getSubsequences
@@ -387,8 +380,8 @@ Formatting output
 
 > factorSort :: [String] -> [String] -> Ordering
 > factorSort x y
->     | size x < size y = LT
->     | size x > size y = GT
+>     | isize x < isize y = LT
+>     | isize x > isize y = GT
 >     | otherwise       = compare
 >                         (tmap untransliterateString x)
 >                         (tmap untransliterateString y)

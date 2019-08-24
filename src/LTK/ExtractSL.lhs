@@ -286,10 +286,6 @@ type of a singleton set.
 >                       Set (Path n e) -> Set [Symbol e]
 > factorsFromPaths = tmap labels
 
-> -- a tractable version of unsymbol
-> emancipate :: (Symbol e) -> e
-> emancipate (Symbol x) = x
-
 \begin{itemize}
 \item Attested units are alphabet elements that actually occur on a productive  
   path of the FSA.  Since the FSA is normalized (by precondition) these are  
@@ -316,7 +312,7 @@ type of a singleton set.
 > forbiddenSubstringsWithAlphabet alph fsa =
 >     ForbiddenSubstrings aUns fUns fWds fIns fFrs fFis
 >         where
->           aUns = tmap (emancipate . edgeLabel) (transitions fsa)
+>           aUns = unsymbols . tmap edgeLabel $ transitions fsa
 >           fUns = alph `difference` aUns
 >           fPs = forbiddenNDPathsWithAlphabet alph fsa
 >           fInSym = factorsFromPaths (initialPaths fPs)

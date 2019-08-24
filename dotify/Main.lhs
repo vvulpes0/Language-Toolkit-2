@@ -6,7 +6,7 @@
 > import System.Console.GetOpt
 > import System.Environment (getArgs)
 > import System.Exit (exitFailure)
-> import System.IO (Handle, IOMode(ReadMode, WriteMode),
+> import System.IO (IOMode(ReadMode, WriteMode),
 >                   hFlush, hGetContents, hPutStr, stdin, stdout, withFile)
 
 > import Data.Functor ((<$>))
@@ -18,6 +18,7 @@
 >     , optOutput        :: Maybe FilePath
 >     }
 
+> main :: IO ()
 > main = uncurry act =<< compilerOpts =<< getArgs
 
 > act :: Options -> [String] -> IO ()
@@ -46,11 +47,13 @@
 > output file s = maybe ($ stdout) (\f -> withFile f WriteMode) file $ \h ->
 >                 hPutStr h s >> hFlush h
 
+> usageHeader :: String
 > usageHeader = "Usage: dotify [OPTION...] [file]"
 
 > printVersion :: IO ()
 > printVersion = putStrLn "Version 1.1"
-> 
+
+> defaultOptions :: Options
 > defaultOptions = Options
 >                  { optShowVersion   = False
 >                  , optShowUsage     = False
@@ -87,4 +90,5 @@
 >       (_, _, errs) -> ioError . userError $
 >                       concat errs ++ usageInfo usageHeader options
 
+> compactString :: String -> String
 > compactString = flip difference "ws" . tr "." "/" . untransliterateString
