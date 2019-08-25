@@ -1,0 +1,351 @@
+.\" The version string should track the overall package version
+.TH PLEBBY 1 "2019-08-24" "Version 0.1" "Language Toolkit"
+.SH NAME
+plebby \- Piecewise / Local Expression Builder Interpreter
+.SH SYNOPSIS
+.B plebby
+.SH DESCRIPTION
+The interactive theorem-prover reads and evaluates single-line
+.BR pleb (5)
+statements.
+Additionally, it provides various commands that
+one can use to explore and interact with languages.
+.SS Interpreter Basics
+.TP
+.B :quit
+Exit the interpreter.
+.
+.TP
+.B :help
+Print an alphabetical list of commands
+with brief descriptions.
+.
+.SS Saving and Loading
+.B :savestate
+.RI < file >
+.RS
+Write the current state to
+.RI < file >.
+.RE
+.
+.PP
+.B :write
+.RI < file >
+.RI < expr >
+.RS
+Write a binary form of
+.RI < expr >
+to
+.RI < file >.
+.RE
+.
+.PP
+.B :loadstate
+.RI < file >
+.RS
+Restore a state previously written by
+.B :savestate
+from
+.RI < file >.
+.RE
+.
+.PP
+.B :readBin
+.RI < file >
+.RS
+Read a binary format expression from
+.RI < file >
+and store the result in the special variable
+.BR it .
+.RE
+.
+.PP
+.B :readJeff
+.RI < file >
+.RS
+Read an automaton file in Jeff format from
+.RI < file >
+and store the result in the special variable
+.BR it .
+This will never result in an alphabet-agnostic constraint automaton.
+In other words, adding to the alphabet has no effect on whether a
+word is accepted by the resulting automaton,
+because it is always in ground form.
+.RE
+.
+.PP
+.B :read
+.RI < file >
+.RS
+Read
+.RI < file >
+as a
+.BR pleb (5)
+program, assimilating all bindings.
+If there are any bare expressions,
+the last one is assigned to the special variable
+.BR it .
+.RE
+.
+.PP
+.B :import
+.RI < file >
+.RS
+Read
+.RI < file >
+one line at a time as if its contents had been typed into the interpreter.
+Specifically this means that each statement must be
+entirely on one line,
+and some lines may be interpreter commands (including
+.BR :import ).
+.RE
+.
+.SS Determining the Class of an Expression
+.B :isPT
+.RI < expr >
+.RS
+Determine whether
+.RI < expr >
+represents a Piecewise Testable stringset
+in the current
+.BR universe .
+.RE
+.
+.PP
+.B :isSL
+.RI < expr >
+.RS
+Determine whether
+.RI < expr >
+represents a Strictly Local stringset
+in the current
+.BR universe .
+.RE
+.
+.PP
+.B :isSP
+.RI < expr >
+.RS
+Determine whether
+.RI < expr >
+represents a Strictly Piecewise stringset
+in the current
+.BR universe .
+.RE
+.
+.PP
+.B :isTSL
+.RI < expr >
+.RS
+Determine whether
+.RI < expr >
+represents a Tier-Based Strictly Local stringset
+in the current
+.BR universe .
+.RE
+.
+.SS Comparing Expressions
+.B :strict-subset
+.RI < expr >
+.RI < expr >
+.RS
+Determine whether the first
+.RI < expr >
+is a proper subset of the second
+in the current
+.BR universe .
+.RE
+.
+.PP
+.B :subset
+.RI < expr >
+.RI < expr >
+.RS
+Determine whether the first
+.RI < expr >
+is a (not necessarily proper) subset of the second
+in the current
+.BR universe .
+.RE
+.
+.PP
+.B :equal
+.RI < expr >
+.RI < expr >
+.RS
+Determine whether the first
+.RI < expr >
+is equal to the second
+in the current
+.BR universe ,
+i.e. each is a subset of the other.
+.RE
+.
+.PP
+.B :implies
+.RI < expr >
+.RI < expr >
+.RS
+Determine whether the first
+.RI < expr >
+logically implies the second
+in the current
+.BR universe .
+This is equivalent to
+.BR :subset .
+.RE
+.
+.SS Graphical Output
+All commands that display graphical output
+require the
+.B dot
+and
+.B display
+programs accessible on
+.RI ${ PATH },
+where
+.B dot
+is GraphViz-compatible and
+.B display
+can accept a PNG file over the standard input and display it appropriately.
+ImageMagick, for example, contains such a
+.B display
+program.
+.
+.PP
+.B :display
+.RI < expr >
+.RS
+Show a normal-form automaton representation of
+.RI < expr >
+graphically.
+.RE
+.
+.PP
+.B :psg
+.RI < expr >
+.RS
+Show the powerset graph of a normal-form automaton representation of
+.RI < expr >
+graphically.
+.RE
+.
+.PP
+.B :synmon
+.RI < expr >
+.RS
+Show the syntactic monoid associated with a
+normal-form automaton representation of
+.RI < expr >
+graphically.
+.RE
+.
+.SS Generating Dot Files Without Displaying Them
+.B :dot
+.RI < expr >
+.RS
+Print a Dot file for a normal-form automaton representation of
+.RI < expr >.
+.RE
+.
+.PP
+.B :dot-psg
+.RI < expr >
+.RS
+Print a Dot file for the powerset graph of
+a normal-form automaton representation of
+.RI < expr >.
+.RE
+.
+.PP
+.B :dot-synmon
+.RI < expr >
+.RS
+Print a Dot file for the syntactic monoid associated with
+a normal-form automaton representation of
+.RI < expr >.
+.RE
+.
+.SS Operations on the Environment
+.TP
+.B :bindings
+Print a list of currently-bound variables and their bindings.
+Because expression variables have large representations,
+these representations are omitted from this listing
+but can be displayed individually with
+.BR :show .
+.
+.PP
+.B :show
+.RI < var >
+.RS
+Print the current binding of
+.RI < var >,
+if any, or a message indicating that it is not bound.
+.RE
+.
+.PP
+.B :unset
+.RI < var >
+.RS
+Remove any binding for
+.RI < var >
+from the current environment.
+.RE
+.
+.TP
+.B :reset
+Remove all bindings from the current environment.
+.
+.TP
+.B :restore-universe
+Set the special variable
+.B universe
+to the symbol set that contains all and only
+those symbols used in other bindings
+in the current environment.
+.
+.TP
+.B :compile
+Convert all saved expressions into automata,
+retaining the metadata that allows the expression
+to be alphabet-agnostic.
+.
+.TP
+.B :ground
+Convert all saved expressions into automata,
+discarding the metadata that allows the expression
+to be alphabet-agnostic.
+.
+.TP
+.B :restrict
+Remove all symbols that are not in the current
+.B universe
+from all current bindings.
+This may result in an empty symbol set,
+which cannot be assigned directly.
+Non-satisfiable factors are uniformly replaced by
+.B ~<>
+for simplicity.
+.SH OPTIONS
+None.
+.SH "EXIT STATUS"
+.TP
+.B 0
+Successful program execution
+.TP
+.B ">0"
+An error occurred.
+.SH FILES
+.TP
+~/.haskeline
+Configuration file for the line editor.
+.SH BUGS
+Lines that cannot be parsed are ignored,
+but generally no warnings are emitted.
+.SH "SEE ALSO"
+.BR display (1),
+.BR dot (1),
+.BR pleb (5)
+.PP
+https://github.com/judah/haskeline/wiki/UserPreferences
