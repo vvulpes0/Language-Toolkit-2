@@ -38,6 +38,7 @@
 > import Data.Char (isLetter, isSpace)
 > import Data.Foldable (asum)
 > import Data.Functor ((<$>))
+> import Data.Monoid (mconcat)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 

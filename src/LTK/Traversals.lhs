@@ -18,7 +18,14 @@
 >                       ) where
 
 > import LTK.FSA
+
+#if MIN_VERSION_base(4,9,0)
+The base-4.9 library from GHC 8.x added Semigroup to complement Monoid.
+
 > import Data.Semigroup (Semigroup, (<>))
+
+#endif
+
 > import Data.Monoid (Monoid, mempty, mappend)
 > import Data.Set (Set)
 
@@ -62,17 +69,22 @@ In order to have a Multiset of Path, Path must be Ord:
 >              (e2, l2, d2) =
 >                  (endstate p2, labels p2, depth p2)
 
+#if MIN_VERSION_base(4,9,0)
+Semigroup instance to satisfy base-4.9
+
 > instance (Ord n) => Semigroup (Path n e) where
->     Path xs1 q1 qs1 d1 <> Path xs2 q2 qs2 d2
+>     (<>) = mappend
+
+#endif
+
+> instance (Ord n) => Monoid (Path n e) where
+>     mempty = Path [] Nothing empty 0
+>     mappend (Path xs1 q1 qs1 d1) (Path xs2 q2 qs2 d2)
 >         = Path
 >           (xs1 ++ xs2)
 >           (maybe id (const . Just) q1 q2)
 >           (qs1 `union` qs2)
 >           (d1 + d2)
-
-> instance (Ord n) => Monoid (Path n e) where
->     mempty = Path [] Nothing empty 0
->     mappend = (<>)
 
 The extensions of a path p are paths extending p by a single edge
 

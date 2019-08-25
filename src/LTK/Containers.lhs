@@ -49,7 +49,13 @@
 >                       , tr
 >                       ) where
 
+#if MIN_VERSION_base(4,9,0)
+The base-4.9 library from GHC 8.x added Semigroup to complement Monoid.
+
 > import safe Data.Semigroup (Semigroup, (<>))
+
+#endif
+
 > import safe Data.Monoid (Monoid, mempty, mappend)
 > import safe Data.Set (Set)
 > import safe qualified Data.Set as Set
@@ -373,12 +379,17 @@ lookup-time logarithmic in the number of distinct elements.
 >               ys' = Set.toAscList ys
 >               zs  = differenceSortedMultis xs' ys'
 
+#if MIN_VERSION_base(4,9,0)
+Semigroup instance to satisfy base-4.9
+
 > instance Ord a => Semigroup (Multiset a) where
->     (<>) = union
+>     (<>) = mappend
+
+#endif
 
 > instance Ord a => Monoid (Multiset a) where
 >     mempty = empty
->     mappend = (<>)
+>     mappend = union
 
 > instance Show a => Show (Multiset a) where
 >     showsPrec p m = showParen (p > 10) $

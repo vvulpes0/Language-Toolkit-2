@@ -23,7 +23,7 @@
 > import Control.Applicative ((<*>), pure)
 > import Control.Monad.Trans.Class ( lift )
 > import Data.Char (isSpace, toLower)
-> import Data.Functor ( (<$>) )
+> import Data.Functor ((<$>))
 > import System.Console.Haskeline ( InputT
 >                                 , defaultSettings
 >                                 , getInputLine
@@ -36,7 +36,21 @@
 >                  , hSetBinaryMode
 >                  , stderr
 >                  )
+
+#if MIN_VERSION_base(4,4,0)
+
 > import System.IO.Error ( catchIOError )
+
+# else
+Older versions of base used catch instead of catchIOError.
+The types are consistent, so it is enough to define a synonym here.
+
+> import System.IO.Error ( IOError, catch )
+> catchIOError :: IO a -> (IOError -> IO a) -> IO a
+> catchIOError = catch
+
+# endif
+
 > import System.Process ( CreateProcess(std_err, std_in, std_out)
 >                       , StdStream(CreatePipe, UseHandle)
 >                       , createProcess

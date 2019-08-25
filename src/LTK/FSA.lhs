@@ -73,8 +73,16 @@
 > import Control.Parallel (par, pseq)
 
 > import Control.Applicative (Applicative, pure, (<*>))
-> import Data.Semigroup (Semigroup, (<>))
-> import Data.Monoid (Monoid, mempty, mappend)
+> import Data.Functor ((<$>))
+
+#if MIN_VERSION_base(4,9,0)
+The base-4.9 library from GHC 8.x added Semigroup to complement Monoid.
+
+> import safe Data.Semigroup (Semigroup, (<>))
+
+#endif
+
+> import Data.Monoid (Monoid, mempty, mappend, mconcat)
 
 
 Data Structures
@@ -259,12 +267,17 @@ State
 >     return   =  pure
 >     a >>= f  =  f $ nodeLabel a
 
+#if MIN_VERSION_base(4,9,0)
+Semigroup instance to satisfy base-4.9
+
 > instance (Semigroup n) => Semigroup (State n) where
 >     (<>) = fmap . nodeLabel . fmap (<>)
 
-> instance (Semigroup n, Monoid n) => Monoid (State n) where
+#endif
+
+> instance (Monoid n) => Monoid (State n) where
 >     mempty   =  State mempty
->     mappend  =  (<>)
+>     mappend  =  fmap . nodeLabel . fmap mappend
 
 > instance (NFData n) => NFData (State n) where
 >     rnf (State n) = rnf n
@@ -354,12 +367,17 @@ and final states.
 
 Here we consider FSAs to be Semigroups (and Monoids) under concatenation
 
+#if MIN_VERSION_base(4,9,0)
+Semigroup instance to satisfy base-4.9
+
 > instance (Enum n, Ord n, Ord e) => Semigroup (FSA n e) where
->     (<>) = apply autConcatenation
+>     (<>) = mappend
+
+#endif
 
 > instance (Enum n, Ord n, Ord e) => Monoid (FSA n e) where
 >     mempty   =  singletonLanguage empty
->     mappend  =  (<>)
+>     mappend  =  apply autConcatenation
 
 > apply :: (Ord e, Ord n1, Ord n2, Enum n2) =>
 >          (a -> b -> FSA n1 e) -> a -> b -> FSA n2 e
