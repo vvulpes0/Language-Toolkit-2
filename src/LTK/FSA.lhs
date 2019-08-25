@@ -990,21 +990,19 @@ and minimization require DFAs as input.
 >           buildTransitions' q = Set.mapMonotonic (\a -> buildTransition a q)
 >                                 (alphabet f)
 >           buildTransitions = collapse (union . buildTransitions') empty
->           trans'' = until
->                      (\(_, b, c) -> isize b == isize c)
->                      (\(a, b, c) ->
->                       let d = buildTransitions (difference c b) in
->                       (union a d, c, union c $ tmap (\(_, _, z) -> z) d))
->                      (empty, empty, singleton start)
+>           (trans',qs,_) = until
+>                           (\(_, b, c) -> isize b == isize c)
+>                           (\(a, b, c) ->
+>                                let d = buildTransitions (difference c b)
+>                                in (union a d
+>                                   , c
+>                                   , union c $ tmap (\(_, _, z) -> z) d))
+>                           (empty, empty, singleton start)
 >           makeRealTransition (a, b, c) = Transition (Symbol a)
 >                                          (metaFlip b)
 >                                          (metaFlip c)
->           trans' = let (a, _, _) = trans'' in a
 >           trans = Set.mapMonotonic makeRealTransition trans'
->           fin = Set.mapMonotonic metaFlip
->                 (keep
->                  isFinal
->                  (tmap (\(_, x, _) -> x) trans'))
+>           fin = Set.mapMonotonic metaFlip $ keep isFinal qs
 
 > -- |Returns a deterministic automaton representing the same
 > -- stringset as the potentially nondeterministic input.

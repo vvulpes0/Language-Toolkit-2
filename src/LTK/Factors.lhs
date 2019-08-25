@@ -228,7 +228,7 @@
 
 > word :: (Enum a, Ord a, Ord b) =>
 >              Bool -> Set b -> [Set b] -> FSA a b
-> word True alpha []            = singletonWithAlphabet alpha []
+> word True  alpha []           = singletonWithAlphabet alpha []
 > word False alpha []           = complementDeterministic $
 >                                 singletonWithAlphabet alpha []
 > word isPositive alpha symseq  = renameStates .
@@ -261,8 +261,8 @@
 
 > initialLocal :: (Enum a, Ord a, Ord b) =>
 >                 Bool -> Set b -> [Set b] -> FSA a b
-> initialLocal _ alpha [] = complementDeterministic $
->                           emptyWithAlphabet alpha
+> initialLocal True  a [] = complementDeterministic $ initialLocal False a []
+> initialLocal False a [] = emptyWithAlphabet a
 > initialLocal isPositive alpha symseq = FSA
 >                                        alpha
 >                                        trans
@@ -298,8 +298,8 @@ negative).  Making these from NFAs is cheaper, it seems.
 
 > finalLocal :: (Enum a, Ord a, Ord b) =>
 >                 Bool -> Set b -> [Set b] -> FSA a b
-> finalLocal _ alpha [] = complementDeterministic $
->                         emptyWithAlphabet alpha
+> finalLocal True  a [] = complementDeterministic $ finalLocal False a []
+> finalLocal False a [] = emptyWithAlphabet a
 > finalLocal isPositive alpha symseq = renameStates .
 >                                      (if isPositive
 >                                       then id
@@ -321,8 +321,8 @@ negative).  Making these from NFAs is cheaper, it seems.
 
 > local :: (Enum a, Ord a, Ord b) =>
 >                 Bool -> Set b -> [Set b] -> FSA a b
-> local _ alpha [] = complementDeterministic $
->                    emptyWithAlphabet alpha
+> local True  alpha [] = complementDeterministic $ local False alpha []
+> local False alpha [] = emptyWithAlphabet alpha
 > local isPositive alpha symseq = renameStates .
 >                                 (if isPositive
 >                                  then id
