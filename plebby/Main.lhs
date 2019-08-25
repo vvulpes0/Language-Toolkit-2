@@ -30,6 +30,7 @@
 >                                 , runInputT
 >                                 )
 > import System.IO ( hClose
+>                  , hGetContents
 >                  , hPutStr
 >                  , hPutStrLn
 >                  , hSetBinaryMode
@@ -37,7 +38,7 @@
 >                  )
 > import System.IO.Error ( catchIOError )
 > import System.Process ( CreateProcess(std_err, std_in, std_out)
->                       , StdStream(CreatePipe, NoStream, UseHandle)
+>                       , StdStream(CreatePipe, UseHandle)
 >                       , createProcess
 >                       , proc
 >                       , waitForProcess
@@ -421,16 +422,19 @@
 >   let dotP     = (proc "dot" ["-Tpng"]) {
 >                    std_in = CreatePipe
 >                  , std_out = CreatePipe
->                  , std_err = NoStream
+>                  , std_err = CreatePipe
 >                  }
->   (Just p_stdin, Just pipe, _, dot_ph) <- createProcess dotP
+>   (Just p_stdin, Just pipe, Just p_stderr, dot_ph) <- createProcess dotP
+>   _ <- hGetContents p_stderr
 >   hSetBinaryMode pipe True
 >   let displayP = (proc "display" []) {
 >                    std_in = UseHandle pipe
->                  , std_out = NoStream
->                  , std_err = NoStream
+>                  , std_out = CreatePipe
+>                  , std_err = CreatePipe
 >                  }
->   _ <- createProcess displayP
+>   (_, Just d_stdout, Just d_stderr, _)  <- createProcess displayP
+>   _ <- hGetContents d_stdout
+>   _ <- hGetContents d_stderr
 >   hPutStr p_stdin (to Dot fsa)
 >   hClose p_stdin
 >   _ <- waitForProcess dot_ph
