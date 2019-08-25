@@ -1357,14 +1357,22 @@ is not checked.
 > extract :: (Ord a, Ord b) => (a -> b) -> b -> Set a -> Set a
 > extract f a = extractRange f a a
 
+#if MIN_VERSION_containers(0,5,8)
+From containers-0.5.8, a range can be extracted from a Set in
+guaranteed log-time.
+
+> extractRange :: (Ord a, Ord b) => (a -> b) -> b -> b -> Set a -> Set a
+> extractRange f m n = Set.takeWhileAntitone ((<= n) . f) .
+>                      Set.dropWhileAntitone ((< m) . f)
+
+#else
+If we are using an older version of the containers library
+that doesn't contain the necessary functions, we can make do
+with a variant that is at least still faster than filter.
+
 > extractRange :: (Ord a, Ord b) => (a -> b) -> b -> b -> Set a -> Set a
 > extractRange f m n = Set.fromDistinctAscList .
 >                      takeWhile ((<= n) . f) . dropWhile ((< m) . f) .
 >                      Set.toAscList
 
-If we required users to have containers-0.5.8 or newer, we could use the
-following faster definition with guaranteed log-time extraction.
-
- > extractRange :: (Ord a, Ord b) => (a -> b) -> b -> b -> Set a -> Set a
- > extractRange f m n = Set.takeWhileAntitone ((<= n) . f) .
- >                      Set.dropWhileAntitone ((< m) . f)
+#endif
