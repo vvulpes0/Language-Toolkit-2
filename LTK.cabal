@@ -44,6 +44,8 @@ maintainer:          49007668+vvulpes0@users.noreply.github.com
 tested-with:         GHC ==8.6.3
 build-type:          Simple
 extra-source-files:  man/dotify.1
+                   , man/plebby.1
+                   , man/pleb.5
 
 source-repository head
   type:      git
