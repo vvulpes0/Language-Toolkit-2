@@ -1342,7 +1342,7 @@ built in such a way that order of elements is not preserved.
 > treeFromList [] = error "No elements"
 > treeFromList (x:[]) = Leaf x
 > treeFromList xs = ls' `par` rs' `pseq` Tree ls' rs'
->     where (ls, rs) = rEvenOdds xs
+>     where (ls, rs) = evenOdds xs
 >           (ls', rs') = (treeFromList ls, treeFromList rs)
 
 > instance NFData a => NFData (Tree a) where
@@ -1359,10 +1359,14 @@ Split a linked list into two smaller lists by taking the even and odd
 elements.  This does not require computing the list's length, thus it
 can be more efficient than splitting at the middle element.
 
-> rEvenOdds :: [a] -> ([a],[a])
-> rEvenOdds []        =  ([], [])
-> rEvenOdds (a:[])    =  (a : [], [])
-> rEvenOdds (a:b:xs)  =  (\(x,y) -> (a:x, b:y)) (rEvenOdds xs)
+The implementation of evenOdds given here will even work on an
+infinite stream because it guarantees that elements are output
+as soon as they are obtained.
+
+> evenOdds :: [a] -> ([a],[a])
+> evenOdds []        =  ([], [])
+> evenOdds (a:[])    =  (a : [], [])
+> evenOdds (a:b:xs)  =  let (e, o) = evenOdds xs in (a:e, b:o)
 
 A fast method to extract elements from a set
 that works to find elements whose image under a monotonic function
