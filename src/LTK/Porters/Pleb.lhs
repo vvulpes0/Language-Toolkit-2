@@ -1,3 +1,4 @@
+> {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module:    LTK.Porters.Pleb
 > Copyright: (c) 2018-2019 Dakotah Lambert
