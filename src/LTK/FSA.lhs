@@ -25,6 +25,7 @@
 > module LTK.FSA ( FSA(..)
 >                , states
 >                , isNull
+>                , follow
 >                -- * Constructing simple automata
 >                , totalWithAlphabet
 >                , emptyWithAlphabet
@@ -37,6 +38,10 @@
 >                , syntacticMonoid
 >                , residue
 >                , coresidue
+>                -- * Primitive ideals
+>                , primitiveIdeal2
+>                , primitiveIdealL
+>                , primitiveIdealR
 >                -- * Transformations
 >                , flatIntersection
 >                , flatUnion
@@ -922,18 +927,22 @@ but are actually equivalent in terms of their two-sided ideals.
 > jEquivalence :: (Ord e, Ord n) =>
 >                 FSA ([Maybe n], [Symbol e]) e ->
 >                 Set (Set (State ([Maybe n], [Symbol e])))
-> jEquivalence f = partitionBy (p2 f) (states f)
+> jEquivalence f = partitionBy (primitiveIdeal2 f) (states f)
 
 The primitive left-ideal of an element x of the syntactic monoid is
 the set of elements {ax} for all elements a:
 
-> pl :: (Ord n, Ord e) => FSA (n, [Symbol e]) e ->
->       State (n, [Symbol e]) -> Set (State (n, [Symbol e]))
-> pl f x = collapse (union . follow f (snd $ nodeLabel x)) empty (states f)
+> -- |The primitive left ideal.
+> primitiveIdealL :: (Ord n, Ord e) => FSA (n, [Symbol e]) e ->
+>                    State (n, [Symbol e]) -> Set (State (n, [Symbol e]))
+> primitiveIdealL f x = collapse (union . follow f (snd $ nodeLabel x)) empty
+>                       (states f)
 
+> -- |The generalized $\delta$ function,
+> -- follow each symbol in a string in order.
 > follow :: (Ord n, Ord e) => FSA n e ->
 >           [Symbol e] -> State n -> Set (State n)
-> follow f xs q = collapse ((.) . delta f) id xs $ singleton q
+> follow f xs q = collapse (flip (.) . delta f) id xs $ singleton q
 
 The primitive right-ideal is {xa} for all a,
 i.e. the reachability relation:
@@ -943,15 +952,19 @@ i.e. the reachability relation:
 >                     ,transitions = Set.map x (transitions f)
 >                     ,isDeterministic = False}
 >     where x t = t {edgeLabel = Epsilon}
-> pr :: (Ord n, Ord e) => FSA n e -> State n -> Set (State n)
-> pr f x = epsilonClosure (ignoreSymbols f) (singleton x)
+
+> -- |The primitive right ideal.
+> primitiveIdealR :: (Ord n, Ord e) => FSA n e -> State n -> Set (State n)
+> primitiveIdealR f x = epsilonClosure (ignoreSymbols f) (singleton x)
 
 Then the two-sided ideal is {axb} for all a and b,
 i.e. the right-ideals of every left-ideal (or v.v.).
 
-> p2 :: (Ord n, Ord e) => FSA (n, [Symbol e]) e ->
->       State (n, [Symbol e]) -> Set (State (n, [Symbol e]))
-> p2 f = collapse (union . pr f) empty . pl f
+> -- |The primitive two-sided ideal.
+> primitiveIdeal2 :: (Ord n, Ord e) => FSA (n, [Symbol e]) e ->
+>                    State (n, [Symbol e]) -> Set (State (n, [Symbol e]))
+> primitiveIdeal2 f = collapse (union . primitiveIdealR f) empty .
+>                     primitiveIdealL f
 
 > trivialUnder :: (FSA n e -> Set (Set (State n))) -> FSA n e -> Bool
 > trivialUnder f = all ((== 1) . isize) . f
@@ -966,7 +979,8 @@ That is, w is equivalent to v iff wM == vM and Mw == Mv.
 
 > hEquivalence :: (Ord n, Ord e) =>
 >                 FSA (n, [Symbol e]) e -> Set (Set (State (n, [Symbol e])))
-> hEquivalence f = refinePartitionBy (pr f) . partitionBy (pl f) $ states f
+> hEquivalence f = refinePartitionBy (primitiveIdealR f) .
+>                  partitionBy (primitiveIdealL f) $ states f
 
 
 Determinization

@@ -101,12 +101,34 @@ and some lines may be interpreter commands (including
 .RE
 .
 .SS Determining the Class of an Expression
+.B :isLT
+.RI < expr >
+.RS
+Determine whether
+.RI < expr >
+represents a Locally Testable stringset
+in the current
+.BR universe .
+.RE
+.
+.PP
 .B :isPT
 .RI < expr >
 .RS
 Determine whether
 .RI < expr >
 represents a Piecewise Testable stringset
+in the current
+.BR universe .
+.RE
+.
+.PP
+.B :isSF
+.RI < expr >
+.RS
+Determine whether
+.RI < expr >
+represents a Star-Free stringset
 in the current
 .BR universe .
 .RE
@@ -140,6 +162,17 @@ in the current
 Determine whether
 .RI < expr >
 represents a Tier-Based Strictly Local stringset
+in the current
+.BR universe .
+.RE
+.
+.PP
+.B :isTLT
+.RI < expr >
+.RS
+Determine whether
+.RI < expr >
+represents a Tier-Based Locally Testable stringset
 in the current
 .BR universe .
 .RE

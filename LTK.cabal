@@ -58,8 +58,18 @@ library
   exposed-modules:
                   LTK
                 , LTK.Containers
-                , LTK.ExtractSL
-                , LTK.ExtractSP
+                , LTK.Decide
+                , LTK.Decide.LT
+                , LTK.Decide.PT
+                , LTK.Decide.SF
+                , LTK.Decide.SL
+                , LTK.Decide.SP
+                , LTK.Decide.TLT
+                , LTK.Decide.TSL
+                , LTK.Extract
+                , LTK.Extract.SL
+                , LTK.Extract.SP
+                , LTK.Extract.TSL
                 , LTK.Factors
                 , LTK.FSA
                 , LTK.Porters
