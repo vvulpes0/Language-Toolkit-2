@@ -6,7 +6,7 @@
 > 
 > Functions used for extracting constraints from automata.
 > Each complexity class for which these operations are implemented
-> has a separate Extract.<Class> module as well.
+> has a separate Decide.class module as well.
 > -}
 > module LTK.Decide (isSL, isLT, isTSL, isTLT, isSP, isPT, isSF) where
 > import LTK.Decide.SL

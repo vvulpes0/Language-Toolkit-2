@@ -938,7 +938,7 @@ the set of elements {ax} for all elements a:
 > primitiveIdealL f x = collapse (union . follow f (snd $ nodeLabel x)) empty
 >                       (states f)
 
-> -- |The generalized $\delta$ function,
+> -- |The generalized \(\delta\) function,
 > -- follow each symbol in a string in order.
 > follow :: (Ord n, Ord e) => FSA n e ->
 >           [Symbol e] -> State n -> Set (State n)

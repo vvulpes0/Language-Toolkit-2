@@ -6,7 +6,7 @@
 > 
 > Functions used for extracting constraints from automata.
 > Each complexity class for which these operations are implemented
-> has a separate Extract.<Class> module as well.
+> has a separate Extract.class module as well.
 > -}
 > module LTK.Extract ( module LTK.Extract.SL
 >                    , module LTK.Extract.SP
