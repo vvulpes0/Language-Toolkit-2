@@ -1,10 +1,19 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-# Language
+>   CPP,
 >   FlexibleContexts,
 >   FlexibleInstances,
 >   MultiParamTypeClasses,
 >   Trustworthy
 >   #-}
+
+#if !defined(MIN_VERSION_base)
+# define MIN_VERSION_base(a,b,c) 0
+#endif
+#if !defined(MIN_VERSION_containers)
+# define MIN_VERSION_containers(a,b,c) 0
+#endif
+
 > {-|
 > Module    : LTK.FSA
 > Copyright : (c) 2014-2019 Dakotah Lambert

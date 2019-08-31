@@ -1,3 +1,9 @@
+> {-# Language CPP #-}
+
+#if !defined(MIN_VERSION_base)
+# define MIN_VERSION_base(a,b,c) 0
+#endif
+
 > module Main where
 
 > import LTK.FSA

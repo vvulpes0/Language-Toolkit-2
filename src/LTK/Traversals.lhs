@@ -1,4 +1,10 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
+> {-# Language CPP #-}
+
+#if !defined(MIN_VERSION_base)
+# define MIN_VERSION_base(a,b,c) 0
+#endif
+
 > {-|
 > Module    : Traversals
 > Copyright : (c) 2017-2019 Jim Rogers and Dakotah Lambert

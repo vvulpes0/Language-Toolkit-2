@@ -1,10 +1,16 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-# Language
+>   CPP,
 >   FlexibleInstances,
 >   FunctionalDependencies,
 >   MultiParamTypeClasses,
 >   Trustworthy
 >   #-}
+
+#if !defined(MIN_VERSION_base)
+# define MIN_VERSION_base(a,b,c) 0
+#endif
+
 > {-|
 > Module      : LTK.Containers
 > Copyright   : (c) 2016-2019 Dakotah Lambert
