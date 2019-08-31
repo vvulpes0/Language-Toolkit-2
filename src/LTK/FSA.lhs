@@ -966,6 +966,8 @@ i.e. the right-ideals of every left-ideal (or v.v.).
 > primitiveIdeal2 f = collapse (union . primitiveIdealR f) empty .
 >                     primitiveIdealL f
 
+> -- |An automaton is considered trivial under some equivalence relation
+> -- if each of its equivalence classes is singleton.
 > trivialUnder :: (FSA n e -> Set (Set (State n))) -> FSA n e -> Bool
 > trivialUnder f = all ((== 1) . isize) . f
 
@@ -977,6 +979,9 @@ Where two strings are J-equivalent iff their two-sided ideals are equal,
 they are H-equivalent if their corresponding one-sided ideals are equal.
 That is, w is equivalent to v iff wM == vM and Mw == Mv.
 
+> -- |Given an automaton whose syntactic monoid is \(M\),
+> -- two strings \(u\) and \(v\) are equivalent if
+> -- \(Mu=Mv\) and \(uM=vM\).
 > hEquivalence :: (Ord n, Ord e) =>
 >                 FSA (n, [Symbol e]) e -> Set (Set (State (n, [Symbol e])))
 > hEquivalence f = refinePartitionBy (primitiveIdealR f) .
