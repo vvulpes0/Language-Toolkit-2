@@ -1,0 +1,6 @@
+packages: ./*.cabal
+
+package *
+  haddock-html-location:
+    https://hackage.haskell.org/packages/archive/$pkg/latest/doc/html
+  haddock-quickjump: true

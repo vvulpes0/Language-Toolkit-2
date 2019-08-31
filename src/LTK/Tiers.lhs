@@ -1,3 +1,4 @@
+> {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module:     LTK.Tiers
 > Copyright:  (c) 2019 Dakotah Lambert

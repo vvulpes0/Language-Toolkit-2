@@ -1,3 +1,4 @@
+> {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module:    LTK.Factors
 > Copyright: (c) 2017-2019 Dakotah Lambert
