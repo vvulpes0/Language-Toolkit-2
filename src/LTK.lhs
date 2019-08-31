@@ -9,8 +9,8 @@
 > so several smaller modules are exposed indivually as well.
 > -}
 
-> module LTK ( module LTK.ExtractSL
->            , module LTK.ExtractSP
+> module LTK ( module LTK.Decide
+>            , module LTK.Extract
 >            , module LTK.Factors
 >            , module LTK.FSA
 >            , module LTK.Porters
@@ -18,8 +18,8 @@
 >            , module LTK.Traversals
 >            ) where
 
-> import LTK.ExtractSL
-> import LTK.ExtractSP
+> import LTK.Decide
+> import LTK.Extract
 > import LTK.Factors
 > import LTK.FSA
 > import LTK.Porters

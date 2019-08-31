@@ -1,7 +1,7 @@
 > module Main where
 
-> import LTK.ExtractSL
-> import LTK.ExtractSP
+> import LTK.Decide
+> import LTK.Extract
 > import LTK.Factors
 > import LTK.FSA
 > import LTK.Porters

@@ -46,29 +46,29 @@ MoL'17 as is the notion of an $\SL$ approximation of a non-$\SL$ stringset.
 >   MultiParamTypeClasses
 >   #-}
 > {-|
-> Module    : LTK.ExtractSL
+> Module    : LTK.Extract.SL
 > Copyright : (c) 2017-2019 Jim Rogers and Dakotah Lambert
 > License   : BSD-style, see LICENSE
 > 
 > Find forbidden substrings of an automaton.
 > -}
-> module LTK.ExtractSL ( ForbiddenSubstrings(..)
->                      , ForbiddenPaths(..)
->                      , TaggedSubstring(..)
->                      -- *Extracting forbidden substrings
->                      , factorsFromPaths
->                      , forbiddenSubstrings
->                      , forbiddenPaths
->                      , forbiddenPathsWithBound
->                      -- *Building automata
->                      , buildFSA
->                      -- *Determining SL
->                      , isSL
->                      , slQ
->                      -- *...with precomputed PSG
->                      , isSLPSG
->                      , slPSGQ
->                      ) where
+> module LTK.Extract.SL ( ForbiddenSubstrings(..)
+>                       , ForbiddenPaths(..)
+>                       , TaggedSubstring(..)
+>                       -- *Extracting forbidden substrings
+>                       , factorsFromPaths
+>                       , forbiddenSubstrings
+>                       , forbiddenPaths
+>                       , forbiddenPathsWithBound
+>                       -- *Building automata
+>                       , buildFSA
+>                       -- *Determining SL
+>                       , isSL
+>                       , slQ
+>                       -- *...with precomputed PSG
+>                       , isSLPSG
+>                       , slPSGQ
+>                       ) where
 
 > import LTK.FSA
 > import LTK.Traversals  -- for initialsPaths, rejectingPaths

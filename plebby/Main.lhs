@@ -22,9 +22,11 @@
 >                         , tokenize
 >                         )
 > import LTK.Porters      (Dot(Dot), Jeff(Jeff), formatSet, fromE, to)
-> import LTK.ExtractSL    (isSL)
-> import LTK.ExtractSP    (isSP)
-> import LTK.Tiers        (project)
+> import LTK.Decide       ( isSL, isTSL
+>                         , isLT, isTLT
+>                         , isSP
+>                         , isPT
+>                         , isSF)
 
 > import Control.Applicative ((<*>), pure)
 > import Control.Monad.Trans.Class ( lift )
@@ -101,9 +103,12 @@ The types are consistent, so it is enough to define a synonym here.
 >              | Write FilePath Expr
 >              deriving (Eq, Read, Show)
 > data Relation = Equal Expr Expr
+>               | IsLT Expr
 >               | IsPT Expr
+>               | IsSF Expr
 >               | IsSL Expr
 >               | IsSP Expr
+>               | IsTLT Expr
 >               | IsTSL Expr
 >               | Subset Expr Expr
 >               | SSubset Expr Expr -- Strict Subset
@@ -180,12 +185,18 @@ The types are consistent, so it is enough to define a synonym here.
 >                          , [ArgE, ArgE], "determine if expr1 implies expr2")
 >                        , ( ":import",         error ":import not defined here"
 >                          , [ArgF], "read file as plebby script")
+>                        , ( ":isLT",           ((M .         IsLT   ) <$> pe )
+>                          , [ArgE], "determine if expr is a Locally Testable set")
 >                        , ( ":isPT",           ((M .         IsPT   ) <$> pe )
 >                          , [ArgE], "determine if expr is a Piecewise Testable set")
+>                        , ( ":isSF",           ((M .         IsSF   ) <$> pe )
+>                          , [ArgE], "determine if expr is a Star-Free set")
 >                        , ( ":isSL",           ((M .         IsSL   ) <$> pe )
 >                          , [ArgE], "determine if expr is a Strictly Local set")
 >                        , ( ":isSP",           ((M .         IsSP   ) <$> pe )
 >                          , [ArgE], "determine if expr is a Strictly Piecewise set")
+>                        , ( ":isTLT",          ((M .         IsTLT  ) <$> pe )
+>                          , [ArgE], "determine if expr is a Tier-Based Locally Testable set")
 >                        , ( ":isTSL",          ((M .         IsTSL  ) <$> pe )
 >                          , [ArgE], "determine if expr is a Tier-Based Strictly Local set")
 >                        , ( ":loadstate",      error ":loadstate not defined here"
@@ -387,21 +398,23 @@ The types are consistent, so it is enough to define a synonym here.
 > doRelation :: Env -> Relation -> Maybe Bool
 > doRelation e r = case r of
 >                    Equal p1 p2    ->  relate e (==) p1 p2
+>                    IsLT p         ->  isLT <$> normalize <$> desemantify <$>
+>                                       makeAutomaton (e' p)
 >                    IsPT p         ->  isPT <$> normalize <$> desemantify <$>
+>                                       makeAutomaton (e' p)
+>                    IsSF p         ->  isSF <$> normalize <$> desemantify <$>
 >                                       makeAutomaton (e' p)
 >                    IsSL p         ->  isSL <$> normalize <$> desemantify <$>
 >                                       makeAutomaton (e' p)
 >                    IsSP p         ->  isSP <$> normalize <$> desemantify <$>
 >                                       makeAutomaton (e' p)
->                    IsTSL p        ->  isSL <$> normalize <$>
->                                       project <$> desemantify <$>
+>                    IsTLT p        ->  isTLT <$> normalize <$> desemantify <$>
+>                                       makeAutomaton (e' p)
+>                    IsTSL p        ->  isTSL <$> normalize <$> desemantify <$>
 >                                       makeAutomaton (e' p)
 >                    Subset p1 p2   ->  relate e isSupersetOf p1 p2
 >                    SSubset p1 p2  ->  relate e isProperSupersetOf p1 p2
 >     where e' p = (\(a, b, _) -> (a, b, Just p)) e
->           isPT f = let m = syntacticMonoid f
->                    in renameStates m `asTypeOf` f ==
->                       renameStates (minimizeOver jEquivalence m)
 
 > relate :: Env
 >        -> (FSA Integer String -> FSA Integer String -> a) -> Expr -> Expr

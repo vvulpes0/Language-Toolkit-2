@@ -210,7 +210,7 @@ prevents having to descend through the tree to find this information.
 >           automata es  =  let a' = map automatonFromExpr es
 >                           in map (semanticallyExtendAlphabetTo (bigAlpha a')) a'
 >           bigAlpha     =  collapse (maybe id insert) Set.empty .
->                           unionAll . tmap alphabet
+>                           collapse (union . alphabet) Set.empty
 
 > automatonFromPLFactor :: PLFactor -> FSA Integer (Maybe String)
 > automatonFromPLFactor (PLFactor h t pieces)
