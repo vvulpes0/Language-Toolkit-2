@@ -102,6 +102,7 @@ The types are consistent, so it is enough to define a synonym here.
 >              deriving (Eq, Read, Show)
 > data Relation = Equal Expr Expr
 >               | IsPT Expr
+>               | IsSF Expr
 >               | IsSL Expr
 >               | IsSP Expr
 >               | IsTSL Expr
@@ -182,6 +183,8 @@ The types are consistent, so it is enough to define a synonym here.
 >                          , [ArgF], "read file as plebby script")
 >                        , ( ":isPT",           ((M .         IsPT   ) <$> pe )
 >                          , [ArgE], "determine if expr is a Piecewise Testable set")
+>                        , ( ":isSF",           ((M .         IsSF   ) <$> pe )
+>                          , [ArgE], "determine if expr is a Star-Free set")
 >                        , ( ":isSL",           ((M .         IsSL   ) <$> pe )
 >                          , [ArgE], "determine if expr is a Strictly Local set")
 >                        , ( ":isSP",           ((M .         IsSP   ) <$> pe )
@@ -389,6 +392,8 @@ The types are consistent, so it is enough to define a synonym here.
 >                    Equal p1 p2    ->  relate e (==) p1 p2
 >                    IsPT p         ->  isPT <$> normalize <$> desemantify <$>
 >                                       makeAutomaton (e' p)
+>                    IsSF p         ->  isSF <$> normalize <$> desemantify <$>
+>                                       makeAutomaton (e' p)
 >                    IsSL p         ->  isSL <$> normalize <$> desemantify <$>
 >                                       makeAutomaton (e' p)
 >                    IsSP p         ->  isSP <$> normalize <$> desemantify <$>
@@ -399,9 +404,8 @@ The types are consistent, so it is enough to define a synonym here.
 >                    Subset p1 p2   ->  relate e isSupersetOf p1 p2
 >                    SSubset p1 p2  ->  relate e isProperSupersetOf p1 p2
 >     where e' p = (\(a, b, _) -> (a, b, Just p)) e
->           isPT f = let m = syntacticMonoid f
->                    in renameStates m `asTypeOf` f ==
->                       renameStates (minimizeOver jEquivalence m)
+>           isPT = trivialUnder jEquivalence . syntacticMonoid
+>           isSF = trivialUnder hEquivalence . syntacticMonoid
 
 > relate :: Env
 >        -> (FSA Integer String -> FSA Integer String -> a) -> Expr -> Expr

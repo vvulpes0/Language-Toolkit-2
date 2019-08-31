@@ -10,9 +10,6 @@
 #if !defined(MIN_VERSION_base)
 # define MIN_VERSION_base(a,b,c) 0
 #endif
-#if !defined(MIN_VERSION_containers)
-# define MIN_VERSION_containers(a,b,c) 0
-#endif
 
 > {-|
 > Module    : LTK.FSA
@@ -54,7 +51,9 @@
 >                -- *** Equivalence Classes
 >                , minimizeOver
 >                , nerode
+>                , hEquivalence
 >                , jEquivalence
+>                , trivialUnder
 >                -- ** Alphabetic Transformations
 >                , extendAlphabetTo
 >                , semanticallyExtendAlphabetTo
@@ -447,7 +446,7 @@ that to define the transition function.
 > epsilonClosure fsa qs
 >     | isDeterministic fsa  = qs
 >     | otherwise            = epsilonClosure' qs qs
->     where epsilons = extract edgeLabel Epsilon (transitions fsa)
+>     where epsilons = extractMonotonic edgeLabel Epsilon (transitions fsa)
 >           epsilonClosure' seen new
 >               | isEmpty new  =  seen
 >               | otherwise    =  epsilonClosure'
@@ -471,7 +470,7 @@ that to define the transition function.
 >                     outStates  = epsilonClosure fsa .
 >                                  tmap destination .
 >                                  keep ((isIn closure) . source) $
->                                  extract edgeLabel (head s) ts
+>                                  extractMonotonic edgeLabel (head s) ts
 
 We should not have to produce IDs ourselves.  We can define the transition
 function `delta` from an FSA, a symbol, and a state to a set of states:
@@ -755,14 +754,17 @@ equivalence class.
 > -- The precondition that the input is deterministic
 > -- is not checked.
 > minimizeDeterministic :: (Ord e, Ord n) => FSA n e -> FSA (Set n) e
-> minimizeDeterministic = minimizeOver nerode
+> minimizeDeterministic = setD . minimizeOver nerode
+>     where setD f = f {isDeterministic = True}
 
-> -- |Returns a deterministic 'FSA' minimized over a given relation.
+> -- |Returns a non-necessarily deterministic 'FSA'
+> -- minimized over a given relation.
+> -- Some, but not all, relations do guarantee deterministic output.
 > -- The precondition that the input is deterministic
 > -- is not checked.
 > minimizeOver :: (Ord e, Ord n) =>
 >                 (FSA n e -> Set (Set (State n))) -> FSA n e -> FSA (Set n) e
-> minimizeOver r fsa = FSA (alphabet fsa) trans qi fin True
+> minimizeOver r fsa = FSA (alphabet fsa) trans qi fin False
 >     where classes = r fsa
 >           classOf x = (State . tmap nodeLabel . unionAll)
 >                       (keep (contains x) classes)
@@ -783,7 +785,7 @@ equivalence class.
 >           i' = difference (pairs sts) $ distinguishedPairs fsa
 >           eqClass x = (unionAll
 >                        [ singleton x
->                        , (tmap snd . extract fst x) i
+>                        , (tmap snd . extractMonotonic fst x) i
 >                        , (Set.mapMonotonic fst . keep ((== x) . snd)) i
 >                        ])
 
@@ -920,61 +922,51 @@ but are actually equivalent in terms of their two-sided ideals.
 > jEquivalence :: (Ord e, Ord n) =>
 >                 FSA ([Maybe n], [Symbol e]) e ->
 >                 Set (Set (State ([Maybe n], [Symbol e])))
-> jEquivalence f = splitJEqClass f $
->                  Set.fromList [finals f, difference (states f) (finals f)]
-
-> splitJEqClass :: (Ord e, Ord n) =>
->                  FSA ([Maybe n], [Symbol e]) e ->
->                  Set (Set (State ([Maybe n], [Symbol e]))) ->
->                  Set (Set (State ([Maybe n], [Symbol e])))
-> splitJEqClass f xi
->     | isize new == isize xi  = xi
->     | otherwise              = splitJEqClass f new
->     where new = collapse (union . splitJEqClass' f xi) empty xi
-
-> splitJEqClass' :: (Ord e, Ord n) =>
->                   FSA ([Maybe n], [Symbol e]) e ->
->                   Set (Set (State ([Maybe n], [Symbol e]))) ->
->                   Set (State ([Maybe n], [Symbol e])) ->
->                   Set (Set (State ([Maybe n], [Symbol e])))
-> splitJEqClass' f xi s
->     | isize s == 0  = empty
->     | otherwise      = insert (insert x ys) (splitJEqClass' f xi ys')
->     where (x, xs)  = choose s
->           ys       = keep ((==) (p2 f x) . p2 f) xs
->           ys'      = difference xs ys
+> jEquivalence f = partitionBy (p2 f) (states f)
 
 The primitive left-ideal of an element x of the syntactic monoid is
 the set of elements {ax} for all elements a:
 
 > pl :: (Ord n, Ord e) => FSA (n, [Symbol e]) e ->
 >       State (n, [Symbol e]) -> Set (State (n, [Symbol e]))
-> pl f x = unmaybe $ tmap (d x) (states f)
->     where d a q    = pull                                   .
->                      until (allS (null . string)) (step f)  .
->                      singleton . ID q . snd $ nodeLabel a
->           pull cs  = if zsize cs
->                      then Nothing
->                      else Just . state $ chooseOne cs
->           unmaybe cs
->               | zsize cs   = empty
->               | otherwise  = case y of
->                                Just a  -> insert a (unmaybe ys)
->                                _       -> unmaybe ys
->               where (y, ys) = choose cs
+> pl f x = collapse (union . follow f (snd $ nodeLabel x)) empty (states f)
 
+> follow :: (Ord n, Ord e) => FSA n e ->
+>           [Symbol e] -> State n -> Set (State n)
+> follow f xs q = collapse ((.) . delta f) id xs $ singleton q
+
+The primitive right-ideal is {xa} for all a,
+i.e. the reachability relation:
+
+> ignoreSymbols :: (Ord n, Ord e) => FSA n e -> FSA n ()
+> ignoreSymbols f = f {alphabet = empty
+>                     ,transitions = Set.map x (transitions f)
+>                     ,isDeterministic = False}
+>     where x t = t {edgeLabel = Epsilon}
 > pr :: (Ord n, Ord e) => FSA n e -> State n -> Set (State n)
-> pr f x = snd $ until
->          (zsize . fst)
->          (\(a,b) -> let p = pr' a
->                     in (difference p b, union p b))
->          (singleton x, singleton x)
->     where pr'     = tmap state . unionAll . tmap pr''
->           pr'' y  = step f $ tmap (ID y . singleton . Symbol) (alphabet f)
+> pr f x = epsilonClosure (ignoreSymbols f) (singleton x)
+
+Then the two-sided ideal is {axb} for all a and b,
+i.e. the right-ideals of every left-ideal (or v.v.).
 
 > p2 :: (Ord n, Ord e) => FSA (n, [Symbol e]) e ->
 >       State (n, [Symbol e]) -> Set (State (n, [Symbol e]))
-> p2 f = unionAll . tmap (pr f) . pl f
+> p2 f = collapse (union . pr f) empty . pl f
+
+> trivialUnder :: (FSA n e -> Set (Set (State n))) -> FSA n e -> Bool
+> trivialUnder f = all ((== 1) . isize) . f
+
+
+H-Minimization
+==============
+
+Where two strings are J-equivalent iff their two-sided ideals are equal,
+they are H-equivalent if their corresponding one-sided ideals are equal.
+That is, w is equivalent to v iff wM == vM and Mw == Mv.
+
+> hEquivalence :: (Ord n, Ord e) =>
+>                 FSA (n, [Symbol e]) e -> Set (Set (State (n, [Symbol e])))
+> hEquivalence f = refinePartitionBy (pr f) . partitionBy (pl f) $ states f
 
 
 Determinization
@@ -1217,7 +1209,7 @@ alphabets unified.
 >           ts   =  transitions fsa
 >           f e  =  union (Set.mapMonotonic (\x -> e {edgeLabel = Symbol x}) new)
 >           ts'  =  collapse f empty $
->                   extract edgeLabel (Symbol Nothing) ts
+>                   extractMonotonic edgeLabel (Symbol Nothing) ts
 
 > -- |Remove the semantic 'Nothing' edges from an automaton and reflect this
 > -- change in the type.
@@ -1376,32 +1368,3 @@ as soon as they are obtained.
 > evenOdds []        =  ([], [])
 > evenOdds (a:[])    =  (a : [], [])
 > evenOdds (a:b:xs)  =  let (e, o) = evenOdds xs in (a:e, b:o)
-
-A fast method to extract elements from a set
-that works to find elements whose image under a monotonic function
-falls within a given range.
-The precondition that for all x,y in xs, x < y ==> f x <= f y
-is not checked.
-
-> extract :: (Ord a, Ord b) => (a -> b) -> b -> Set a -> Set a
-> extract f a = extractRange f a a
-
-#if MIN_VERSION_containers(0,5,8)
-From containers-0.5.8, a range can be extracted from a Set in
-guaranteed log-time.
-
-> extractRange :: (Ord a, Ord b) => (a -> b) -> b -> b -> Set a -> Set a
-> extractRange f m n = Set.takeWhileAntitone ((<= n) . f) .
->                      Set.dropWhileAntitone ((< m) . f)
-
-#else
-If we are using an older version of the containers library
-that doesn't contain the necessary functions, we can make do
-with a variant that is at least still faster than filter.
-
-> extractRange :: (Ord a, Ord b) => (a -> b) -> b -> b -> Set a -> Set a
-> extractRange f m n = Set.fromDistinctAscList .
->                      takeWhile ((<= n) . f) . dropWhile ((< m) . f) .
->                      Set.toAscList
-
-#endif
