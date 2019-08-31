@@ -4,7 +4,7 @@
 > Copyright : (c) 2019 Dakotah Lambert
 > License   : BSD-style, see LICENSE
 > 
-> Functions used for extracting constraints from automata.
+> Functions used for deciding the complexity class of an automaton.
 > Each complexity class for which these operations are implemented
 > has a separate Decide.class module as well.
 > -}
