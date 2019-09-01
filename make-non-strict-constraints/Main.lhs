@@ -1,29 +1,31 @@
 > module Main where
 
-> import LTK.ConstraintCompiler
-> import LTK.Porters
+> import LTK.ConstraintCompiler(compile)
+> import LTK.Porters(Jeff(Jeff), to, untransliterate)
 
-> import LTK.Factors
+> import LTK.Factors ( Factor(Substring), forbidden, required
+>                    , w0s0, w0s2, w0plus, w1s2
+>                    , wpluss0, wpluss1, wplus, wxs0, wxs1, wxs2, wx)
 > import LTK.FSA
 
-> import Control.DeepSeq
-> import Control.Parallel.Strategies
+> import Control.DeepSeq (NFData, ($!!))
+> import Control.Parallel.Strategies (parListChunk, rdeepseq, using)
 > import qualified Data.Set as Set (toAscList)
-> import System.IO
+> import System.IO (IOMode(WriteMode), hPutStr, hFlush, withFile)
 
 > c89, c9x, c91, c145, c146 :: FSA Integer String
-> c89 = compileFromList' wx [[required (Substring [wxs2] False False)]]
-> c9x = compileFromList' wx [[forbidden (Substring [wpluss0] False False), forbidden (Substring [w1s2] False True)]]
-> c91 = compileFromList' wx [[forbidden (Substring [wpluss1] False False), forbidden (Substring [w1s2] False True)]]
-> c145 = desurfaceSecondary $ compileFromList' wx
+> c89 = compile wx [[required (Substring [wxs2] False False)]]
+> c9x = compile wx [[forbidden (Substring [wpluss0] False False), forbidden (Substring [w1s2] False True)]]
+> c91 = compile wx [[forbidden (Substring [wpluss1] False False), forbidden (Substring [w1s2] False True)]]
+> c145 = desurfaceSecondary $ compile wx
 >        [[forbidden (Substring [w0plus, w0plus] False False)],
 >         [forbidden (Substring [w0s0,w0s0] False False)],
 >         [forbidden (Substring [wplus, w0plus] False False)],
 >         [forbidden (Substring [w0plus] True False)]]
 > c146 = renameStates . minimize . determinize $ unionAll
->        [compileFromList' wx [[forbidden (Substring [w0s2] False False)]],
+>        [compile wx [[forbidden (Substring [w0s2] False False)]],
 >         c145,
->         compileFromList' wx [[required (Substring [w0s2] True True)]]]
+>         compile wx [[required (Substring [w0s2] True True)]]]
 
 > desurfaceSecondary :: (Enum n1, Ord n, Ord n1) => FSA n String -> FSA n1 String
 > desurfaceSecondary = renameStates . minimize . determinize . renameSymbolsBy f
@@ -44,7 +46,6 @@
 
 > main :: IO ()
 > main = do
->   --putStrLn (header "CompiledConstraints")
 >   let constraints = map prepare $
 >                     nonEmptySubsets
 >                     [("c89",c89),

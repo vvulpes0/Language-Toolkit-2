@@ -1,3 +1,9 @@
+> {-# Language CPP #-}
+
+#if !defined(MIN_VERSION_base)
+# define MIN_VERSION_base(a,b,c) 0
+#endif
+
 > module Main where
 
 > import LTK.FSA
@@ -15,29 +21,49 @@
 >                         , restrictUniverse
 >                         , tokenize
 >                         )
-> import LTK.Porters      (Dot(..), Jeff(..), formatSet, to, fromE)
-> import LTK.ExtractSL    (isSL)
-> import LTK.ExtractSP    (isSP)
-> import LTK.Tiers        (project)
+> import LTK.Porters      (Dot(Dot), Jeff(Jeff), formatSet, fromE, to)
+> import LTK.Decide       ( isSL, isTSL
+>                         , isLT, isTLT
+>                         , isLTT, isTLTT
+>                         , isSP
+>                         , isPT
+>                         , isSF)
 
-> import Control.Applicative ( Applicative(..) )
+> import Control.Applicative ((<*>), pure)
 > import Control.Monad.Trans.Class ( lift )
 > import Data.Char (isSpace, toLower)
-> import Data.Functor ( (<$>) )
+> import Data.Functor ((<$>))
 > import System.Console.Haskeline ( InputT
 >                                 , defaultSettings
 >                                 , getInputLine
 >                                 , runInputT
 >                                 )
+> import System.Environment (getEnvironment)
 > import System.IO ( hClose
+>                  , hGetContents
 >                  , hPutStr
 >                  , hPutStrLn
 >                  , hSetBinaryMode
 >                  , stderr
+>                  , stdout
 >                  )
+
+#if MIN_VERSION_base(4,4,0)
+
 > import System.IO.Error ( catchIOError )
-> import System.Process ( CreateProcess(..)
->                       , StdStream(..)
+
+# else
+Older versions of base used catch instead of catchIOError.
+The types are consistent, so it is enough to define a synonym here.
+
+> import System.IO.Error ( IOError, catch )
+> catchIOError :: IO a -> (IOError -> IO a) -> IO a
+> catchIOError = catch
+
+# endif
+
+> import System.Process ( CreateProcess(std_err, std_in, std_out)
+>                       , StdStream(CreatePipe, UseHandle)
 >                       , createProcess
 >                       , proc
 >                       , waitForProcess
@@ -80,9 +106,14 @@
 >              | Write FilePath Expr
 >              deriving (Eq, Read, Show)
 > data Relation = Equal Expr Expr
+>               | IsLT Expr
+>               | IsLTT Expr
 >               | IsPT Expr
+>               | IsSF Expr
 >               | IsSL Expr
 >               | IsSP Expr
+>               | IsTLT Expr
+>               | IsTLTT Expr
 >               | IsTSL Expr
 >               | Subset Expr Expr
 >               | SSubset Expr Expr -- Strict Subset
@@ -159,14 +190,24 @@
 >                          , [ArgE, ArgE], "determine if expr1 implies expr2")
 >                        , ( ":import",         error ":import not defined here"
 >                          , [ArgF], "read file as plebby script")
+>                        , ( ":isLT",           ((M .         IsLT   ) <$> pe )
+>                          , [ArgE], "determine if expr is Locally Testable")
+>                        , ( ":isLTT",          ((M .         IsLTT  ) <$> pe )
+>                          , [ArgE], "determine if expr is Locally Threshold Testable")
 >                        , ( ":isPT",           ((M .         IsPT   ) <$> pe )
->                          , [ArgE], "determine if expr is a Piecewise Testable set")
+>                          , [ArgE], "determine if expr is Piecewise Testable")
+>                        , ( ":isSF",           ((M .         IsSF   ) <$> pe )
+>                          , [ArgE], "determine if expr is Star-Free")
 >                        , ( ":isSL",           ((M .         IsSL   ) <$> pe )
->                          , [ArgE], "determine if expr is a Strictly Local set")
+>                          , [ArgE], "determine if expr is Strictly Local")
 >                        , ( ":isSP",           ((M .         IsSP   ) <$> pe )
->                          , [ArgE], "determine if expr is a Strictly Piecewise set")
+>                          , [ArgE], "determine if expr is Strictly Piecewise")
+>                        , ( ":isTLT",          ((M .         IsTLT  ) <$> pe )
+>                          , [ArgE], "determine if expr is Tier-Locally Testable")
+>                        , ( ":isTLTT",         ((M .         IsTLTT ) <$> pe )
+>                          , [ArgE], "determine if expr is Tier-LTT")
 >                        , ( ":isTSL",          ((M .         IsTSL  ) <$> pe )
->                          , [ArgE], "determine if expr is a Tier-Based Strictly Local set")
+>                          , [ArgE], "determine if expr is Strictly Tier-Local")
 >                        , ( ":loadstate",      error ":loadstate not defined here"
 >                          , [ArgF], "restore state from file")
 >                        , ( ":psg",            ((L .         D_PSG  ) <$> pe )
@@ -246,7 +287,7 @@
 >                        makeAutomaton (dict, subexprs, Just expr)) >>
 >                       return e
 >         ErrorMsg str -> hPutStr stderr str >> return e
->         Help xs -> hPutStr stderr (doHelp xs) >> return e
+>         Help xs -> lessHelp xs >> return e
 >         Import file -> catchIOError (importScript e =<< lines <$> readFile file)
 >                        (const $
 >                            (hPutStrLn stderr
@@ -363,24 +404,47 @@
 >           p2       = map (\(_,b,_) -> b)
 >           p3       = map (\(_,_,c) -> c)
 
+> lessHelp :: [(String, [ArgType], String)] -> IO ()
+> lessHelp xs = do
+>   mpager <- fmap (map snd . filter ((==) "PAGER" . fst)) getEnvironment
+>   let ps     = words $ head (mpager ++ ["less"])
+>   let (p:s)  = if null ps then ["less"] else ps
+>   let lessP  = (proc p s) {
+>                  std_in = CreatePipe
+>                , std_out = UseHandle stdout
+>                , std_err = CreatePipe
+>                }
+>   (Just p_stdin, _, Just p_stderr, less_ph) <- createProcess lessP
+>   _ <- hGetContents p_stderr
+>   hPutStr p_stdin (doHelp xs)
+>   hClose p_stdin
+>   _ <- waitForProcess less_ph
+>   return ()
+
 > doRelation :: Env -> Relation -> Maybe Bool
 > doRelation e r = case r of
 >                    Equal p1 p2    ->  relate e (==) p1 p2
+>                    IsLT p         ->  isLT <$> normalize <$> desemantify <$>
+>                                       makeAutomaton (e' p)
+>                    IsLTT p        ->  isLTT <$> normalize <$> desemantify <$>
+>                                       makeAutomaton (e' p)
 >                    IsPT p         ->  isPT <$> normalize <$> desemantify <$>
+>                                       makeAutomaton (e' p)
+>                    IsSF p         ->  isSF <$> normalize <$> desemantify <$>
 >                                       makeAutomaton (e' p)
 >                    IsSL p         ->  isSL <$> normalize <$> desemantify <$>
 >                                       makeAutomaton (e' p)
 >                    IsSP p         ->  isSP <$> normalize <$> desemantify <$>
 >                                       makeAutomaton (e' p)
->                    IsTSL p        ->  isSL <$> normalize <$>
->                                       project <$> desemantify <$>
+>                    IsTLT p        ->  isTLT <$> normalize <$> desemantify <$>
+>                                       makeAutomaton (e' p)
+>                    IsTLTT p       ->  isTLTT <$> normalize <$>
+>                                       desemantify <$> makeAutomaton (e' p)
+>                    IsTSL p        ->  isTSL <$> normalize <$> desemantify <$>
 >                                       makeAutomaton (e' p)
 >                    Subset p1 p2   ->  relate e isSupersetOf p1 p2
 >                    SSubset p1 p2  ->  relate e isProperSupersetOf p1 p2
 >     where e' p = (\(a, b, _) -> (a, b, Just p)) e
->           isPT f = let m = syntacticMonoid f
->                    in renameStates m `asTypeOf` f ==
->                       renameStates (minimizeOver jEquivalence m)
 
 > relate :: Env
 >        -> (FSA Integer String -> FSA Integer String -> a) -> Expr -> Expr
@@ -421,16 +485,19 @@
 >   let dotP     = (proc "dot" ["-Tpng"]) {
 >                    std_in = CreatePipe
 >                  , std_out = CreatePipe
->                  , std_err = NoStream
+>                  , std_err = CreatePipe
 >                  }
->   (Just p_stdin, Just pipe, _, dot_ph) <- createProcess dotP
+>   (Just p_stdin, Just pipe, Just p_stderr, dot_ph) <- createProcess dotP
+>   _ <- hGetContents p_stderr
 >   hSetBinaryMode pipe True
 >   let displayP = (proc "display" []) {
 >                    std_in = UseHandle pipe
->                  , std_out = NoStream
->                  , std_err = NoStream
+>                  , std_out = CreatePipe
+>                  , std_err = CreatePipe
 >                  }
->   _ <- createProcess displayP
+>   (_, Just d_stdout, Just d_stderr, _)  <- createProcess displayP
+>   _ <- hGetContents d_stdout
+>   _ <- hGetContents d_stderr
 >   hPutStr p_stdin (to Dot fsa)
 >   hClose p_stdin
 >   _ <- waitForProcess dot_ph

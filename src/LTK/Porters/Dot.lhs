@@ -2,7 +2,7 @@
 > {-|
 > Module    : LTK.Porters.Dot
 > Copyright : (c) 2017-2019 Dakotah Lambert
-> License   : BSD-style, see LICENSE
+> License   : MIT
 > 
 > This module provides methods to convert automata to the GraphViz
 > Dot format.  At the moment, only export is supported.

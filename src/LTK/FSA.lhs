@@ -1,14 +1,20 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-# Language
+>   CPP,
 >   FlexibleContexts,
 >   FlexibleInstances,
 >   MultiParamTypeClasses,
 >   Trustworthy
 >   #-}
+
+#if !defined(MIN_VERSION_base)
+# define MIN_VERSION_base(a,b,c) 0
+#endif
+
 > {-|
 > Module    : LTK.FSA
 > Copyright : (c) 2014-2019 Dakotah Lambert
-> License   : BSD-style, see LICENSE
+> License   : MIT
 
 > The purpose of this module is to define an interface to a generic,
 > reusable impementation of finite-state automata (FSAs).  The primary
@@ -19,6 +25,7 @@
 > module LTK.FSA ( FSA(..)
 >                , states
 >                , isNull
+>                , follow
 >                -- * Constructing simple automata
 >                , totalWithAlphabet
 >                , emptyWithAlphabet
@@ -31,6 +38,10 @@
 >                , syntacticMonoid
 >                , residue
 >                , coresidue
+>                -- * Primitive ideals
+>                , primitiveIdeal2
+>                , primitiveIdealL
+>                , primitiveIdealR
 >                -- * Transformations
 >                , flatIntersection
 >                , flatUnion
@@ -45,7 +56,9 @@
 >                -- *** Equivalence Classes
 >                , minimizeOver
 >                , nerode
+>                , hEquivalence
 >                , jEquivalence
+>                , trivialUnder
 >                -- ** Alphabetic Transformations
 >                , extendAlphabetTo
 >                , semanticallyExtendAlphabetTo
@@ -72,9 +85,17 @@
 > import Control.DeepSeq (NFData, rnf)
 > import Control.Parallel (par, pseq)
 
-> import Control.Applicative (Applicative(..))
-> import Data.Semigroup (Semigroup(..))
-> import Data.Monoid (Monoid(..))
+> import Control.Applicative (Applicative, pure, (<*>))
+> import Data.Functor ((<$>))
+
+#if MIN_VERSION_base(4,9,0)
+The base-4.9 library from GHC 8.x added Semigroup to complement Monoid.
+
+> import safe Data.Semigroup (Semigroup, (<>))
+
+#endif
+
+> import Data.Monoid (Monoid, mempty, mappend, mconcat)
 
 
 Data Structures
@@ -259,12 +280,17 @@ State
 >     return   =  pure
 >     a >>= f  =  f $ nodeLabel a
 
+#if MIN_VERSION_base(4,9,0)
+Semigroup instance to satisfy base-4.9
+
 > instance (Semigroup n) => Semigroup (State n) where
 >     (<>) = fmap . nodeLabel . fmap (<>)
 
-> instance (Semigroup n, Monoid n) => Monoid (State n) where
+#endif
+
+> instance (Monoid n) => Monoid (State n) where
 >     mempty   =  State mempty
->     mappend  =  (<>)
+>     mappend  =  fmap . nodeLabel . fmap mappend
 
 > instance (NFData n) => NFData (State n) where
 >     rnf (State n) = rnf n
@@ -354,12 +380,17 @@ and final states.
 
 Here we consider FSAs to be Semigroups (and Monoids) under concatenation
 
+#if MIN_VERSION_base(4,9,0)
+Semigroup instance to satisfy base-4.9
+
 > instance (Enum n, Ord n, Ord e) => Semigroup (FSA n e) where
->     (<>) = apply autConcatenation
+>     (<>) = mappend
+
+#endif
 
 > instance (Enum n, Ord n, Ord e) => Monoid (FSA n e) where
 >     mempty   =  singletonLanguage empty
->     mappend  =  (<>)
+>     mappend  =  apply autConcatenation
 
 > apply :: (Ord e, Ord n1, Ord n2, Enum n2) =>
 >          (a -> b -> FSA n1 e) -> a -> b -> FSA n2 e
@@ -420,7 +451,7 @@ that to define the transition function.
 > epsilonClosure fsa qs
 >     | isDeterministic fsa  = qs
 >     | otherwise            = epsilonClosure' qs qs
->     where epsilons = extract edgeLabel Epsilon (transitions fsa)
+>     where epsilons = extractMonotonic edgeLabel Epsilon (transitions fsa)
 >           epsilonClosure' seen new
 >               | isEmpty new  =  seen
 >               | otherwise    =  epsilonClosure'
@@ -444,7 +475,7 @@ that to define the transition function.
 >                     outStates  = epsilonClosure fsa .
 >                                  tmap destination .
 >                                  keep ((isIn closure) . source) $
->                                  extract edgeLabel (head s) ts
+>                                  extractMonotonic edgeLabel (head s) ts
 
 We should not have to produce IDs ourselves.  We can define the transition
 function `delta` from an FSA, a symbol, and a state to a set of states:
@@ -728,14 +759,17 @@ equivalence class.
 > -- The precondition that the input is deterministic
 > -- is not checked.
 > minimizeDeterministic :: (Ord e, Ord n) => FSA n e -> FSA (Set n) e
-> minimizeDeterministic = minimizeOver nerode
+> minimizeDeterministic = setD . minimizeOver nerode
+>     where setD f = f {isDeterministic = True}
 
-> -- |Returns a deterministic 'FSA' minimized over a given relation.
+> -- |Returns a non-necessarily deterministic 'FSA'
+> -- minimized over a given relation.
+> -- Some, but not all, relations do guarantee deterministic output.
 > -- The precondition that the input is deterministic
 > -- is not checked.
 > minimizeOver :: (Ord e, Ord n) =>
 >                 (FSA n e -> Set (Set (State n))) -> FSA n e -> FSA (Set n) e
-> minimizeOver r fsa = FSA (alphabet fsa) trans qi fin True
+> minimizeOver r fsa = FSA (alphabet fsa) trans qi fin False
 >     where classes = r fsa
 >           classOf x = (State . tmap nodeLabel . unionAll)
 >                       (keep (contains x) classes)
@@ -756,7 +790,7 @@ equivalence class.
 >           i' = difference (pairs sts) $ distinguishedPairs fsa
 >           eqClass x = (unionAll
 >                        [ singleton x
->                        , (tmap snd . extract fst x) i
+>                        , (tmap snd . extractMonotonic fst x) i
 >                        , (Set.mapMonotonic fst . keep ((== x) . snd)) i
 >                        ])
 
@@ -893,61 +927,65 @@ but are actually equivalent in terms of their two-sided ideals.
 > jEquivalence :: (Ord e, Ord n) =>
 >                 FSA ([Maybe n], [Symbol e]) e ->
 >                 Set (Set (State ([Maybe n], [Symbol e])))
-> jEquivalence f = splitJEqClass f $
->                  Set.fromList [finals f, difference (states f) (finals f)]
-
-> splitJEqClass :: (Ord e, Ord n) =>
->                  FSA ([Maybe n], [Symbol e]) e ->
->                  Set (Set (State ([Maybe n], [Symbol e]))) ->
->                  Set (Set (State ([Maybe n], [Symbol e])))
-> splitJEqClass f xi
->     | isize new == isize xi  = xi
->     | otherwise              = splitJEqClass f new
->     where new = collapse (union . splitJEqClass' f xi) empty xi
-
-> splitJEqClass' :: (Ord e, Ord n) =>
->                   FSA ([Maybe n], [Symbol e]) e ->
->                   Set (Set (State ([Maybe n], [Symbol e]))) ->
->                   Set (State ([Maybe n], [Symbol e])) ->
->                   Set (Set (State ([Maybe n], [Symbol e])))
-> splitJEqClass' f xi s
->     | isize s == 0  = empty
->     | otherwise      = insert (insert x ys) (splitJEqClass' f xi ys')
->     where (x, xs)  = choose s
->           ys       = keep ((==) (p2 f x) . p2 f) xs
->           ys'      = difference xs ys
+> jEquivalence f = partitionBy (primitiveIdeal2 f) (states f)
 
 The primitive left-ideal of an element x of the syntactic monoid is
 the set of elements {ax} for all elements a:
 
-> pl :: (Ord n, Ord e) => FSA (n, [Symbol e]) e ->
->       State (n, [Symbol e]) -> Set (State (n, [Symbol e]))
-> pl f x = unmaybe $ tmap (d x) (states f)
->     where d a q    = pull                                   .
->                      until (allS (null . string)) (step f)  .
->                      singleton . ID q . snd $ nodeLabel a
->           pull cs  = if zsize cs
->                      then Nothing
->                      else Just . state $ chooseOne cs
->           unmaybe cs
->               | zsize cs   = empty
->               | otherwise  = case y of
->                                Just a  -> insert a (unmaybe ys)
->                                _       -> unmaybe ys
->               where (y, ys) = choose cs
+> -- |The primitive left ideal.
+> primitiveIdealL :: (Ord n, Ord e) => FSA (n, [Symbol e]) e ->
+>                    State (n, [Symbol e]) -> Set (State (n, [Symbol e]))
+> primitiveIdealL f x = collapse (union . follow f (snd $ nodeLabel x)) empty
+>                       (states f)
 
-> pr :: (Ord n, Ord e) => FSA n e -> State n -> Set (State n)
-> pr f x = snd $ until
->          (zsize . fst)
->          (\(a,b) -> let p = pr' a
->                     in (difference p b, union p b))
->          (singleton x, singleton x)
->     where pr'     = tmap state . unionAll . tmap pr''
->           pr'' y  = step f $ tmap (ID y . singleton . Symbol) (alphabet f)
+> -- |The generalized \(\delta\) function,
+> -- follow each symbol in a string in order.
+> follow :: (Ord n, Ord e) => FSA n e ->
+>           [Symbol e] -> State n -> Set (State n)
+> follow f xs q = collapse (flip (.) . delta f) id xs $ singleton q
 
-> p2 :: (Ord n, Ord e) => FSA (n, [Symbol e]) e ->
->       State (n, [Symbol e]) -> Set (State (n, [Symbol e]))
-> p2 f = unionAll . tmap (pr f) . pl f
+The primitive right-ideal is {xa} for all a,
+i.e. the reachability relation:
+
+> ignoreSymbols :: (Ord n, Ord e) => FSA n e -> FSA n ()
+> ignoreSymbols f = f {alphabet = empty
+>                     ,transitions = Set.map x (transitions f)
+>                     ,isDeterministic = False}
+>     where x t = t {edgeLabel = Epsilon}
+
+> -- |The primitive right ideal.
+> primitiveIdealR :: (Ord n, Ord e) => FSA n e -> State n -> Set (State n)
+> primitiveIdealR f x = epsilonClosure (ignoreSymbols f) (singleton x)
+
+Then the two-sided ideal is {axb} for all a and b,
+i.e. the right-ideals of every left-ideal (or v.v.).
+
+> -- |The primitive two-sided ideal.
+> primitiveIdeal2 :: (Ord n, Ord e) => FSA (n, [Symbol e]) e ->
+>                    State (n, [Symbol e]) -> Set (State (n, [Symbol e]))
+> primitiveIdeal2 f = collapse (union . primitiveIdealR f) empty .
+>                     primitiveIdealL f
+
+> -- |An automaton is considered trivial under some equivalence relation
+> -- if each of its equivalence classes is singleton.
+> trivialUnder :: (FSA n e -> Set (Set (State n))) -> FSA n e -> Bool
+> trivialUnder f = all ((== 1) . isize) . f
+
+
+H-Minimization
+==============
+
+Where two strings are J-equivalent iff their two-sided ideals are equal,
+they are H-equivalent if their corresponding one-sided ideals are equal.
+That is, w is equivalent to v iff wM == vM and Mw == Mv.
+
+> -- |Given an automaton whose syntactic monoid is \(M\),
+> -- two strings \(u\) and \(v\) are equivalent if
+> -- \(Mu=Mv\) and \(uM=vM\).
+> hEquivalence :: (Ord n, Ord e) =>
+>                 FSA (n, [Symbol e]) e -> Set (Set (State (n, [Symbol e])))
+> hEquivalence f = refinePartitionBy (primitiveIdealR f) .
+>                  partitionBy (primitiveIdealL f) $ states f
 
 
 Determinization
@@ -972,21 +1010,19 @@ and minimization require DFAs as input.
 >           buildTransitions' q = Set.mapMonotonic (\a -> buildTransition a q)
 >                                 (alphabet f)
 >           buildTransitions = collapse (union . buildTransitions') empty
->           trans'' = until
->                      (\(_, b, c) -> isize b == isize c)
->                      (\(a, b, c) ->
->                       let d = buildTransitions (difference c b) in
->                       (union a d, c, union c $ tmap (\(_, _, z) -> z) d))
->                      (empty, empty, singleton start)
+>           (trans',qs,_) = until
+>                           (\(_, b, c) -> isize b == isize c)
+>                           (\(a, b, c) ->
+>                                let d = buildTransitions (difference c b)
+>                                in (union a d
+>                                   , c
+>                                   , union c $ tmap (\(_, _, z) -> z) d))
+>                           (empty, empty, singleton start)
 >           makeRealTransition (a, b, c) = Transition (Symbol a)
 >                                          (metaFlip b)
 >                                          (metaFlip c)
->           trans' = let (a, _, _) = trans'' in a
 >           trans = Set.mapMonotonic makeRealTransition trans'
->           fin = Set.mapMonotonic metaFlip
->                 (keep
->                  isFinal
->                  (tmap (\(_, x, _) -> x) trans'))
+>           fin = Set.mapMonotonic metaFlip $ keep isFinal qs
 
 > -- |Returns a deterministic automaton representing the same
 > -- stringset as the potentially nondeterministic input.
@@ -1192,7 +1228,7 @@ alphabets unified.
 >           ts   =  transitions fsa
 >           f e  =  union (Set.mapMonotonic (\x -> e {edgeLabel = Symbol x}) new)
 >           ts'  =  collapse f empty $
->                   extract edgeLabel (Symbol Nothing) ts
+>                   extractMonotonic edgeLabel (Symbol Nothing) ts
 
 > -- |Remove the semantic 'Nothing' edges from an automaton and reflect this
 > -- change in the type.
@@ -1326,7 +1362,7 @@ built in such a way that order of elements is not preserved.
 > treeFromList [] = error "No elements"
 > treeFromList (x:[]) = Leaf x
 > treeFromList xs = ls' `par` rs' `pseq` Tree ls' rs'
->     where (ls, rs) = rEvenOdds xs
+>     where (ls, rs) = evenOdds xs
 >           (ls', rs') = (treeFromList ls, treeFromList rs)
 
 > instance NFData a => NFData (Tree a) where
@@ -1343,28 +1379,11 @@ Split a linked list into two smaller lists by taking the even and odd
 elements.  This does not require computing the list's length, thus it
 can be more efficient than splitting at the middle element.
 
-> rEvenOdds :: [a] -> ([a],[a])
-> rEvenOdds []        =  ([], [])
-> rEvenOdds (a:[])    =  (a : [], [])
-> rEvenOdds (a:b:xs)  =  (\(x,y) -> (a:x, b:y)) (rEvenOdds xs)
+The implementation of evenOdds given here will even work on an
+infinite stream because it guarantees that elements are output
+as soon as they are obtained.
 
-A fast method to extract elements from a set
-that works to find elements whose image under a monotonic function
-falls within a given range.
-The precondition that for all x,y in xs, x < y ==> f x <= f y
-is not checked.
-
-> extract :: (Ord a, Ord b) => (a -> b) -> b -> Set a -> Set a
-> extract f a = extractRange f a a
-
-> extractRange :: (Ord a, Ord b) => (a -> b) -> b -> b -> Set a -> Set a
-> extractRange f m n = Set.fromDistinctAscList .
->                      takeWhile ((<= n) . f) . dropWhile ((< m) . f) .
->                      Set.toAscList
-
-If we required users to have containers-0.5.8 or newer, we could use the
-following faster definition with guaranteed log-time extraction.
-
- > extractRange :: (Ord a, Ord b) => (a -> b) -> b -> b -> Set a -> Set a
- > extractRange f m n = Set.takeWhileAntitone ((<= n) . f) .
- >                      Set.dropWhileAntitone ((< m) . f)
+> evenOdds :: [a] -> ([a],[a])
+> evenOdds []        =  ([], [])
+> evenOdds (a:[])    =  (a : [], [])
+> evenOdds (a:b:xs)  =  let (e, o) = evenOdds xs in (a:e, b:o)

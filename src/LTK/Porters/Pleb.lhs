@@ -1,7 +1,8 @@
+> {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module:    LTK.Porters.Pleb
 > Copyright: (c) 2018-2019 Dakotah Lambert
-> License:   BSD-style, see LICENSE
+> License:   MIT
 
 > The (P)iecewise / (L)ocal (E)xpression (B)uilder.
 > This module defines a parser for a representation of
@@ -20,7 +21,7 @@
 >                         , Env
 >                         , Expr
 >                         , SymSet
->                         , Token()
+>                         , Token
 >                         , compileEnv
 >                         , groundEnv
 >                         , insertExpr
@@ -33,10 +34,12 @@
 >                         , restrictUniverse
 >                         , tokenize) where
 
-> import Control.Applicative (Applicative(..), Alternative(..))
+> import Control.Applicative ( Applicative, Alternative
+>                            , empty, many, pure, some, (<*>), (<|>))
 > import Data.Char (isLetter, isSpace)
 > import Data.Foldable (asum)
 > import Data.Functor ((<$>))
+> import Data.Monoid (mconcat)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
@@ -207,7 +210,7 @@ prevents having to descend through the tree to find this information.
 >           automata es  =  let a' = map automatonFromExpr es
 >                           in map (semanticallyExtendAlphabetTo (bigAlpha a')) a'
 >           bigAlpha     =  collapse (maybe id insert) Set.empty .
->                           unionAll . tmap alphabet
+>                           collapse (union . alphabet) Set.empty
 
 > automatonFromPLFactor :: PLFactor -> FSA Integer (Maybe String)
 > automatonFromPLFactor (PLFactor h t pieces)

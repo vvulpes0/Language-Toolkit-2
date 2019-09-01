@@ -80,20 +80,20 @@
 >   MultiParamTypeClasses
 >   #-}
 > {-|
-> Module    : LTK.ExtractSP
+> Module    : LTK.Extract.SP
 > Copyright : (c) 2017-2019 Dakotah Lambert
-> License   : BSD-style, see LICENSE
+> License   : MIT
 > 
 > Find forbidden subsequences of an automaton.
 > -}
 
-> module LTK.ExtractSP ( ForbiddenSubsequences(..)
->                      , forbiddenSubsequences
->                      , fsaFromForbiddenSubsequences
->                      , isSP
->                      , isSSQ
->                      , subsequenceClosure
->                      ) where
+> module LTK.Extract.SP ( ForbiddenSubsequences(..)
+>                       , forbiddenSubsequences
+>                       , fsaFromForbiddenSubsequences
+>                       , isSP
+>                       , isSSQ
+>                       , subsequenceClosure
+>                       ) where
 > import LTK.Factors
 > import LTK.FSA
 > import LTK.Traversals

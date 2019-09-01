@@ -2,7 +2,7 @@
 > {-|
 > Module : LTK.Porters.Jeff
 > Copyright : (c) 2016-2018 Dakotah Lambert
-> LICENSE : BSD-style, see LICENSE
+> LICENSE : MIT
 > 
 > This module provides methods to convert automata to and from
 > Jeff's format.
@@ -18,7 +18,7 @@
 >                         ) where
 
 > import LTK.FSA
-> import Control.Applicative (Applicative(..))
+> import Control.Applicative ((<*>))
 > import Data.Functor ((<$>))
 > import Data.Set (Set)
 > import qualified Data.Set as Set

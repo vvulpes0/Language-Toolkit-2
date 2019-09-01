@@ -1,0 +1,389 @@
+.\" The version string should track the overall package version
+.TH PLEB 5 "2019-08-31" "Version 0.2" "Language Toolkit"
+.SH NAME
+pleb \- Piecewise / Local Expression Builder
+.SH DESCRIPTION
+A Pleb file defines a language (set of strings) by a logical expression,
+and may also define named sets of symbols or named expressions.
+The language is powerful enough
+to define any language that a finite-state automaton can describe,
+but its design centers around the subset of these languages in which
+the set of factors that occur in a word is sufficient information
+to determine whether that word is in the language.
+.SS Basic Syntax
+Whitespace,
+.RI < ws >,
+is ignored everywhere
+except within tokens
+or where it is explicitly mentioned in the grammar.
+Comments are considered whitespace.
+.PP
+.RS
+.RI < comment >
+::=
+.B #
+.RI [< non-newline "> ...\&]"
+.RI < newline >
+.RE
+.PP
+A file (program) is a non-empty sequence of statements.
+When using
+.B LTK.Porters.Pleb.readPleb
+to evaluate a program,
+the result is the value of the special variable
+.BR it .
+This is generally the final bare expression (if any).
+In the case that
+.B it
+has no value, this method of evaluation returns an error.
+The resulting automaton (if any) is constructed with respect
+to the alphabet described by the special variable
+.BR universe ,
+which collects all symbols used throughout the file.
+.PP
+.RS
+.RI < program >
+::=
+.RI < statement >
+.RI [< statement "> ...\&]"
+.RE
+.PP
+A statement is either
+an expression or
+an assignment of either a symbol set or an expression.
+.PP
+.RS
+.RI < statement >
+::=
+.RI < sym-assign "> | <" exp-assign "> | <" exp >
+.PP
+.RI < sym-assign >
+::=
+.B =
+.RI < name >
+.B {
+.RI < symbols >
+.RB [ ,
+.RI < symbols "> ...\&]"
+.B }
+.RS
+.RE
+.BR "             " "  |"
+.B =
+.RI < name >
+.B (
+.RI < symbols >
+.RB [ ,
+.RI < symbols "> ...\&]"
+.B )
+.PP
+.RI < exp-assign >
+::=
+.B =
+.RI < name >
+.RI < exp >
+.RE
+.PP
+An expression comes in one of three types.
+It can be an n-ary expression, a unary expression, or a factor.
+Additionally it can be the name of a defined subexpression.
+.PP
+.RS
+.RI < exp >
+::=
+.RI < name "> | <" n-ary "> | <" unary "> | <" factor >
+.PP
+.RI < n-ary >
+::=
+.RI < n-op >
+.B {
+.RI < exp >
+.RB [ ,
+.RI < exp "> ...\&]"
+.B }
+.RS
+.RE
+.BR "        " "  |"
+.RI < n-op >
+.B (
+.RI < exp >
+.RB [ ,
+.RI < exp "> ...\&]"
+.B )
+.PP
+.RI < unary >
+::=
+.RI < u-op >
+.RI < exp >
+.RE
+.PP
+Factors are a bit more complicated.
+The basic form of a factor
+is a sequence of symbol sets
+separated by
+.RI < r-op >,
+which can be either
+.RI < ws >
+for adjacency or
+.B ,
+for (long-distance) precedence.
+Additionally, a factor can be either free (without anchors)
+or anchored to one or both of the head or tail of a string.
+Finally, a factor can be the name of a factor-type variable.
+.PP
+.RS
+.RI < factor >
+::=
+.RI < name >
+.RS
+.RE
+.BR "        " "   |"
+.RI [< anchors >]
+.B <
+.RI [< symbols >
+.RI [< r-op "> <" symbols "> ...\&]]"
+.B >
+.RS
+.RE
+.BR "        " "   |"
+.B ".\&<"
+.RI < factor >
+.RB [ ,
+.RI < factor "> ...\&]"
+.B >
+.RS
+.RE
+.BR "        " "   |"
+.B "..\&<"
+.RI < factor >
+.RB [ ,
+.RI < factor "> ...\&]"
+.B >
+.RE
+.PP
+The first compound kind of factor combines its sub-factors
+with the adjacency relation,
+and the other with the (long-distance) precedence relation.
+The anchors are denoted as follows.
+.PP
+.RS
+.RI < anchors >
+::=
+.RI < head-tail "> | <" head "> | <" tail >
+.PP
+.RI < head-tail >
+::=
+.B "%||%"
+.PP
+.RI < head >
+::=
+.B "%|"
+.PP
+.RI < tail >
+::=
+.B "|%"
+.RE
+.PP
+Note that
+.RI < head-tail >
+is treated as a single token;
+no whitespace may occur within the
+.B "%||%"
+sequence
+(in particular, not between
+.B "%|"
+and
+.BR "|%" ).
+.PP
+As described previously the relation operators,
+.RI < r-op >,
+in a
+.RI < factor >
+can be either whitespace to represent the adjacency relation,
+or a comma to represent the (long-distance) precedence relation.
+.PP
+.RS
+.RI < r-op >
+::=
+.RI < ws "> |"
+.B ,
+.RE
+.PP
+Symbol sets are either singleton (represent by a
+.B /
+prefix)
+or the name of some already-defined symbol set.
+.PP
+.RS
+.RI < symbols >
+::=
+.B /
+.RI < name "> | <" name >
+.RE
+.PP
+A name is a letter as defined by Unicode
+followed by any sequence of characters
+other than whitespace or characters from the following set:
+.RS
+.B , [ ] ( ) { } < >
+.RE
+Note that this includes the
+.B #
+character, so a comment cannot occur in the middle of a name.
+.SS N-ary Operators
+An n-ary operator can be any of the following.
+The first option, as with the anchors described previously,
+is pure ASCII, while the other options may be Unicode.
+.TP
+.B /\e
+The set intersection (logical conjunction) of the operands.
+.TP
+.B \e/
+The set union (logical disjunction) of the operands.
+.TP
+.B @@
+The gapped-concatenation of the operands,
+equivalent to normal concatenation except that
+arbitrary strings may be inserted between the operands.
+.TP
+.B @
+The concatenation of the operands.
+Note that non-anchored ends of factor-expressions
+automatically allow arbitrary strings to occur,
+so this concatenation may not be what one expects.
+It is better to use the
+.BR .\&< ...\& >
+form in that case.
+.SS Unary Operators
+This section describes the unary relations just as
+the previous section described the n-ary ones.
+.TP
+.BR ~ " | " !
+The logical negation of the operand.
+Equivalent to the set complement of the operand.
+.TP
+.B *
+The iteration closure of the operand.
+Allow it to occur zero or more times.
+This has the same caveat as the concatenation operator:
+factor-expressions that are not fully anchored
+may have arbitrary strings at the non-anchored ends.
+.PP
+.B [
+.RI < symbols "> ["
+.B ,
+.RI < symbols "> ...\&]"
+.B ]
+.RS
+The symbols defined by the
+.RI < symbols >
+components specify a tier
+on which the operand should occur.
+This returns the preprojection of the operand:
+the largest language that when projected to the tier
+is equal to the operand.
+.RE
+.SS Unicode Syntax
+In addition to the ASCII syntax described previously,
+there is a unicode syntax that provides the following synonyms:
+.TP
+.B =
+<U+225D> [equal to by definition]
+.TP
+.BR < ...\& >
+<U+27E8>...\&<U+27E9> [mathematical left/right angle bracket]
+.TP
+.B %|
+<U+22CA> [right normal factor semidirect product]
+.TP
+.B |%
+<U+22C9> [left normal factor semidirect product]
+.TP
+.B /\e
+<U+22C2> [n-ary intersection] or <U+2229> [intersection]
+.TP
+.B \e/
+<U+22C3> [n-ary union] or <U+222A> [union]
+.TP
+.B @
+<U+2219> [bullet operator]
+.TP
+.B ~
+<U+00AC> [not sign]
+.TP
+.B *
+<U+2217> [asterisk operator]
+.PP
+No special setup is needed to use these synonyms,
+except possibly configuring your environment
+in such a way that they can be easily input.
+.SH NOTES
+There is currently no way to directly specify finite-state automata,
+even though the underlying expression tree accepts them
+as a type of expression.
+The
+.B plebby
+interpreter
+does create such expressions
+when reading automata or compiling expressions.
+.SH EXAMPLES
+.TP
+.B </a>
+The symbol "a" occurs.
+.TP
+.B [/a]~%||%<>
+The same constraint,
+written in a TSL manner:
+on the tier consisting of
+.BR a ,
+it is not the case that the word is empty.
+.PP
+.B = primary {/H'}
+.RS
+.RE
+.B = non-primary {/L, /H}
+.RS
+.RE
+.B = obligatoriness </primary>
+.RS
+.RE
+.B = culminativity ~</primary,/primary>
+.RS
+.RE
+.B /\e{obligatoriness,culminativity}
+.RS
+.IP (1)
+Assign the set {H'} to the name
+.B primary
+.IP (2)
+Assign the set {L, H} to the name
+.BR non-primary ,
+in order to include all of L, H, and H' in
+.BR universe.
+.IP (3)
+Define
+.B obligatoriness
+to be the constraint
+that some element of
+.B primary
+occurs.
+.IP (4)
+Define
+.B culminativity
+to be the constraint
+that no more than one element of
+.B primary
+occurs using the (long-distance) precedence relation.
+.IP (5)
+Define the special variable
+.BR it ,
+and thus the result of the program,
+as the intersection of
+.B obligatoriness
+and
+.BR culminativity :
+the set of strings containing exactly one element of
+.BR primary .
+.RE
+.SH "SEE ALSO"
+.BR plebby (1)

@@ -1,14 +1,23 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-# Language
+>   CPP,
 >   FlexibleInstances,
 >   FunctionalDependencies,
 >   MultiParamTypeClasses,
 >   Trustworthy
 >   #-}
+
+#if !defined(MIN_VERSION_base)
+# define MIN_VERSION_base(a,b,c) 0
+#endif
+#if !defined(MIN_VERSION_containers)
+# define MIN_VERSION_containers(a,b,c) 0
+#endif
+
 > {-|
 > Module      : LTK.Containers
 > Copyright   : (c) 2016-2019 Dakotah Lambert
-> License     : BSD-style, see LICENSE
+> License     : MIT
 > 
 > Containers: a uniform way to work with entities that may
 > contain other entities.
@@ -30,6 +39,8 @@
 >                       , tmap
 >                       , keep
 >                       , groupBy
+>                       , partitionBy
+>                       , refinePartitionBy
 >                       -- *Multisets
 >                       , Multiset
 >                       , multiplicity
@@ -46,11 +57,18 @@
 >                       , IncreasingSize(..)
 >                       , DecreasingSize(..)
 >                       -- *Miscellaneous functions
+>                       , extractMonotonic
 >                       , tr
 >                       ) where
 
-> import safe Data.Semigroup (Semigroup(..))
-> import safe Data.Monoid (Monoid(..))
+#if MIN_VERSION_base(4,9,0)
+The base-4.9 library from GHC 8.x added Semigroup to complement Monoid.
+
+> import safe Data.Semigroup (Semigroup, (<>))
+
+#endif
+
+> import safe Data.Monoid (Monoid, mempty, mappend)
 > import safe Data.Set (Set)
 > import safe qualified Data.Set as Set
 
@@ -249,6 +267,22 @@ properties of each typeclass to build map and filter, here called
 >     where y = f (chooseOne xs)
 >           currentGroup = keep ((== y) . f) xs
 
+> -- |A fast 'groupBy' for 'Set' objects.
+> partitionBy :: (Ord a, Ord n) => (n -> a) -> Set n -> Set (Set n)
+> partitionBy f = fst .
+>                 until (isEmpty . snd)
+>                 (\(x, y) ->
+>                      let extracted  =  extractMonotonic fst
+>                                        (fst (chooseOne y)) y
+>                          (_, y')    =  Set.splitAt (size extracted) y
+>                      in (insert (Set.mapMonotonic snd extracted) x, y')
+>                 ) .
+>                 (,) empty . Set.map (\x -> (f x, x))
+
+> -- |A convenience function for the common partition refinement operation.
+> refinePartitionBy :: (Ord a, Ord n) => (n -> a) -> Set (Set n) -> Set (Set n)
+> refinePartitionBy f = collapse (union . partitionBy f) empty
+
 > -- |Build a 'Container' from the elements of a 'Collapsible'.
 > -- This can be used to cast between most types of 'Container'.
 > -- Time complexity is \(O(nci)\), where \(n\) is the number of
@@ -373,12 +407,17 @@ lookup-time logarithmic in the number of distinct elements.
 >               ys' = Set.toAscList ys
 >               zs  = differenceSortedMultis xs' ys'
 
+#if MIN_VERSION_base(4,9,0)
+Semigroup instance to satisfy base-4.9
+
 > instance Ord a => Semigroup (Multiset a) where
->     (<>) = union
+>     (<>) = mappend
+
+#endif
 
 > instance Ord a => Monoid (Multiset a) where
 >     mempty = empty
->     mappend = (<>)
+>     mappend = union
 
 > instance Show a => Show (Multiset a) where
 >     showsPrec p m = showParen (p > 10) $
@@ -480,3 +519,35 @@ Miscellaneous functions
 >           makeInfinite []      =  []
 >           makeInfinite (y:[])  =  repeat y
 >           makeInfinite (y:ys)  =  y : makeInfinite ys
+
+A fast method to extract elements from a set
+that works to find elements whose image under a monotonic function
+falls within a given range.
+The precondition that for all x,y in xs, x < y ==> f x <= f y
+is not checked.
+
+#if MIN_VERSION_containers(0,5,8)
+From containers-0.5.8, a range can be extracted from a Set in
+guaranteed log-time.
+
+> extractRange :: (Ord a, Ord b) => (a -> b) -> b -> b -> Set a -> Set a
+> extractRange f m n = Set.takeWhileAntitone ((<= n) . f) .
+>                      Set.dropWhileAntitone ((< m) . f)
+
+#else
+If we are using an older version of the containers library
+that doesn't contain the necessary functions, we can make do
+with a variant that is at least still faster than filter.
+
+> extractRange :: (Ord a, Ord b) => (a -> b) -> b -> b -> Set a -> Set a
+> extractRange f m n = Set.fromDistinctAscList .
+>                      takeWhile ((<= n) . f) . dropWhile ((< m) . f) .
+>                      Set.toAscList
+
+#endif
+
+> -- |A fast method to extract elements from a set
+> -- whose image under a monotonic function is a certain value.
+> -- The precondition that the function is monotonic is not checked.
+> extractMonotonic :: (Ord a, Ord b) => (a -> b) -> b -> Set a -> Set a
+> extractMonotonic f a = extractRange f a a

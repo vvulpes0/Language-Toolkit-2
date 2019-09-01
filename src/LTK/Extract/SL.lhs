@@ -46,35 +46,35 @@ MoL'17 as is the notion of an $\SL$ approximation of a non-$\SL$ stringset.
 >   MultiParamTypeClasses
 >   #-}
 > {-|
-> Module    : LTK.ExtractSL
+> Module    : LTK.Extract.SL
 > Copyright : (c) 2017-2019 Jim Rogers and Dakotah Lambert
-> License   : BSD-style, see LICENSE
+> License   : MIT
 > 
 > Find forbidden substrings of an automaton.
 > -}
-> module LTK.ExtractSL ( ForbiddenSubstrings(..)
->                      , ForbiddenPaths(..)
->                      , TaggedSubstring(..)
->                      -- *Extracting forbidden substrings
->                      , factorsFromPaths
->                      , forbiddenSubstrings
->                      , forbiddenPaths
->                      , forbiddenPathsWithBound
->                      -- *Building automata
->                      , buildFSA
->                      -- *Determining SL
->                      , isSL
->                      , slQ
->                      -- *...with precomputed PSG
->                      , isSLPSG
->                      , slPSGQ
->                      ) where
+> module LTK.Extract.SL ( ForbiddenSubstrings(..)
+>                       , ForbiddenPaths(..)
+>                       , TaggedSubstring(..)
+>                       -- *Extracting forbidden substrings
+>                       , factorsFromPaths
+>                       , forbiddenSubstrings
+>                       , forbiddenPaths
+>                       , forbiddenPathsWithBound
+>                       -- *Building automata
+>                       , buildFSA
+>                       -- *Determining SL
+>                       , isSL
+>                       , slQ
+>                       -- *...with precomputed PSG
+>                       , isSLPSG
+>                       , slPSGQ
+>                       ) where
 
 > import LTK.FSA
 > import LTK.Traversals  -- for initialsPaths, rejectingPaths
 > import LTK.Factors
 
-> import Control.DeepSeq
+> import Control.DeepSeq (NFData)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 > import qualified Data.List as List
@@ -426,11 +426,11 @@ factor.
 Note that the FFs here are actual forbidden substrings, not forbidden paths
 
 > fWords :: (Ord e, Ord n) => FSA n e
->                             -> Integer             -- bound
->                             -> Set.Set([Symbol e]) -- initialFFs
->                             -> Set.Set([Symbol e]) -- freeFFs
->                             -> Set.Set([Symbol e]) -- finalFFs
->                             -> Set.Set([Symbol e])
+>                             -> Integer          -- bound
+>                             -> Set ([Symbol e]) -- initialFFs
+>                             -> Set ([Symbol e]) -- freeFFs
+>                             -> Set ([Symbol e]) -- finalFFs
+>                             -> Set ([Symbol e])
 > fWords fsa bound iFFs frFFs fiFFs =
 >     Set.fromList
 >            (filter
@@ -445,7 +445,7 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 >                   max ((supermax (Set.union iFFs fiFFs)) - 1)
 >                       (max ((supermax frFFs)-2)
 >                            bound)
->               supermax :: Set.Set [a] -> Integer
+>               supermax :: Set [a] -> Integer
 >               supermax s
 >                   | (Set.null s) = 0
 >                   | otherwise = 

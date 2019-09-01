@@ -1,7 +1,7 @@
 > module Main where
 
-> import LTK.ExtractSL
-> import LTK.ExtractSP
+> import LTK.Decide
+> import LTK.Extract
 > import LTK.Factors
 > import LTK.FSA
 > import LTK.Porters
@@ -23,7 +23,7 @@
 > import System.Environment (getArgs)
 > import System.Exit (die)
 > import System.FilePath ((</>), takeBaseName)
-> import System.IO ( IOMode (..)
+> import System.IO ( IOMode(ReadMode, WriteMode)
 >                  , hGetContents
 >                  , hPutStrLn
 >                  , stderr
