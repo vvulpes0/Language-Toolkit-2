@@ -13,6 +13,6 @@
 > import LTK.Decide.LTT (isLTT)
 > import LTK.Tiers (project)
 
-> -- |True iff the automaton recognizes a TLT stringset.
+> -- |True iff the automaton recognizes a TLTT stringset.
 > isTLTT :: (Ord n, Ord e) => FSA n e -> Bool
 > isTLTT = isLTT . project
