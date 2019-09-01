@@ -111,6 +111,16 @@ in the current
 .BR universe .
 .RE
 .
+.B :isLTT
+.RI < expr >
+.RS
+Determine whether
+.RI < expr >
+represents a Locally Threshold Testable stringset
+in the current
+.BR universe .
+.RE
+.
 .PP
 .B :isPT
 .RI < expr >
@@ -173,6 +183,17 @@ in the current
 Determine whether
 .RI < expr >
 represents a Tier-Based Locally Testable stringset
+in the current
+.BR universe .
+.RE
+.
+.PP
+.B :isTLTT
+.RI < expr >
+.RS
+Determine whether
+.RI < expr >
+represents a Tier-Based Locally Threshold Testable stringset
 in the current
 .BR universe .
 .RE
@@ -360,6 +381,7 @@ which cannot be assigned directly.
 Non-satisfiable factors are uniformly replaced by
 .B ~<>
 for simplicity.
+.
 .SH OPTIONS
 None.
 .SH "EXIT STATUS"
@@ -369,6 +391,7 @@ Successful program execution
 .TP
 .B ">0"
 An error occurred.
+.
 .SH ENVIRONMENT
 .TP
 .B PAGER
@@ -378,10 +401,19 @@ is set, its value is used as the program to use to display the help text.
 If not, then
 .B less
 is used with no arguments.
+.
 .SH FILES
 .TP
 ~/.haskeline
 Configuration file for the line editor.
+.
+.SH NOTES
+Most of the complexity class decision algorithms are based on
+properties of the syntactic monoid that,
+given the representation,
+might be slow to compute.
+This holds especially true for the (T)LTT test.
+.
 .SH BUGS
 Lines that cannot be parsed are ignored,
 but generally no warnings are emitted.

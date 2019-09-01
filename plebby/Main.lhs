@@ -24,6 +24,7 @@
 > import LTK.Porters      (Dot(Dot), Jeff(Jeff), formatSet, fromE, to)
 > import LTK.Decide       ( isSL, isTSL
 >                         , isLT, isTLT
+>                         , isLTT, isTLTT
 >                         , isSP
 >                         , isPT
 >                         , isSF)
@@ -106,11 +107,13 @@ The types are consistent, so it is enough to define a synonym here.
 >              deriving (Eq, Read, Show)
 > data Relation = Equal Expr Expr
 >               | IsLT Expr
+>               | IsLTT Expr
 >               | IsPT Expr
 >               | IsSF Expr
 >               | IsSL Expr
 >               | IsSP Expr
 >               | IsTLT Expr
+>               | IsTLTT Expr
 >               | IsTSL Expr
 >               | Subset Expr Expr
 >               | SSubset Expr Expr -- Strict Subset
@@ -189,6 +192,8 @@ The types are consistent, so it is enough to define a synonym here.
 >                          , [ArgF], "read file as plebby script")
 >                        , ( ":isLT",           ((M .         IsLT   ) <$> pe )
 >                          , [ArgE], "determine if expr is Locally Testable")
+>                        , ( ":isLTT",          ((M .         IsLTT  ) <$> pe )
+>                          , [ArgE], "determine if expr is Locally Threshold Testable")
 >                        , ( ":isPT",           ((M .         IsPT   ) <$> pe )
 >                          , [ArgE], "determine if expr is Piecewise Testable")
 >                        , ( ":isSF",           ((M .         IsSF   ) <$> pe )
@@ -199,6 +204,8 @@ The types are consistent, so it is enough to define a synonym here.
 >                          , [ArgE], "determine if expr is Strictly Piecewise")
 >                        , ( ":isTLT",          ((M .         IsTLT  ) <$> pe )
 >                          , [ArgE], "determine if expr is Tier-Locally Testable")
+>                        , ( ":isTLTT",         ((M .         IsTLTT ) <$> pe )
+>                          , [ArgE], "determine if expr is Tier-LTT")
 >                        , ( ":isTSL",          ((M .         IsTSL  ) <$> pe )
 >                          , [ArgE], "determine if expr is Strictly Tier-Local")
 >                        , ( ":loadstate",      error ":loadstate not defined here"
@@ -419,6 +426,8 @@ The types are consistent, so it is enough to define a synonym here.
 >                    Equal p1 p2    ->  relate e (==) p1 p2
 >                    IsLT p         ->  isLT <$> normalize <$> desemantify <$>
 >                                       makeAutomaton (e' p)
+>                    IsLTT p        ->  isLTT <$> normalize <$> desemantify <$>
+>                                       makeAutomaton (e' p)
 >                    IsPT p         ->  isPT <$> normalize <$> desemantify <$>
 >                                       makeAutomaton (e' p)
 >                    IsSF p         ->  isSF <$> normalize <$> desemantify <$>
@@ -429,6 +438,8 @@ The types are consistent, so it is enough to define a synonym here.
 >                                       makeAutomaton (e' p)
 >                    IsTLT p        ->  isTLT <$> normalize <$> desemantify <$>
 >                                       makeAutomaton (e' p)
+>                    IsTLTT p       ->  isTLTT <$> normalize <$>
+>                                       desemantify <$> makeAutomaton (e' p)
 >                    IsTSL p        ->  isTSL <$> normalize <$> desemantify <$>
 >                                       makeAutomaton (e' p)
 >                    Subset p1 p2   ->  relate e isSupersetOf p1 p2

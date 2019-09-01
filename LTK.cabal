@@ -60,11 +60,13 @@ library
                 , LTK.Containers
                 , LTK.Decide
                 , LTK.Decide.LT
+                , LTK.Decide.LTT
                 , LTK.Decide.PT
                 , LTK.Decide.SF
                 , LTK.Decide.SL
                 , LTK.Decide.SP
                 , LTK.Decide.TLT
+                , LTK.Decide.TLTT
                 , LTK.Decide.TSL
                 , LTK.Extract
                 , LTK.Extract.SL
