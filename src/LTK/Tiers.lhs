@@ -2,7 +2,7 @@
 > {-|
 > Module:     LTK.Tiers
 > Copyright:  (c) 2019 Dakotah Lambert
-> Licence:    BSD-style, see LICENSE
+> Licence:    MIT
 
 > If an FSA defines a stringset that is the preprojection
 > of some other stringset over a smaller alphabet,

@@ -2,7 +2,7 @@
 > {-|
 > Module    : LTK.Decide.SF
 > Copyright : (c) 2019 Dakotah Lambert
-> License   : BSD-style, see LICENSE
+> License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
 > is Star-Free (SF) based on the semigroup characterization

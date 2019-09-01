@@ -17,7 +17,7 @@
 > {-|
 > Module      : LTK.Containers
 > Copyright   : (c) 2016-2019 Dakotah Lambert
-> License     : BSD-style, see LICENSE
+> License     : MIT
 > 
 > Containers: a uniform way to work with entities that may
 > contain other entities.

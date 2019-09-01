@@ -2,7 +2,7 @@
 > {-|
 > Module    : LTK.Decide.PT
 > Copyright : (c) 2019 Dakotah Lambert
-> License   : BSD-style, see LICENSE
+> License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
 > is Piecewise Testable (PT) based on the semigroup characterization

@@ -2,7 +2,7 @@
 > {-|
 > Module:    LTK.Porters.Pleb
 > Copyright: (c) 2018-2019 Dakotah Lambert
-> License:   BSD-style, see LICENSE
+> License:   MIT
 
 > The (P)iecewise / (L)ocal (E)xpression (B)uilder.
 > This module defines a parser for a representation of

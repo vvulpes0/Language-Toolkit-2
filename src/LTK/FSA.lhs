@@ -14,7 +14,7 @@
 > {-|
 > Module    : LTK.FSA
 > Copyright : (c) 2014-2019 Dakotah Lambert
-> License   : BSD-style, see LICENSE
+> License   : MIT
 
 > The purpose of this module is to define an interface to a generic,
 > reusable impementation of finite-state automata (FSAs).  The primary

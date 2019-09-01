@@ -2,7 +2,7 @@
 > {-|
 > Module:    LTK.Factors
 > Copyright: (c) 2017-2019 Dakotah Lambert
-> License:   BSD-Style, see LICENSE
+> License:   MIT
 
 > This module provides a means to define
 > positive and negative factors

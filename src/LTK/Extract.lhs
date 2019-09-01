@@ -2,7 +2,7 @@
 > {-|
 > Module    : LTK.Extract
 > Copyright : (c) 2019 Dakotah Lambert
-> License   : BSD-style, see LICENSE
+> License   : MIT
 > 
 > Functions used for extracting constraints from automata.
 > Each complexity class for which these operations are implemented

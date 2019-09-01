@@ -2,7 +2,7 @@
 > {-|
 > Module:    LTK
 > Copyright: (c) 2019 Dakotah Lambert
-> License:   BSD-style, see LICENSE
+> License:   MIT
 
 > The entire Language Toolkit.
 > Generally this is more than one will need,

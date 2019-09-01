@@ -2,7 +2,7 @@
 > {-|
 > Module    : LTK.Decide.SP
 > Copyright : (c) 2019 Dakotah Lambert
-> License   : BSD-style, see LICENSE
+> License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
 > is Strictly Piecewise (SP) by my own direct-construction algorithm.

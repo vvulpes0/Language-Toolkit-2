@@ -2,7 +2,7 @@
 > {-|
 > Module    : LTK.Decide.TLT
 > Copyright : (c) 2019 Dakotah Lambert
-> License   : BSD-style, see LICENSE
+> License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
 > is Tier-Based Locally Testable (TLT) by my own algorithm.

@@ -8,7 +8,7 @@
 > {-|
 > Module    : Traversals
 > Copyright : (c) 2017-2019 Jim Rogers and Dakotah Lambert
-> License   : BSD-style, see LICENSE
+> License   : MIT
 >
 > Find paths through an automaton.
 > -}

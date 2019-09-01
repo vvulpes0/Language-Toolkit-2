@@ -2,7 +2,7 @@
 > {-|
 > Module    : LTK.Extract.TSL
 > Copyright : (c) 2019 Dakotah Lambert
-> License   : BSD-style, see LICENSE
+> License   : MIT
 > 
 > Generalize Extract.SL for tier-local constraints.
 > -}

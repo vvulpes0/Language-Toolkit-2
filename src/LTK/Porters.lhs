@@ -2,7 +2,7 @@
 > {-|
 > Module : LTK.Porters
 > Copyright : (c) 2018-2019 Dakotah Lambert
-> License   : BSD-style, see LICENSE
+> License   : MIT
 > 
 > This module provides methods to convert automata to and from
 > various formats.
