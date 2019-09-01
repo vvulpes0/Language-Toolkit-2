@@ -6,15 +6,15 @@
 html {
 	font-family:sans-serif;
 	font-size:100%;
-	linespread:1.4;
-	background-color:#333;
-	color:#fff;
+	line-height:1.4;
+	background-color:#000;
+	color:#eee;
 	overflow-x:hidden;
 }
 
 body {
-	background-color:#d1d1d1;
-	color:#333;
+	background-color:#ddd;
+	color:#222;
 	width:100%;
 	max-width:56em;
 	margin:0 auto 3em;
@@ -22,17 +22,28 @@ body {
 	padding-top:4em;
 }
 
+a {
+	color:inherit;
+	text-decoration:none;
+	border-bottom:1px dashed #222;
+}
+
+a:hover {
+	color:#000;
+	border-bottom:1px dashed #000;
+}
+
 .code {
 	font-family:monospace, serif;
 }
 
 div.code {
-	background-color:#333;
-	color:#fff;
+	background-color:#555;
+	color:#ddd;
 	padding:0.5em;
 	white-space:nowrap;
 	overflow:auto;
-	font-size:75%;
+	font-size:100%;
 }
 
 .center {
@@ -59,20 +70,22 @@ nav {
 	max-height:2em;
 	white-space:nowrap;
 	overflow:hidden;
-	background-color:#ee9;
+	background-color:#ff8;
 	color:#333;
 	padding:0.5em 1em;
 	margin:0 auto 1em;
 	margin-bottom:1em;
+	box-shadow:0 0 0.5em black;
 }
 
-nav a {
+nav a, nav a:hover {
 	background-color:inherit;
 	color:inherit;
 	text-decoration:none;
+	border:none;
 }
 
-nav a[href="./"] {
+nav li.home a {
 	background-image:url('img/home.svg');
 	background-size:contain;
 	background-repeat:no-repeat;
@@ -82,7 +95,7 @@ nav a[href="./"] {
 	width:1em;
 	text-indent:-9999px;
 	overflow:hidden;
-	white-space:no-wrap;
+	white-space:nowrap;
 }
 
 nav li {
@@ -99,6 +112,7 @@ nav li:hover {
 }
 
 h2 {
+	color:#333;
 	text-align:left;
 	font-size:1.5em;
 	font-weight:bold;
@@ -117,6 +131,23 @@ h2+p {
 	margin-top:0;
 }
 
+p+h2, iframe+h2 {
+	margin-top:1em;
+}
+
 dl {
 	display:inline-block;
+}
+
+dl a, dl a:hover {
+	border:none;
+}
+
+.embed {
+	display:block;
+	border:none;
+	margin:1em -4px 0;
+	padding:0;
+	width:100%;
+	height:50em;
 }

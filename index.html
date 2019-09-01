@@ -4,90 +4,92 @@
  <meta charset="utf-8" />
  <meta name="viewport" content="initial-scale=1.0" />
  <title>Local Language Toolkit version 0.01 alpha (SCiL19)</title>
- <base href="https://vvulpes0.github.io/Language-Toolkit-2/" />
  <link rel="stylesheet" type="text/css" href="default.css" />
  <link rel="icon" type="image/vnd.microsoft.icon" href="img/favicon.ico" />
 </head>
 <body>
 <nav>
 <ul>
-<li class="current"><a href="./">Home</a></li>
-<li><a href="code/">Code</a></li>
+<li class="current home"><a href="./">Home</a></li>
 <li><a href="docs/">Docs</a></li>
-<li><a href="examples/">Examples</a></li>
 </ul>
 </nav>
 <article id="main-content">
 <h2>Installation</h2>
-<ol><li
->Install GHC, the Haskell parallel libraries, GraphViz, and ImageMagick:<div class="code"
->sudo apt-get install ghc libghc-parallel-dev graphviz imagemagick</div></li
-><li><span class="code">cd</span> to the directory in which you will run the toolkit.</li
-><li>Download the <a href="https://lutras-hacking.ddns.net/websvn/dl.php?repname=Language-Toolkit-2&path=%2Ftags%2F0.01a%2F&isdir=1&">current version</a> of the toolkit.</li
-><li>Unpack the tarball:<div class="code"
->tar xzf Language-Toolkit-2-&lt;versionNumber&gt;.tar.gz</div
->Where <span class="code">&lt;versionNumber&gt;</span>
-will be something like 0.01a.r107.
-This will create a directory named
-<span class="code">&lt;versionNumber&gt;</span>.</li
-><li><span class="code">cd &lt;versionNumber&gt;</span>.</li
-><li>Download <a href="docs/docs.tar.gz">the documentation</a> and unpack it:<div class="code"
->tar xzf &lt;docs.tar.gz&gt;</div
->This will create a directory <span class="code">docs</span>
-in your current directory.</li
-><li>Download <a href="examples/plebFiles.tar.gz">the example</a>
-pleb and <span class="code">plebby</span> files and unpack them:<div class="code"
->tar xzf examples.tar.gz</div
->This will create a directory <span class="code">plebFiles</span>
-in your current directory.</li
-><li>Compile <span class="code">plebby</span><div class="code"
->ghc -O2 -threaded -with-rtsopts='-N -C0.001 -qg1' plebby</div></li
-><li>Optionally download <a href="http://st2.ullet.net/files/files/st2-v1-archive-0415.tar.gz">the StressTyp2 archive</a>.</li
-><li>Unpack the archive:<div class="code"
->tar xzf st2-v1-archive-0415.tar.gz</div>
-This will create the directory <span class="code">st2-v1-archive-0415</span>
-in your current directory.</li
-><li>Run <span class="code">plebby</span> and test it<div class="code"
->./plebby<br
-/>&gt; :import &lt;plebFiles&gt;/yidin.plebby<br
-/>&gt; :display yidin
-</div
->Where <span class="code">&lt;plebFiles&gt;</span>
-is the path to the directory with the example files.
-This should display the automaton for Yidin, as described in the StressTyp2 database.
 <div class="code"
->&gt; :readJeff st2-v1-archive-0415/transducers/fsasJeff/219_Yidin_SPD.fsa<br
-/>&gt; :equal it yidin</div
->If all has gone well, this should return True.
-You may <span class="code">:quit</span> when you are done.</li
-><li>If you would like to use <span class="code">factorize</span>,
-first compile it:<div class="code"
->ghc -O2 -threaded -with-rtsopts='-N -C0.001 -qg1' factorize</div></li
-><li>Next download the <a href="compiled.tar.gz">precompiled non-strict constraints</a>.</li
-><li>Unpack them<div class="code"
->tar xzf compiled.tar.gz</div
->This will create a directory <span class="code">Compiled</span>
-along with the compiled constraints
-and the file <span class="code">Compiled/constraints</span>,
-which are required for <span class="code">factorize</span>.</li
-><li
->Run <span class="code">factorize</span
+ >git clone https://github.com/vvulpes0/Language-Toolkit-2.git<br
+/>cabal v2-install all<br
+/>cabal v2-install --lib LTK</div
+><p>For more information, see the
+<a href="https://github.com/vvulpes0/Language-Toolkit-2/blob/master/README.md"
+>README</a>.</p
+><h2>Examples</h2>
+<p
+>There are example pleb and <span class="code">plebby</span> files
+in the <span class="code">examples</span>
+directory of the Git repository.
+Their format is documented by the
+<span class="code">plebby(1)</span> and
+<span class="code">pleb(5)</span> manual pages.
+If you want to use these examples, you should create a symbolic link called
+<span class="code">plebFiles</span>
+in the directory you want to work in.</p
+><p
+>The pleb and <span class="code">plebby</span> files
+included in that directory are in ASCII format for maximum compatibility.
+There is also a Unicode syntax that may or may not be more readable.
+For example, the Cheremis Meadow stress pattern
+(described on the poster presented at SCiL 2019)
+can be written in ASCII format:</p
 ><div class="code"
->./factorize st2-v1-archive-0415/transducers/fsasJeff/*</div
->(You may wish to choose a subset of the lects to start with,
-but the whole library should take less than five minutes.)
-The results will be in the directory
-<span class="code">Results</span>.</li
-></ol
-><h2>Associated writings</h2><div class="center"
-><dl><dt><a href="https://scholarworks.umass.edu/cgi/viewcontent.cgi?article=1065&context=scil"><img src="img/paper-preview.png" alt="thumbnail"></a></dt
-><dd>SCiL paper</dd></dl
-><dl><dt><a href="pdf/pl.pdf"><img src="img/pl-preview.png" alt="thumbnail"></a></dt
-><dd>PL</dd></dl
-><dl><dt><a href="pdf/factorize.pdf"><img src="img/factorize-preview.png" alt="thumbnail"></a></dt
-><dd>Factorize</dd></dl
-><dl><dt><a href="pdf/poster.pdf"><img src="img/poster-preview.png" alt="thumbnail"></a></dt
-><dd>Poster</dd></dl></div
+ >= sigma {/L, /H, /S}<br
+/>= sigma' {/L', /H', /S'}<br
+/>= sigma* {sigma, sigma'}<br
+/>= heavy* {/H, /S, /H', /S'}<br
+/>= obligatoriness &lt;sigma'&gt;<br
+/>= culminativity ~&lt;sigma',sigma'&gt;<br
+/>= d1 ~&lt;sigma',/S&gt;<br
+/>= d2 ~&lt;sigma',/H,sigma*&gt;<br
+/>= d3 ~&lt;/L' sigma*&gt;<br
+/>= d4 /\{~&lt;/L',heavy*&gt;, ~&lt;heavy*,/L'&gt;}<br
+/>= d5 ~|%&lt;heavy*,/H'&gt;<br
+/>= cheremis-meadow /\{obligatoriness, culminativity, d1, d2, d3, d4, d5}<br
+/>cheremis-meadow</div><p
+>or in Unicode format:</p
+><div class="code"
+ >= L {/L} = H {/H} = S {/S}
+  = &#x2c8;L {/L'} = &#x2c8;H {/H'} = &#x2c8;S {/S'}<br
+/>= &#x3c3; {L, H, S}<br
+/>= &#x2c8;&#x3c3; {&#x2c8;L, &#x2c8;H, &#x2c8;S}<br
+/>= &#x2e3;&#x3c3; {&#x3c3;, &#x2c8;&#x3c3;}<br
+/>= &#x2e3;heavy {H, S, &#x2c8;H, &#x2c8;S}<br
+/>= obligatoriness &#x27e8;&#x2c8;&#x3c3;&#x27e9;<br
+/>= culminativity &#xac;&#x27e8;&#x2c8;&#x3c3;,&#x2c8;&#x3c3;&#x27e9;<br
+/>= d1 &#xac;&#x27e8;&#x2c8;&#x3c3;,S&#x27e9;<br
+/>= d2 &#xac;&#x27e8;&#x2c8;&#x3c3;,H,&#x2e3;&#x3c3;&#x27e9;<br
+/>= d3 &#xac;&#x27e8;&#x2c8;L &#x2e3;&#x3c3;&#x27e9;<br
+/>= d4 &#x22c2;{&#xac;&#x27e8;&#x2c8;L,&#x2e3;heavy&#x27e9;,
+                &#xac;&#x27e8;&#x2e3;heavy,&#x2c8;L&#x27e9;}<br
+/>= d5 &#xac;&#x22c9;&#x27e8;&#x2e3;heavy,&#x2c8;H&#x27e9;<br
+/>= cheremis-meadow &#x22c2;{obligatoriness, culminativity, d1, d2, d3, d4, d5}<br
+/>cheremis-meadow</div><p
+>Note that the trick of defining singleton sets to eliminate the slashes
+works in both variants of the syntax, and that nothing prevents a user from
+mixing both types of syntax in the same file.
+The prefix marker for primary stress used here is
+&ldquo;MODIFIER LETTER VERTICAL LINE&rdquo; (u02C8) while the suffix version is
+&ldquo;APOSTROPHE&rdquo; (u0027) &mdash;
+attempting to use the apostrophe in prefix position will fail
+because that character is not a letter.</p
+><p
+>A <a href="constraints.ods">spreadsheet</a> containing a
+(sometimes-incorrect) list of factorizations that predates
+the <span class="code">factorize</span> program is available
+in Open Document format.  This can be used with
+<span class="code">stressConstraints.plebby</span>,
+as shown in the other provided example files,
+though it should be noted that the output of
+<span class="code">factorize</span> is definitive.</p
 ></article>
 </body>
 </html>
