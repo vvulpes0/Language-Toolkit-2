@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEBBY 1 "2019-08-24" "Version 0.1" "Language Toolkit"
+.TH PLEBBY 1 "2019-08-31" "Version 0.1" "Language Toolkit"
 .SH NAME
 plebby \- Piecewise / Local Expression Builder Interpreter
 .SH SYNOPSIS
@@ -369,6 +369,15 @@ Successful program execution
 .TP
 .B ">0"
 An error occurred.
+.SH ENVIRONMENT
+.TP
+.B PAGER
+If
+.B PAGER
+is set, its value is used as the program to use to display the help text.
+If not, then
+.B less
+is used with no arguments.
 .SH FILES
 .TP
 ~/.haskeline

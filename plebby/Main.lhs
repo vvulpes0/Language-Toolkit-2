@@ -37,12 +37,14 @@
 >                                 , getInputLine
 >                                 , runInputT
 >                                 )
+> import System.Environment (getEnvironment)
 > import System.IO ( hClose
 >                  , hGetContents
 >                  , hPutStr
 >                  , hPutStrLn
 >                  , hSetBinaryMode
 >                  , stderr
+>                  , stdout
 >                  )
 
 #if MIN_VERSION_base(4,4,0)
@@ -278,7 +280,7 @@ The types are consistent, so it is enough to define a synonym here.
 >                        makeAutomaton (dict, subexprs, Just expr)) >>
 >                       return e
 >         ErrorMsg str -> hPutStr stderr str >> return e
->         Help xs -> hPutStr stderr (doHelp xs) >> return e
+>         Help xs -> lessHelp xs >> return e
 >         Import file -> catchIOError (importScript e =<< lines <$> readFile file)
 >                        (const $
 >                            (hPutStrLn stderr
@@ -394,6 +396,23 @@ The types are consistent, so it is enough to define a synonym here.
 >           p1       = map (\(a,_,_) -> a)
 >           p2       = map (\(_,b,_) -> b)
 >           p3       = map (\(_,_,c) -> c)
+
+> lessHelp :: [(String, [ArgType], String)] -> IO ()
+> lessHelp xs = do
+>   mpager <- fmap (map snd . filter ((==) "PAGER" . fst)) getEnvironment
+>   let ps     = words $ head (mpager ++ ["less"])
+>   let (p:s)  = if null ps then ["less"] else ps
+>   let lessP  = (proc p s) {
+>                  std_in = CreatePipe
+>                , std_out = UseHandle stdout
+>                , std_err = CreatePipe
+>                }
+>   (Just p_stdin, _, Just p_stderr, less_ph) <- createProcess lessP
+>   _ <- hGetContents p_stderr
+>   hPutStr p_stdin (doHelp xs)
+>   hClose p_stdin
+>   _ <- waitForProcess less_ph
+>   return ()
 
 > doRelation :: Env -> Relation -> Maybe Bool
 > doRelation e r = case r of
