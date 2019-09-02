@@ -7,6 +7,8 @@
 > Functions used for deciding the complexity class of an automaton.
 > Each complexity class for which these operations are implemented
 > has a separate Decide.class module as well.
+>
+> @since 0.2
 > -}
 > module LTK.Decide (
 >                   -- * Basic local classes

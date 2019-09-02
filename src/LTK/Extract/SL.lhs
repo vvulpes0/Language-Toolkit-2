@@ -51,6 +51,9 @@ MoL'17 as is the notion of an $\SL$ approximation of a non-$\SL$ stringset.
 > License   : MIT
 > 
 > Find forbidden substrings of an automaton.
+> Formerly known as @(ExtractSL)@.
+>
+> @since 0.2
 > -}
 > module LTK.Extract.SL ( ForbiddenSubstrings(..)
 >                       , ForbiddenPaths(..)

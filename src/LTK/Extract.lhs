@@ -1,4 +1,4 @@
-> {-# OPTIONS_HADDOCK show-extensions #-}
+> {-# OPTIONS_HADDOCK show-extensions, not-home #-}
 > {-|
 > Module    : LTK.Extract
 > Copyright : (c) 2019 Dakotah Lambert
@@ -7,6 +7,11 @@
 > Functions used for extracting constraints from automata.
 > Each complexity class for which these operations are implemented
 > has a separate Extract.class module as well.
+>
+> This module does not export decision algorithms.
+> For those, see 'LTK.Decide'.
+>
+> @since 0.2
 > -}
 > module LTK.Extract ( module LTK.Extract.SL
 >                    , module LTK.Extract.SP

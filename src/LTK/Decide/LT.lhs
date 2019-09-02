@@ -8,6 +8,8 @@
 > is Locally Testable (LT) based on the semigroup characterization
 > of Brzozowski and Simon from their 1973 work
 > "Characterizations of locally testable events".
+>
+> @since 0.2
 > -}
 > module LTK.Decide.LT (isLT) where
 

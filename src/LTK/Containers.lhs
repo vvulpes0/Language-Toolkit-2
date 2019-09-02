@@ -268,6 +268,8 @@ properties of each typeclass to build map and filter, here called
 >           currentGroup = keep ((== y) . f) xs
 
 > -- |A fast 'groupBy' for 'Set' objects.
+> --
+> -- @since 0.2
 > partitionBy :: (Ord a, Ord n) => (n -> a) -> Set n -> Set (Set n)
 > partitionBy f = fst .
 >                 until (isEmpty . snd)
@@ -280,6 +282,8 @@ properties of each typeclass to build map and filter, here called
 >                 (,) empty . Set.map (\x -> (f x, x))
 
 > -- |A convenience function for the common partition refinement operation.
+> --
+> -- @since 0.2
 > refinePartitionBy :: (Ord a, Ord n) => (n -> a) -> Set (Set n) -> Set (Set n)
 > refinePartitionBy f = collapse (union . partitionBy f) empty
 
@@ -549,5 +553,7 @@ with a variant that is at least still faster than filter.
 > -- |A fast method to extract elements from a set
 > -- whose image under a monotonic function is a certain value.
 > -- The precondition that the function is monotonic is not checked.
+> --
+> -- @since 0.2
 > extractMonotonic :: (Ord a, Ord b) => (a -> b) -> b -> Set a -> Set a
 > extractMonotonic f a = extractRange f a a

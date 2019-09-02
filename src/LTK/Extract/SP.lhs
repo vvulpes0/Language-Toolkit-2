@@ -85,6 +85,9 @@
 > License   : MIT
 > 
 > Find forbidden subsequences of an automaton.
+> Formerly known as @(ExtractSP)@.
+>
+> @since 0.2
 > -}
 
 > module LTK.Extract.SP ( ForbiddenSubsequences(..)

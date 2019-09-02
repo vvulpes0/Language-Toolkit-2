@@ -8,6 +8,8 @@
 > is Locally Testable (LTT) based on the semigroup characterization
 > of Beaquier and Pin from their 1989 work
 > "Factors of Words".
+>
+> @since 0.2
 > -}
 > module LTK.Decide.LTT (isLTT) where
 

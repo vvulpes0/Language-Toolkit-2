@@ -6,6 +6,8 @@
 
 > This module implements an algorithm to decide whether a given FSA
 > is Strictly Piecewise (SP) by my own direct-construction algorithm.
+>
+> @since 0.2
 > -}
 > module LTK.Decide.SP (isSP) where
 > import LTK.Extract.SP (isSP)

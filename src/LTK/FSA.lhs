@@ -933,6 +933,8 @@ The primitive left-ideal of an element x of the syntactic monoid is
 the set of elements {ax} for all elements a:
 
 > -- |The primitive left ideal.
+> --
+> -- @since 0.2
 > primitiveIdealL :: (Ord n, Ord e) => FSA (n, [Symbol e]) e ->
 >                    State (n, [Symbol e]) -> Set (State (n, [Symbol e]))
 > primitiveIdealL f x = collapse (union . follow f (snd $ nodeLabel x)) empty
@@ -940,6 +942,8 @@ the set of elements {ax} for all elements a:
 
 > -- |The generalized \(\delta\) function,
 > -- follow each symbol in a string in order.
+> --
+> -- @since 0.2
 > follow :: (Ord n, Ord e) => FSA n e ->
 >           [Symbol e] -> State n -> Set (State n)
 > follow f xs q = collapse (flip (.) . delta f) id xs $ singleton q
@@ -954,6 +958,8 @@ i.e. the reachability relation:
 >     where x t = t {edgeLabel = Epsilon}
 
 > -- |The primitive right ideal.
+> --
+> -- @since 0.2
 > primitiveIdealR :: (Ord n, Ord e) => FSA n e -> State n -> Set (State n)
 > primitiveIdealR f x = epsilonClosure (ignoreSymbols f) (singleton x)
 
@@ -961,6 +967,8 @@ Then the two-sided ideal is {axb} for all a and b,
 i.e. the right-ideals of every left-ideal (or v.v.).
 
 > -- |The primitive two-sided ideal.
+> --
+> -- @since 0.2
 > primitiveIdeal2 :: (Ord n, Ord e) => FSA (n, [Symbol e]) e ->
 >                    State (n, [Symbol e]) -> Set (State (n, [Symbol e]))
 > primitiveIdeal2 f = collapse (union . primitiveIdealR f) empty .
@@ -968,6 +976,8 @@ i.e. the right-ideals of every left-ideal (or v.v.).
 
 > -- |An automaton is considered trivial under some equivalence relation
 > -- if each of its equivalence classes is singleton.
+> --
+> -- @since 0.2
 > trivialUnder :: (FSA n e -> Set (Set (State n))) -> FSA n e -> Bool
 > trivialUnder f = all ((== 1) . isize) . f
 
@@ -982,6 +992,8 @@ That is, w is equivalent to v iff wM == vM and Mw == Mv.
 > -- |Given an automaton whose syntactic monoid is \(M\),
 > -- two strings \(u\) and \(v\) are equivalent if
 > -- \(Mu=Mv\) and \(uM=vM\).
+> --
+> -- @since 0.2
 > hEquivalence :: (Ord n, Ord e) =>
 >                 FSA (n, [Symbol e]) e -> Set (Set (State (n, [Symbol e])))
 > hEquivalence f = refinePartitionBy (primitiveIdealR f) .

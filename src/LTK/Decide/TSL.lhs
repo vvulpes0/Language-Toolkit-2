@@ -6,6 +6,8 @@
 
 > This module implements an algorithm to decide whether a given FSA
 > is Tier-Based Strictly Local (TSL) by my own algorithm.
+>
+> @since 0.2
 > -}
 > module LTK.Decide.TSL (isTSL) where
 

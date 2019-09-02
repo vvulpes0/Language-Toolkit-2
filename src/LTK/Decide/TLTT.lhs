@@ -6,6 +6,8 @@
 
 > This module implements an algorithm to decide whether a given FSA
 > is Tier-Based Locally Threshold Testable (TLTT) by my own algorithm.
+>
+> @since 0.2
 > -}
 > module LTK.Decide.TLTT (isTLTT) where
 
