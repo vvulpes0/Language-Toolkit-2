@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEB 5 "2019-08-31" "Version 0.2" "Language Toolkit"
+.TH PLEB 5 "2019-09-02" "Version 0.2" "Language Toolkit"
 .SH NAME
 pleb \- Piecewise / Local Expression Builder
 .SH DESCRIPTION
@@ -308,7 +308,7 @@ there is a unicode syntax that provides the following synonyms:
 .B @
 <U+2219> [bullet operator]
 .TP
-.B ~
+.B !
 <U+00AC> [not sign]
 .TP
 .B *
@@ -331,7 +331,7 @@ when reading automata or compiling expressions.
 .B </a>
 The symbol "a" occurs.
 .TP
-.B [/a]~%||%<>
+.B [/a]!%||%<>
 The same constraint,
 written in a TSL manner:
 on the tier consisting of
@@ -347,10 +347,10 @@ it is not the case that the word is empty.
 .B = obligatoriness </primary>
 .RS
 .RE
-.B = culminativity ~</primary,/primary>
+.B = culminativity !</primary, /primary>
 .RS
 .RE
-.B /\e{obligatoriness,culminativity}
+.B /\e{obligatoriness, culminativity}
 .RS
 .IP (1)
 Assign the set {H'} to the name
