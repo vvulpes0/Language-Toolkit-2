@@ -75,6 +75,7 @@ library
                 , LTK.Factors
                 , LTK.FSA
                 , LTK.Porters
+                , LTK.Porters.ATT
                 , LTK.Porters.Dot
                 , LTK.Porters.Jeff
                 , LTK.Porters.Pleb

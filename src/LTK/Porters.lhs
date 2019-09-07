@@ -22,6 +22,8 @@
 >                    , Dot(Dot)
 >                    , Jeff(Jeff)
 >                    , Pleb(Pleb)
+>                    , ATT(ATT)
+>                    , ATTO(ATTO)
 >                    -- *Miscellaneous
 >                    , formatSet
 >                    , transliterate
@@ -41,6 +43,9 @@
 >                         , untransliterate
 >                         , untransliterateString)
 > import LTK.Porters.Pleb ( readPleb )
+> import LTK.Porters.ATT  ( readATT
+>                         , exportATT
+>                         , invertATT)
 
 > -- |A type that can be written from an 'FSA'.
 > class Exportable t where
@@ -96,3 +101,25 @@
 
 > instance Importable Pleb where
 >     toFSA (Pleb s) = readPleb s
+
+=== instances for ATT format
+
+> -- |The AT&T finite-state transducer format, input projection
+> newtype ATT = ATT String
+
+> instance Importable ATT where
+>     toFSA (ATT s) = Right $ readATT s
+
+> instance Exportable ATT where
+>     fromFSA          =  ATT . exportATT
+>     extract (ATT s)  =  s
+
+> -- |The AT&T finite-state transducer format, output projection
+> newtype ATTO = ATTO String
+
+> instance Importable ATTO where
+>     toFSA (ATTO s) = Right . readATT $ invertATT s
+
+> instance Exportable ATTO where
+>     fromFSA           = ATTO . exportATT
+>     extract (ATTO s)  = invertATT s

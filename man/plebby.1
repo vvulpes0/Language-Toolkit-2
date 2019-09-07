@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEBBY 1 "2019-09-02" "Version 0.2" "Language Toolkit"
+.TH PLEBBY 1 "2019-09-07" "Version 0.2" "Language Toolkit"
 .SH NAME
 plebby \- Piecewise / Local Expression Builder Interpreter
 .SH SYNOPSIS
@@ -29,6 +29,26 @@ Write the current state to
 .RE
 .
 .PP
+.B :writeATT
+.RI < file >
+.RI < file >
+.RI < file >
+.RI < expr >
+.RS
+Write an AT&T transducer representation of
+.RI < expr >
+to the three
+.RI < file >
+argmuents, which represent the transitions, input symbols, and output symbols,
+respectively.
+If
+.B _
+is given as the name of a symbol table,
+then that table is not written.
+The input and output tables are identical, so writing both is redundant.
+.RE
+.
+.PP
 .B :write
 .RI < file >
 .RI < expr >
@@ -47,6 +67,30 @@ Restore a state previously written by
 .B :savestate
 from
 .RI < file >.
+.RE
+.
+.PP
+.B :readATT
+.RI < file "> <" file "> <" file >
+.RS
+Read an AT&T format transducer from the three
+.RI < file >
+arguments (transitions, input symbols, and output symbols),
+and store the input-projection of the result in the special variable
+.BR it .
+If
+.B _
+is given as the name of a symbol table,
+then no file is read for that table.
+.RE
+.
+.PP
+.B :readATTO
+.RI < file "> <" file "> <" file >
+.RS
+Equivalent to
+.B :readATT
+except that it is the output-projection that is stored.
 .RE
 .
 .PP
