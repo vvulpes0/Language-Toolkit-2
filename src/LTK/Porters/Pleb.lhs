@@ -302,8 +302,8 @@ prevents having to descend through the tree to find this information.
 > parseNAryExpr :: Dictionary SymSet -> Dictionary Expr -> Parse NAryExpr
 > parseNAryExpr dict subexprs
 >     = (makeLifter
->        [ (["⋂", "∩", "/\\"],  Conjunction)
->        , (["⋃", "∪", "\\/"],  Disjunction)
+>        [ (["⋀", "⋂", "∧", "∩", "/\\"],  Conjunction)
+>        , (["⋁", "⋃", "∨", "∪", "\\/"],  Disjunction)
 >        , (["∙∙", "@@"],       Domination)
 >        , (["∙" , "@" ],       Concatenation)
 >        ] <*>
