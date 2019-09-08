@@ -15,45 +15,24 @@
 >                        ) where
 
 > import LTK.FSA
+
+> import Data.List (intercalate)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
-> nq :: String -> String
-> nq = keep (/= '"')
-
-> collectBy :: (Collapsible t,
->               Container (t a) a, Container (t (t a)) (t a), Eq b) =>
->              (a -> b) -> t a -> t (t a)
-> collectBy f xs
->     | zsize xs   = empty
->     | otherwise  = insert firstKind . collectBy f $
->                       difference xs firstKind
->     where first      = chooseOne xs
->           firstKind  = keep ((==) (f first) . f) xs
+> showish :: (Show a) => a -> String
+> showish = filter (/= '"') . show
 
 > transitionClasses :: (Ord n, Ord e) => FSA n e -> Set (Set (Transition n e))
-> transitionClasses = unionAll .
->                     tmap (collectBy destination) .
->                     collectBy source .
->                     transitions
-
-> commaSeparateList :: (Collapsible c) => c String -> String
-> commaSeparateList xs
->     | zsize xs       = ""
->     | isize xs == 1  = x
->     | otherwise      = x ++ ", " ++ commaSeparateList xs'
->     where (x, xs') = choose xs
+> transitionClasses = collapse (union . groupBy destination) empty .
+>                     groupBy source . transitions
 
 > -- |Return value is in the range \([0 .. n]\),
 > -- where \(n\) is the size of the input.
 > -- A value of \(n\) indicates that the element was
 > -- not in the input.
 > shortLabelIn :: (Collapsible s, Eq n) => s n -> n -> Int
-> shortLabelIn xs x
->     | zsize xs   = 0
->     | a == x     = 0
->     | otherwise  = 1 + shortLabelIn as x
->     where (a, as) = choose xs
+> shortLabelIn xs x = collapse (\y a -> if y /= x then 1 + a else 0) 0 xs
 
 > dotifyTransitionSet :: (Collapsible c, Eq e, Show e) =>
 >                        c (Symbol e, Int, Int) -> String
@@ -64,9 +43,8 @@
 >     where (_, src, dest)  = chooseOne ts
 >           first (a,_,_)   = a
 >           list            = collapse (:) [] ts
->           syms            = nq . commaSeparateList $
->                             tmap (sym . first) list
->           sym (Symbol a)  = deescape . nq $ show a
+>           syms            = intercalate ", " $ map (sym . first) list
+>           sym (Symbol a)  = deescape $ showish a
 >           sym Epsilon     = "\x03b5" -- ε
 
 > dotifyTransitions :: (Ord n, Ord e, Show n, Show e) => FSA n e -> [String]
@@ -80,8 +58,10 @@
 >           sts                  = states f
 
 > dotifyInitial :: Int -> [String]
-> dotifyInitial n = [fakeStart ++ " [style=\"invis\", width=\"0\", height=\"0\", label=\"\"];",
->                    fakeStart ++ " -> " ++ realStart ++ ";"]
+> dotifyInitial n
+>     = [fakeStart ++
+>        " [style=\"invis\", width=\"0\", height=\"0\", label=\"\"];",
+>        fakeStart ++ " -> " ++ realStart ++ ";"]
 >     where realStart  = show n
 >           fakeStart  = '_' : realStart ++ "_"
 
@@ -101,11 +81,11 @@
 >                  finals f
 
 > dotifyStates :: (Ord e, Ord n, Show n) => FSA n e -> [String]
-> dotifyStates f = collapse (:) [] $ tmap makeLabel sts
+> dotifyStates f = map makeLabel $ fromCollapsible sts
 >     where sts          = states f
 >           idOf         = shortLabelIn sts
 >           makeLabel x  = show (idOf x) ++ " [label=\"" ++
->                          (deescape . nq . show $ nodeLabel x) ++ "\"];"
+>                          (deescape . showish $ nodeLabel x) ++ "\"];"
 
 > -- |Convert an 'FSA' to its representation in the GraphViz @dot@ format.
 > exportDot :: (Ord e, Ord n, Show e, Show n) => FSA n e -> String
@@ -131,7 +111,8 @@
 > -- >>> formatSet (fromList [1, 2, 3])
 > -- "{1, 2, 3}"
 > formatSet :: Show n => Set n -> String
-> formatSet =  ((++ "}") . ('{' :) . commaSeparateList . tmap (nq . show) . Set.toAscList)
+> formatSet =  (++ "}") . ('{' :) . intercalate ", " . map showish .
+>              Set.toAscList
 
 > deescape :: String -> String
 > deescape ('\\' : '&' : xs) = deescape xs

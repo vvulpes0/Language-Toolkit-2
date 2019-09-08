@@ -95,7 +95,7 @@ The base-4.9 library from GHC 8.x added Semigroup to complement Monoid.
 
 #endif
 
-> import Data.Monoid (Monoid, mempty, mappend, mconcat)
+> import Data.Monoid (Monoid, mempty, mappend)
 
 
 Data Structures
@@ -172,7 +172,7 @@ the string plus two.
 >           failTransitions = Set.mapMonotonic
 >                             (\a -> Transition (Symbol a) qfail qfail) as
 >           begins = singleton (State $ toEnum 1)
->           qlast = (+ 1) . fromIntegral . length $ str
+>           qlast = (+ 1) $ size str
 >           fins = singleton (State $ toEnum qlast)
 
 > -- |An automaton that accepts only the given string,
@@ -191,7 +191,7 @@ input.
 
 
 > -- |The label of a 'Transition'.
-> data Symbol e = Epsilon  -- ^The edge may be taken without consuming any input.
+> data Symbol e = Epsilon  -- ^The edge may be taken without consuming input.
 >               | Symbol e -- ^The edge requires consuming this symbol.
 >               deriving (Eq, Ord, Read, Show)
 
@@ -216,9 +216,8 @@ becomes
 
 > -- |Remove 'Epsilon' from a 'Collapsible' of 'Symbol'
 > -- and present the unwrapped results as a new 'Container'.
-> unsymbols :: (Collapsible s, Eq (s e), Container (s e) e, Monoid (s e)) =>
->              s (Symbol e) -> s e
-> unsymbols = mconcat . collapse (insert . f) empty
+> unsymbols :: (Collapsible s, Container c e, Monoid c) => s (Symbol e) -> c
+> unsymbols = collapse (mappend . f) mempty
 >     where f (Symbol x) = singleton x
 >           f _          = empty
 
@@ -243,7 +242,7 @@ transition's edge label, then it moves to the second state.
 > -- |The edges of an 'FSA'.
 > data Transition n e = Transition { edgeLabel   :: (Symbol e)
 >                                  , source      :: (State n)
->                                  , destination ::(State n)
+>                                  , destination :: (State n)
 >                                  }
 >                     deriving (Eq, Ord, Show, Read)
 
@@ -569,7 +568,8 @@ and guarantees totality of the result.
 >           (_, _, trans) = until
 >                           (\(new, _, _) -> new == empty)
 >                           (\(new, prev, partial) ->
->                            let exts   = collapse (union . extensions) empty new
+>                            let exts   = collapse (union . extensions)
+>                                         empty new
 >                                seen   = union new prev
 >                                dests  = tmap destination exts
 >                            in (difference dests seen,
@@ -673,6 +673,7 @@ and the string "a" is accepted in both.
 > -- that should not be.
 > residue :: (Ord n, Ord e, Enum n) => FSA n e -> FSA n e -> FSA n e
 > residue = curry (renameStates . minimize . uncurry difference)
+
 > -- |@(coresidue a b)@ is equivalent to @(complement (residue a b))@.
 > -- In the context of an approximation and its source,
 > -- represents unmet constraints of the source.
@@ -1312,14 +1313,14 @@ type to improve memory usage and processing speed.
 > -- deterministic even if the original was.
 > renameStatesBy :: (Ord e, Ord n, Ord n1) =>
 >                   (n -> n1) -> FSA n e -> FSA n1 e
-> renameStatesBy f a = a { transitions      =  tmap
->                                              (transition . fmap f . Noitisnart)
->                                              (transitions a)
->                        , initials         =  tmap (fmap f) (initials a)
->                        , finals           =  tmap (fmap f) (finals a)
->                        , isDeterministic  =  isDeterministic a &&
->                                              isize ns == isize (states a)
->                        }
+> renameStatesBy f a
+>     = a { transitions      =  tmap (transition . fmap f . Noitisnart)
+>                               (transitions a)
+>         , initials         =  tmap (fmap f) (initials a)
+>         , finals           =  tmap (fmap f) (finals a)
+>         , isDeterministic  =  isDeterministic a &&
+>                               isize ns == isize (states a)
+>         }
 >     where ns = tmap (fmap f) (states a)
 
 > -- |Transform the node labels of an automaton using a given function.

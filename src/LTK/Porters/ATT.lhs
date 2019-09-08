@@ -20,6 +20,8 @@
 >                        ) where
 
 > import LTK.FSA
+
+> import Data.List (intercalate)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
@@ -56,7 +58,7 @@
 > invertATT s = embedSymbolsATT ts' (Just o) (Just i)
 >     where (ts, i, o)      =  extractSymbolsATT s
 >           ts'             =  unlines . map invertSingle $ lines ts
->           invertSingle t  =  concat . sepBy "\t" . maybeInvert $ words t
+>           invertSingle t  =  intercalate "\t" . maybeInvert $ words t
 >           maybeInvert (a:b:c:d:xs)
 >               =  a:b:d:c:xs -- swap in and out
 >           maybeInvert xs  =  xs
@@ -153,7 +155,7 @@ Creating an AT&T format automaton
 
 > dumpTr :: (Ord n, Ord e, Show n, Show e) =>
 >           (State n, State n, Symbol e) -> String
-> dumpTr (s, d, l) = concat . sepBy "\t" $
+> dumpTr (s, d, l) = intercalate "\t" $
 >                    [show $ nodeLabel s, show $ nodeLabel d, l', l']
 >     where l' = case l of
 >                  Symbol e -> showish e
@@ -173,14 +175,9 @@ Helpers
 >     | otherwise = (a:head x):tail x
 >     where x = splitOn b as
 
-> sepBy :: a -> [a] -> [a]
-> sepBy _ []     = []
-> sepBy _ (x:[]) = [x]
-> sepBy a (x:xs) = x : a : sepBy a xs
-
 > showish :: Show a => a -> String
 > showish = f . show
->     where f  xs     = if take 1 xs == "\"" then f' (drop 1 xs) else f' xs
+>     where f  xs     = if take 1 xs == "\"" then f' (drop 1 xs) else xs
 >           f' ""     = ""
 >           f' "\""   = ""
 >           f' (x:xs) = x : f' xs

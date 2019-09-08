@@ -39,6 +39,7 @@
 > import Data.Char (isLetter, isSpace)
 > import Data.Foldable (asum)
 > import Data.Functor ((<$>))
+> import Data.List (intersperse)
 > import Data.Monoid (mconcat)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
@@ -196,8 +197,8 @@ prevents having to descend through the tree to find this information.
 >         NAry (Conjunction es)   -> f flatIntersection es
 >         NAry (Disjunction es)   -> f flatUnion es
 >         NAry (Domination es)    -> f (mconcat .
->                                       sepBy (totalWithAlphabet (singleton Nothing)))
->                                    es
+>                                       intersperse (totalWithAlphabet
+>                                                    (singleton Nothing))) es
 >         Unary (Iteration ex)    -> renameStates . minimize . kleeneClosure $
 >                                    automatonFromExpr ex
 >         Unary (Negation ex)     -> complementDeterministic $
@@ -206,9 +207,11 @@ prevents having to descend through the tree to find this information.
 >                                    automatonFromExpr ex
 >         Factor x                -> automatonFromPLFactor x
 >         Automaton x             -> x
->     where f tl = renameStates . minimize . tl . automata
->           automata es  =  let a' = map automatonFromExpr es
->                           in map (semanticallyExtendAlphabetTo (bigAlpha a')) a'
+>     where f tl         =  renameStates . minimize . tl . automata
+>           automata es  =  let as = map automatonFromExpr es
+>                           in (map
+>                               (semanticallyExtendAlphabetTo (bigAlpha as))
+>                               as)
 >           bigAlpha     =  collapse (maybe id insert) Set.empty .
 >                           collapse (union . alphabet) Set.empty
 
@@ -489,7 +492,3 @@ prevents having to descend through the tree to find this information.
 >                        , ('[', ']')
 >                        , ('{', '}')
 >                        ]
-
-> sepBy :: a -> [a] -> [a]
-> sepBy x (a:b:as) = a : x : sepBy x (b:as)
-> sepBy _ as       = as
