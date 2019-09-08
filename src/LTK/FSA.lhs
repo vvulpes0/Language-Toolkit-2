@@ -497,7 +497,7 @@ Logical Operators
 =================
 
 > combine :: State a -> State b -> State (a, b)
-> combine (State a) (State b) = State (a, b)
+> combine q1 q2 = (,) <$> q1 <*> q2
 
 > makePairs :: (Ord a, Ord b) => Set a -> Set b -> Set (a, b)
 > makePairs xs ys = collapse (union . f) empty xs
@@ -508,9 +508,6 @@ Logical Operators
 >                  Set (State (Maybe a), State (Maybe b))
 > makeJustPairs xs ys = makePairs (justify xs) (justify ys)
 >     where justify = Set.mapMonotonic (fmap Just)
-
-> combineAlphabets :: Ord e => FSA n e -> FSA n1 e -> Set e
-> combineAlphabets f1 f2 = union (alphabet f1) (alphabet f2)
 
 The Cartesian construction for automata is closely related to the
 tensor product of graphs.  Given two automata, M1 and M2, we construct
@@ -542,73 +539,57 @@ the initial states of M2.
 The Cartesian construction preserves determinism
 and guarantees totality of the result.
 
-> combineTransitions :: (Ord e, Ord n, Ord n1) => FSA n e -> FSA n1 e ->
->                       Set (Transition (Maybe n, Maybe n1) e)
-> combineTransitions f1 f2 = trans
->     where bigalpha = combineAlphabets f1 f2
->           mDestinations x f q
->               | exts == empty  = singleton (State Nothing)
->               | otherwise      = Set.mapMonotonic (fmap Just) exts
->               where exts = delta f x (singleton q)
->           nexts x f = maybe
->                       (singleton (State Nothing))
->                       (mDestinations x f . State) .
->                       nodeLabel
->           nextPairs x qp = collapse (union . f) empty n1
->               where n1   =  nexts x f1 $ fmap fst qp
->                     n2   =  nexts x f2 $ fmap snd qp
->                     f a  =  Set.mapMonotonic (stateFromPair . (,) a) n2
->           stateFromPair (q1, q2) = (,) <$> q1 <*> q2
->           extensionsOnSymbol qp x = Set.mapMonotonic (Transition x qp) $
->                                     nextPairs x qp
->           extensions qp = collapse (union . extensionsOnSymbol qp) empty $
->                           Set.mapMonotonic Symbol bigalpha
->           initialset = Set.mapMonotonic stateFromPair $
->                        makeJustPairs (initials f1) (initials f2)
->           (_, _, trans) = until
->                           (\(new, _, _) -> new == empty)
->                           (\(new, prev, partial) ->
->                            let exts   = collapse (union . extensions)
->                                         empty new
->                                seen   = union new prev
->                                dests  = tmap destination exts
->                            in (difference dests seen,
->                                seen,
->                                union exts partial))
->                           (initialset, empty, empty)
+> cartesianConstruction :: (Ord e, Ord n1, Ord n2) =>
+>                          (Bool -> Bool -> Bool) -> FSA n1 e -> FSA n2 e ->
+>                          FSA (Maybe n1, Maybe n2) e
+> cartesianConstruction isFinal' f1 f2 = FSA { alphabet         =  alpha
+>                                            , transitions      =  ts
+>                                            , initials         =  qi
+>                                            , finals           =  qf
+>                                            , isDeterministic  =  isDet
+>                                            }
+>     where alpha        =  union (alphabet f1) (alphabet f2)
+>           isDet        =  isDeterministic f1 && isDeterministic f2
+>           qi           =  Set.mapMonotonic (uncurry combine) $
+>                           makeJustPairs (initials f1) (initials f2)
+>           isFinal q    =  let (a,b)  =  nodeLabel q
+>                               f m    =  maybe False (isIn (finals m) . State)
+>                           in isFinal' (f f1 a) (f f2 b)
+>           (_,_,ts,qf)  =  until
+>                           (\(new, _, _, _) -> isEmpty new)
+>                           (\(new, prev, partial, fins) ->
+>                            let exts   =  collapse (union . extensions)
+>                                          empty new
+>                                seen   =  union new prev
+>                                dests  =  tmap destination exts
+>                                fins'  =  keep isFinal dests
+>                            in ( difference dests seen
+>                               , seen
+>                               , union exts partial
+>                               , union fins fins'))
+>                           (qi, empty, empty, keep isFinal qi)
+>           extensions q =  collapse (union . exts' q) empty $
+>                           (Set.mapMonotonic Symbol alpha)
+>           exts' q x    =  Set.mapMonotonic (Transition x q) $ nexts x q
+>           nexts x q    =  let n1   =  nexts' x f1 $ fmap fst q
+>                               n2   =  nexts' x f2 $ fmap snd q
+>                               f a  =  Set.mapMonotonic (combine a) n2
+>                           in collapse (union . f) empty n1
+>           nexts' x f   =  maybe
+>                           (singleton (State Nothing))
+>                           (mDests x f . State) . nodeLabel
+>           mDests x f q
+>               | isEmpty exts  =  singleton (State Nothing)
+>               | otherwise     =  Set.mapMonotonic (fmap Just) exts
+>               where exts  =  delta f x (singleton q)
 
 > autIntersection :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e ->
 >                    FSA (Maybe n1, Maybe n2) e
-> autIntersection f1 f2 = FSA bigalpha trans qi fin det
->     where bigalpha = combineAlphabets f1 f2
->           cs = Set.mapMonotonic (uncurry combine)
->           qi = cs $ makeJustPairs (initials f1) (initials f2)
->           fin  = (intersection sts
->                   (cs (makeJustPairs (finals f1) (finals f2))))
->           trans = combineTransitions f1 f2
->           sts = union (tmap source trans) (tmap destination trans)
->           det = isDeterministic f1 && isDeterministic f2
+> autIntersection = cartesianConstruction (&&)
 
 > autUnion :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e ->
 >             FSA (Maybe n1, Maybe n2) e
-> autUnion f1 f2 = FSA bigalpha trans qi fin det
->     where bigalpha = combineAlphabets f1 f2
->           cs = Set.mapMonotonic (uncurry combine)
->           qi = cs $ makeJustPairs (initials f1) (initials f2)
->           fin1 = finals f1
->           fin2 = finals f2
->           fin1With2 = makeJustPairs fin1 (states f2)
->           fin2With1 = makeJustPairs (states f1) fin2
->           fin1WithN = Set.mapMonotonic
->                       (flip (,) (State Nothing) . fmap Just) fin1
->           fin2WithN = Set.mapMonotonic
->                       ((,) (State Nothing) . fmap Just) fin2
->           fin = (intersection sts
->                  (cs
->                   (unionAll [fin1WithN, fin2WithN, fin1With2, fin2With1])))
->           trans = combineTransitions f1 f2
->           sts = union (tmap source trans) (tmap destination trans)
->           det = isDeterministic f1 && isDeterministic f2
+> autUnion = cartesianConstruction (||)
 
 For the difference A - B, the final states are those that are
 accepting in A and non-accepting in B.
