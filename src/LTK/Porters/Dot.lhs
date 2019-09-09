@@ -14,11 +14,11 @@
 >                        , formatSet
 >                        ) where
 
-> import LTK.FSA
-
 > import Data.List (intercalate)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
+
+> import LTK.FSA
 
 > showish :: (Show a) => a -> String
 > showish = filter (/= '"') . show
@@ -96,10 +96,11 @@
 > exportDotWithName :: (Ord e, Ord n, Show e, Show n) =>
 >                      String -> FSA n e -> String
 > exportDotWithName name f =
->     unlines $ ["digraph " ++ name ++ " {",
->                "graph [rankdir=\"LR\"];",
->                "node  [fixedsize=\"false\", fontsize=\"12.0\", height=\"0.5\", width=\"0.5\"];",
->                "edge  [fontsize=\"12.0\", arrowsize=\"0.5\"];"] ++
+>     unlines $ [ "digraph " ++ name ++ " {"
+>               , "graph [rankdir=\"LR\"];"
+>               , "node  [fixedsize=\"false\", fontsize=\"12.0\", " ++
+>                 "height=\"0.5\", width=\"0.5\"];"
+>               , "edge  [fontsize=\"12.0\", arrowsize=\"0.5\"];"] ++
 >     dotifyInitials f     ++
 >     dotifyStates f       ++
 >     dotifyFinals f       ++

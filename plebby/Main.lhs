@@ -4,35 +4,10 @@
 # define MIN_VERSION_base(a,b,c) 0
 #endif
 
-> module Main where
-
-> import LTK.FSA
-> import LTK.Porters.Pleb ( Env
->                         , Expr
->                         , compileEnv
->                         , doParse
->                         , doStatements
->                         , fromAutomaton
->                         , fromSemanticAutomaton
->                         , groundEnv
->                         , insertExpr
->                         , makeAutomaton
->                         , parseExpr
->                         , restrictUniverse
->                         , tokenize
->                         )
-> import LTK.Porters.ATT  ( embedSymbolsATT, extractSymbolsATT )
-> import LTK.Porters      ( ATT(ATT), ATTO(ATTO), Dot(Dot), Jeff(Jeff)
->                         , formatSet, fromE, to)
-> import LTK.Decide       ( isSL, isTSL
->                         , isLT, isTLT
->                         , isLTT, isTLTT
->                         , isSP
->                         , isPT
->                         , isSF)
+> module Main (main) where
 
 > import Control.Applicative ((<*>), pure)
-> import Control.Monad.Trans.Class ( lift )
+> import Control.Monad.Trans.Class (lift)
 > import Data.Char (isSpace, toLower)
 > import Data.Functor ((<$>))
 > import System.Console.Haskeline ( InputT
@@ -49,19 +24,41 @@
 >                  , stderr
 >                  , stdout
 >                  )
-
 #if MIN_VERSION_base(4,4,0)
+> import System.IO.Error (catchIOError)
+#else
+> import System.IO.Error (IOError, catch) -- We'll make our own
+#endif
 
-> import System.IO.Error ( catchIOError )
+> import LTK.Decide       ( isSL, isTSL
+>                         , isLT, isTLT
+>                         , isLTT, isTLTT
+>                         , isSP
+>                         , isPT
+>                         , isSF)
+> import LTK.FSA
+> import LTK.Porters      ( ATT(ATT), ATTO(ATTO), Dot(Dot), Jeff(Jeff)
+>                         , formatSet, fromE, to)
+> import LTK.Porters.ATT  ( embedSymbolsATT, extractSymbolsATT )
+> import LTK.Porters.Pleb ( Env
+>                         , Expr
+>                         , compileEnv
+>                         , doParse
+>                         , doStatements
+>                         , fromAutomaton
+>                         , fromSemanticAutomaton
+>                         , groundEnv
+>                         , insertExpr
+>                         , makeAutomaton
+>                         , parseExpr
+>                         , restrictUniverse
+>                         , tokenize
+>                         )
 
-# else
-Older versions of base used catch instead of catchIOError.
-The types are consistent, so it is enough to define a synonym here.
 
-> import System.IO.Error ( IOError, catch )
+#if !MIN_VERSION_base(4,4,0)
 > catchIOError :: IO a -> (IOError -> IO a) -> IO a
 > catchIOError = catch
-
 # endif
 
 > import System.Process ( CreateProcess(std_err, std_in, std_out)
@@ -273,7 +270,8 @@ The types are consistent, so it is enough to define a synonym here.
 >                  ]
 >           doOne xs  = case xs of
 >                         (x:_)  ->  f x
->                         _      ->  L (ErrorMsg "unknown interpreter command\n")
+>                         _      ->  L (ErrorMsg
+>                                       "unknown interpreter command\n")
 >           err x = ErrorMsg x -- "failed to evaluate"
 >           isStartOf xs x = ((isPrefixOf (map toLower xs) (map toLower x)) &&
 >                             (all isSpace . take 1 $
@@ -318,18 +316,20 @@ The types are consistent, so it is enough to define a synonym here.
 >                       return e
 >         ErrorMsg str -> hPutStr stderr str >> return e
 >         Help xs -> lessHelp xs >> return e
->         Import file -> catchIOError (importScript e =<< lines <$> readFile file)
+>         Import file -> catchIOError
+>                        (importScript e =<< lines <$> readFile file)
 >                        (const $
->                            (hPutStrLn stderr
->                             ("failed to read \"" ++ file ++ "\"") >>
->                             return e))
+>                         (hPutStrLn stderr
+>                          ("failed to read \"" ++ file ++ "\"") >>
+>                          return e))
 >         Loadstate file -> catchIOError (read <$> readFile file)
 >                           (const $
 >                            (hPutStrLn stderr
 >                             ("failed to read \"" ++ file ++ "\"") >>
 >                             return e))
 >         Read file -> catchIOError (doStatements e <$> readFile file)
->                      (const $ hPutStrLn stderr
+>                      (const $
+>                       hPutStrLn stderr
 >                       ("failed to read \"" ++ file ++ "\"") >>
 >                       return e)
 >         ReadATT f1 f2 f3 -> ratt f1 f2 f3 ATT
@@ -370,8 +370,9 @@ The types are consistent, so it is enough to define a synonym here.
 >                               unlines . fromCollapsible $
 >                               union
 >                               (tmap
->                                (\(a, _) -> "= " ++ a ++ " { " ++ a ++ " } ") $
->                                d')
+>                                (\(a, _) ->
+>                                 "= " ++ a ++ " { " ++ a ++ " } ") $ d'
+>                                )
 >                               (tmap
 >                                (\(a, _) -> "= " ++ a ++ " " ++ a) subexprs)
 >         RestrictUniverse -> return (restrictUniverse e)

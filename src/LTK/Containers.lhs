@@ -62,14 +62,10 @@
 >                       , tr
 >                       ) where
 
-#if MIN_VERSION_base(4,9,0)
-The base-4.9 library from GHC 8.x added Semigroup to complement Monoid.
-
-> import safe Data.Semigroup (Semigroup, (<>))
-
-#endif
-
 > import safe Data.Monoid (Monoid, mempty, mappend)
+#if MIN_VERSION_base(4,9,0)
+> import safe Data.Semigroup (Semigroup, (<>))
+#endif
 > import safe Data.Set (Set)
 > import safe qualified Data.Set as Set
 
@@ -121,7 +117,8 @@ are defined to allow such polymorphism.
 >     isSupersetOf :: (Eq c) => c -> c -> Bool
 >     -- |@(isProperSubsetOf y x)@ tells whether @x@ is a proper subset of @y@.
 >     isProperSubsetOf :: (Eq c) => c -> c -> Bool
->     -- |@(isProperSupersetOf y x)@ tells whether @x@ is a proper superset of @y@.
+>     -- |@(isProperSupersetOf y x)@ tells whether
+>     -- @x@ is a proper superset of @y@.
 >     isProperSupersetOf :: (Eq c) => c -> c -> Bool
 >     -- Default definitions:
 >     isEmpty = (== empty)
@@ -262,15 +259,29 @@ properties of each typeclass to build map and filter, here called
 >   #-}
 
 > -- |Partition a Container.  For example,
-> -- 
+> --
 > -- > groupBy (`mod` 3) [0..9] == [[0,3,6,9],[1,4,7],[2,5,8]]
-> groupBy :: (Eq b, Collapsible s, Container (s a) a, Container (s (s a)) (s a)) =>
->            (a -> b) -> s a -> (s (s a))
+> groupBy :: ( Eq b, Collapsible s, Container (s a) a
+>            , Container (s (s a)) (s a) ) =>
+>            (a -> b) -> s a -> s (s a)
 > groupBy f xs
 >     | isEmpty xs  =  empty
->     | otherwise   =  insert currentGroup (groupBy f (difference xs currentGroup))
+>     | otherwise   =  insert currentGroup $ groupBy f others
 >     where y = f (chooseOne xs)
->           currentGroup = keep ((== y) . f) xs
+>           (currentGroup, others)
+>               = collapse (\a (cg, os) ->
+>                           if f a == y
+>                           then (insert a cg, os)
+>                           else (cg, insert a os)) (empty, empty) xs
+
+
+Notes on partitionBy:
+First, the elements of the set are prefixed by their result under f.
+This sorts them by this value, which we can then extract monotonically.
+If we have a collection with identical first values,
+then the second-projection is monotonic.
+Set.splitAt doesn't exist in older versions of containers,
+so we use Set.split with Set.findMax instead.
 
 > -- |A fast 'groupBy' for 'Set' objects.
 > --
@@ -323,7 +334,7 @@ A Haskell list is a Collapsible Container:
 > instance (Eq a) => Container [a] a where
 >     contains = elem
 >     union = (++)
->     intersection a b = filter (isIn a) b -- maintain order of B for isSubsetOf
+>     intersection a b = filter (isIn a) b -- maintain order of B for subset
 >     difference a b = filter (isNotIn b) a
 >     empty = []
 >     insert = (:)
@@ -380,8 +391,9 @@ lookup-time logarithmic in the number of distinct elements.
 
 > instance Linearizable Multiset where
 >     choose (Multiset xs)
->         | Set.null xs  =  (error "cannot choose an element from an empty multiset",
->                            Multiset (Set.empty))
+>         | Set.null xs
+>             =  ( error "cannot choose an element from an empty multiset"
+>                , Multiset Set.empty)
 >         | m == 1       =  (a, f as)
 >         | otherwise    =  (a, f ((a, pred m) : as))
 >         where ((a,m):as) = Set.toAscList xs
@@ -417,11 +429,8 @@ lookup-time logarithmic in the number of distinct elements.
 >               zs  = differenceSortedMultis xs' ys'
 
 #if MIN_VERSION_base(4,9,0)
-Semigroup instance to satisfy base-4.9
-
 > instance Ord a => Semigroup (Multiset a) where
 >     (<>) = mappend
-
 #endif
 
 > instance Ord a => Monoid (Multiset a) where
@@ -443,7 +452,8 @@ Semigroup instance to satisfy base-4.9
 > multisetFromList :: Ord a => [a] -> Multiset a
 > multisetFromList = fromCollapsible
 
-> unionSortedMultis :: Ord a => [(a, Integer)] -> [(a, Integer)] -> [(a, Integer)]
+> unionSortedMultis :: Ord a =>
+>                      [(a, Integer)] -> [(a, Integer)] -> [(a, Integer)]
 > unionSortedMultis xs [] = xs
 > unionSortedMultis [] ys = ys
 > unionSortedMultis (x:xs) (y:ys)
@@ -451,7 +461,8 @@ Semigroup instance to satisfy base-4.9
 >     | fst x > fst y  =  y : unionSortedMultis (x:xs) ys
 >     | otherwise      =  unionSortedMultis ((fst x, snd x + snd y) : xs) ys
 
-> intersectSortedMultis :: Ord a => [(a, Integer)] -> [(a, Integer)] -> [(a, Integer)]
+> intersectSortedMultis :: Ord a =>
+>                          [(a, Integer)] -> [(a, Integer)] -> [(a, Integer)]
 > intersectSortedMultis _ [] = []
 > intersectSortedMultis [] _ = []
 > intersectSortedMultis (x:xs) (y:ys)
@@ -460,7 +471,8 @@ Semigroup instance to satisfy base-4.9
 >     | otherwise      =  (fst x, min (snd x) (snd y)) :
 >                         intersectSortedMultis xs ys
 
-> differenceSortedMultis :: Ord a => [(a, Integer)] -> [(a, Integer)] -> [(a, Integer)]
+> differenceSortedMultis :: Ord a =>
+>                           [(a, Integer)] -> [(a, Integer)] -> [(a, Integer)]
 > differenceSortedMultis xs [] = xs
 > differenceSortedMultis [] _  = []
 > differenceSortedMultis (x:xs) (y:ys)
@@ -515,8 +527,10 @@ Miscellaneous functions
 > -- in the given string.  If the replacement set is smaller than the
 > -- search set, it is made longer by repeating the last element.
 > --
-> -- > tr "aeiou" "x" "colorless green ideas" == "cxlxrlxss grxxn xdxxs"
-> -- > tr "abcdefghijklmnopqrstuvwxyz" "nopqrstuvwxyzabcdefghijklm" "cat" == "png"
+> -- >>> tr "aeiou" "x" "colorless green ideas"
+> -- "cxlxrlxss grxxn xdxxs"
+> -- >>> tr "abcdefghijklmnopqrstuvwxyz" "nopqrstuvwxyzabcdefghijklm" "cat"
+> -- "png"
 > tr :: (Container (s a) a, Collapsible s, Eq a) =>
 >       [a] -- ^search
 >    -> [a] -- ^replacement

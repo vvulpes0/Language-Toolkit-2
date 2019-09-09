@@ -19,11 +19,11 @@
 >                        , exportATT
 >                        ) where
 
-> import LTK.FSA
-
 > import Data.List (intercalate)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
+
+> import LTK.FSA
 
 > separator :: String
 > separator = "* * *"

@@ -1,10 +1,4 @@
-> module Main where
-
-> import LTK.Decide
-> import LTK.Extract
-> import LTK.Factors
-> import LTK.FSA
-> import LTK.Porters
+> module Main (main) where
 
 > import Control.Concurrent ( MVar
 >                           , ThreadId
@@ -18,7 +12,6 @@
 > import Data.Functor ((<$>))
 > import Data.List (sortBy)
 > import Data.Set (Set)
-> import qualified Data.Set as Set
 > import System.Directory (createDirectoryIfMissing, doesFileExist)
 > import System.Environment (getArgs)
 > import System.Exit (die)
@@ -29,6 +22,13 @@
 >                  , stderr
 >                  , withFile
 >                  )
+> import qualified Data.Set as Set
+
+> import LTK.Decide
+> import LTK.Extract
+> import LTK.Factors
+> import LTK.FSA
+> import LTK.Porters
 
 > continue :: IO ()
 > continue = pure () -- do nothing; carry on
@@ -74,7 +74,8 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >                          zip filesToRead existence
 >   if not (isEmpty nonexistentFiles)
 >   then do
->     mapM_ (hPutStrLn stderr . (++ ".") . ("Cannot find " ++)) nonexistentFiles
+>     (mapM_ (hPutStrLn stderr . (++ ".") . ("Cannot find " ++))
+>      nonexistentFiles)
 >     die "Exiting."
 >   else continue
 >   createDirectoryIfMissing True outputDirectory
@@ -99,7 +100,8 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >           name = tr "_" " " $ dropWhile (isIn "0123456789_") bn
 
 
-Return type of factorization is (Strict Approximation, Costrict Approximation, X)
+Return type of factorization is
+(Strict Approximation, Costrict Approximation, X)
 where X is either () if the factorization is incomplete,
                   Nothing if factorization is complete below testable level, or
                   A FilePath of the necessary compiled higher constraints
@@ -130,7 +132,8 @@ where X is either () if the factorization is incomplete,
 >           strict             =  strictApproximation fsa
 >           costrict           =  costrictApproximation fsa strict
 >           getFSA (a, _, _)   =  a
->           scs                =  intersection (getFSA strict) (getFSA costrict)
+>           scs                =  intersection (getFSA strict) $
+>                                 getFSA costrict
 >           workingHypotheses  =  keep
 >                                 ((== fsa) . intersection scs .
 >                                  contractAlphabetTo (alphabet fsa) . snd)
@@ -346,7 +349,8 @@ Formatting output
 >                       , formatForbiddenSubsequences rssqs
 >                       , [ ""
 >                         , "[nonstrict constraints]"
->                         , "complete=" ++ show (formatBool (higher /= Left ()))
+>                         , "complete=" ++
+>                           show (formatBool (higher /= Left ()))
 >                         , "file=" ++ either (const "") (maybe "" show) higher
 >                         ]
 >                       ]

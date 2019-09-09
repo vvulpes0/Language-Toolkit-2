@@ -34,7 +34,7 @@
 >                         , restrictUniverse
 >                         , tokenize) where
 
-> import Control.Applicative ( Applicative, Alternative
+> import Control.Applicative ( Alternative, Applicative
 >                            , empty, many, pure, some, (<*>), (<|>))
 > import Data.Char (isLetter, isSpace)
 > import Data.Foldable (asum)
@@ -45,7 +45,7 @@
 > import qualified Data.Set as Set
 
 > import LTK.FSA
-> import LTK.Factors (buildLiteral, Factor(..), required)
+> import LTK.Factors (Factor(..), buildLiteral, required)
 
 > -- |A syntactic unit.
 > data Token = TSymbol Char
@@ -140,11 +140,11 @@
 
 > -- |Remove any symbols not present in @(universe)@ from the environment.
 > restrictUniverse :: Env -> Env
-> restrictUniverse (dict, subexprs, v) = ( keep (not . isEmpty . snd) $
->                                          tmap (mapsnd restrictUniverseS) dict
->                                        , tmap (mapsnd restrictUniverseE) subexprs
->                                        , restrictUniverseE <$> v
->                                        )
+> restrictUniverse (dict, subexprs, v)
+>     = ( keep (not . isEmpty . snd) $ tmap (mapsnd restrictUniverseS) dict
+>       , tmap (mapsnd restrictUniverseE) subexprs
+>       , restrictUniverseE <$> v
+>       )
 >     where universe = either (const Set.empty) id (definition "universe" dict)
 >           restrictUniverseS = intersection universe
 >           restrictUniverseE e =

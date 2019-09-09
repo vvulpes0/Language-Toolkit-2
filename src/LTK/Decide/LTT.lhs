@@ -13,11 +13,11 @@
 > -}
 > module LTK.Decide.LTT (isLTT) where
 
-> import LTK.FSA
-> import LTK.Decide.SF (isSF)
-
 > import Data.Set (Set)
 > import qualified Data.Set as Set
+
+> import LTK.Decide.SF (isSF)
+> import LTK.FSA
 
 > type S n e = (n, [Symbol e])
 > type T n e = State (S n e)

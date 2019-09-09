@@ -17,11 +17,12 @@
 >                         , untransliterateString
 >                         ) where
 
-> import LTK.FSA
 > import Control.Applicative ((<*>))
 > import Data.Functor ((<$>))
 > import Data.Set (Set)
 > import qualified Data.Set as Set
+
+> import LTK.FSA
 
 
 Reading from Jeff's format
@@ -56,7 +57,8 @@ Then use that to parse a string in Jeff format and generate an FSA
 >     | not (null xs)  = parseFail "state list" (x:xs) "Invalid separator"
 >     | otherwise      = Right . Set.fromList . tmap State $ splitOn ',' x
 
-> readJeffTransitionList :: [String] -> Either String (Set (Transition String String))
+> readJeffTransitionList :: [String] ->
+>                           Either String (Set (Transition String String))
 > readJeffTransitionList []      = Right empty
 > readJeffTransitionList (a:as)  = insert <$>
 >                                  (readJeffTransition a) <*>

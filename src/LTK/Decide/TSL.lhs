@@ -11,8 +11,8 @@
 > -}
 > module LTK.Decide.TSL (isTSL) where
 
-> import LTK.FSA (FSA)
 > import LTK.Decide.SL (isSL)
+> import LTK.FSA (FSA)
 > import LTK.Tiers (project)
 
 > -- |True iff the automaton recognizes a TSL stringset.

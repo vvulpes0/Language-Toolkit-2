@@ -35,17 +35,17 @@
 >                    ) where
 
 > import LTK.FSA          (FSA, renameStates)
+> import LTK.Porters.ATT  ( exportATT
+>                         , invertATT
+>                         , readATT)
 > import LTK.Porters.Dot  (exportDot, formatSet)
-> import LTK.Porters.Jeff ( readJeff
->                         , exportJeff
+> import LTK.Porters.Jeff ( exportJeff
+>                         , readJeff
 >                         , transliterate
 >                         , transliterateString
 >                         , untransliterate
 >                         , untransliterateString)
 > import LTK.Porters.Pleb ( readPleb )
-> import LTK.Porters.ATT  ( readATT
->                         , exportATT
->                         , invertATT)
 
 > -- |A type that can be written from an 'FSA'.
 > class Exportable t where
@@ -61,7 +61,8 @@
 > from ty = either error id . fromE ty
 
 > -- |Try to create an 'FSA' from a @String@ treated as the given 'Type'.
-> fromE :: (Importable i) => Type i -> String -> Either String (FSA Integer String)
+> fromE :: (Importable i) =>
+>          Type i -> String -> Either String (FSA Integer String)
 > fromE ty = toFSA . ty
 
 > -- |Create a @String@ from an 'FSA', formatted appropriately for

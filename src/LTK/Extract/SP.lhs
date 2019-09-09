@@ -97,15 +97,16 @@
 >                       , isSSQ
 >                       , subsequenceClosure
 >                       ) where
-> import LTK.Factors
-> import LTK.FSA
-> import LTK.Traversals
 
 > import Control.DeepSeq (NFData)
 > import Data.List (sortBy)
 > import Data.Ord (comparing)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
+
+> import LTK.Factors
+> import LTK.FSA
+> import LTK.Traversals
 
 %if false
 
@@ -219,8 +220,10 @@ wherever a transition occurred in $\delta$.
 
 
 > subsequenceClosure' :: (Ord n, Ord e) => FSAt n e -> FSAt n e
-> subsequenceClosure' (FSA ssigma delta q_0 qf _)  =  FSA ssigma (delta `union` delta_prime) q_0 qf False
->     where  delta_prime  =  tmap (\(Transition _ a b) -> (Transition Epsilon a b)) delta
+> subsequenceClosure' (FSA ssigma delta q_0 qf _)
+>     =  FSA ssigma (delta `union` delta_prime) q_0 qf False
+>     where  delta_prime  =  tmap (\(Transition _ a b) ->
+>                                  (Transition Epsilon a b)) delta
 
 %if false
 

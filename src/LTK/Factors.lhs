@@ -42,11 +42,11 @@
 >                    , wxs0, wxs1, wxs2, wxplus, wxminus, wx
 >                    ) where
 
-> import LTK.FSA
-
 > import Control.DeepSeq (NFData)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
+
+> import LTK.FSA
 
 > -- |A substring or subsequence, from which to build constraints.
 > data Factor e

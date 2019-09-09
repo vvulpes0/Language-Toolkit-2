@@ -23,17 +23,13 @@
 >                       , nondeterministicAcyclicExtensions
 >                       ) where
 
-> import LTK.FSA
-
+> import Data.Monoid (Monoid, mappend, mconcat, mempty)
 #if MIN_VERSION_base(4,9,0)
-The base-4.9 library from GHC 8.x added Semigroup to complement Monoid.
-
 > import Data.Semigroup (Semigroup, (<>))
-
 #endif
-
-> import Data.Monoid (Monoid, mempty, mappend, mconcat)
 > import Data.Set (Set)
+
+> import LTK.FSA
 
 A Path is
 * a sequence of labels in inverse order of edges in the path

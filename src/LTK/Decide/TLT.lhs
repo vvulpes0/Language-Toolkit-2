@@ -11,8 +11,8 @@
 > -}
 > module LTK.Decide.TLT (isTLT) where
 
-> import LTK.FSA (FSA)
 > import LTK.Decide.LT (isLT)
+> import LTK.FSA (FSA)
 > import LTK.Tiers (project)
 
 > -- |True iff the automaton recognizes a TLT stringset.

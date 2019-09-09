@@ -1,8 +1,6 @@
-> module Main where
+> module Main (main) where
 
-> import LTK.FSA (difference, renameSymbolsBy, tr)
-> import LTK.Porters (to, from, Dot(Dot), Jeff(Jeff), untransliterateString)
-
+> import Data.Functor ((<$>))
 > import System.Console.GetOpt ( ArgDescr(NoArg, ReqArg)
 >                              , ArgOrder(RequireOrder)
 >                              , OptDescr(Option)
@@ -12,7 +10,8 @@
 > import System.IO ( IOMode(ReadMode, WriteMode)
 >                  , hFlush, hGetContents, hPutStr, stdin, stdout, withFile)
 
-> import Data.Functor ((<$>))
+> import LTK.FSA (difference, renameSymbolsBy, tr)
+> import LTK.Porters (Dot(Dot), Jeff(Jeff), from, to, untransliterateString)
 
 > data Options = Options
 >     { optShowVersion   :: Bool
@@ -73,7 +72,12 @@
 >       (NoArg (\opts -> opts { optShowUsage = True }))
 >       "show this help"
 >     , Option ['o'] []
->       (ReqArg (\f opts -> opts { optOutput = if f == "-" then Nothing else Just f }) "FILE")
+>       (ReqArg (\f opts ->
+>                opts { optOutput = if f == "-"
+>                                   then Nothing
+>                                   else Just f
+>                     }
+>               ) "FILE")
 >       "output FILE"
 >     , Option ['t'] []
 >       (NoArg (\opts -> opts { optTransliterate = id }))

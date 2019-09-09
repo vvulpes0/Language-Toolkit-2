@@ -13,10 +13,10 @@
 > -}
 > module LTK.Decide.LT (isLT) where
 
-> import LTK.FSA
-
 > import Data.Set (Set)
 > import qualified Data.Set as Set
+
+> import LTK.FSA
 
 > -- |True iff the automaton recognizes an LT stringset.
 > isLT :: (Ord n, Ord e) => FSA n e -> Bool

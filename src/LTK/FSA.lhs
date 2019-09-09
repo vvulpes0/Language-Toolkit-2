@@ -78,24 +78,20 @@
 >                , module LTK.Containers
 >                ) where
 
+> import Control.Applicative (Applicative, pure, (<*>))
+> import Control.DeepSeq (NFData, rnf)
+> import Data.Functor ((<$>))
+> import Data.Monoid (Monoid, mappend, mempty)
+#if MIN_VERSION_base(4,9,0)
+> import safe Data.Semigroup (Semigroup, (<>))
+#endif
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 > import qualified Data.Map.Lazy as Map
-> import LTK.Containers
-> import Control.DeepSeq (NFData, rnf)
+
 > import Control.Parallel (par, pseq)
 
-> import Control.Applicative (Applicative, pure, (<*>))
-> import Data.Functor ((<$>))
-
-#if MIN_VERSION_base(4,9,0)
-The base-4.9 library from GHC 8.x added Semigroup to complement Monoid.
-
-> import safe Data.Semigroup (Semigroup, (<>))
-
-#endif
-
-> import Data.Monoid (Monoid, mempty, mappend)
+> import LTK.Containers
 
 
 Data Structures
@@ -284,7 +280,6 @@ Semigroup instance to satisfy base-4.9
 
 > instance (Semigroup n) => Semigroup (State n) where
 >     (<>) = fmap . nodeLabel . fmap (<>)
-
 #endif
 
 > instance (Monoid n) => Monoid (State n) where
@@ -384,7 +379,6 @@ Semigroup instance to satisfy base-4.9
 
 > instance (Enum n, Ord n, Ord e) => Semigroup (FSA n e) where
 >     (<>) = mappend
-
 #endif
 
 > instance (Enum n, Ord n, Ord e) => Monoid (FSA n e) where
@@ -847,7 +841,8 @@ reached by any path from the initial state.  We can trim those.
 >               | otherwise    = reachables' newqs
 >               where initialIDs a = Set.mapMonotonic (flip ID (a : [])) qs
 >                     next = collapse
->                            (union . tmap state . step fsa . initialIDs . Symbol)
+>                            (union . tmap state . step fsa .
+>                             initialIDs . Symbol)
 >                            empty alpha
 >                     newqs = union next qs
 
@@ -1046,7 +1041,8 @@ the source as accepting.
 > -- stateset in the powerset of \(Q\).
 > -- From a node \(\{q_1,q_2,\ldots,q_n\}\),
 > -- there is an edge labelled \(\sigma\) that leads to
-> -- \(\{\delta(q_1,\sigma), \delta(q_2,\sigma), \ldots, \delta(q_n, \sigma)\}\),
+> -- \(\{\delta(q_1,\sigma), \delta(q_2,\sigma), \ldots,
+> --   \delta(q_n, \sigma)\}\),
 > -- where \(\delta\) is the transition function of the input.
 > -- The initial state is \(Q\), and the result is complete.
 > powersetGraph :: (Ord e, Ord n) => FSA n e -> FSA (Set n) e
@@ -1089,7 +1085,8 @@ state is considered accepting in the syntactic monoid.
 > -- where \(q_i\) maps to the \(i^\text{th}\) element of the list.
 > -- From a node \(\langle q_1,q_2,\ldots,q_n\rangle\),
 > -- there is an edge labelled \(\sigma\) that leads to
-> -- \(\langle\delta(q_1,\sigma), \delta(q_2,\sigma), \ldots, \delta(q_n, \sigma)\rangle\),
+> -- \(\langle\delta(q_1,\sigma), \delta(q_2,\sigma), \ldots,
+> --   \delta(q_n, \sigma)\rangle\),
 > -- where \(\delta\) is the transition function of the input.
 > -- The initial state is the identity function, and the result is complete.
 > syntacticMonoid :: (Ord e, Ord n) =>
@@ -1220,7 +1217,8 @@ alphabets unified.
 >     where as   =  alphabet fsa
 >           new  =  difference (Set.mapMonotonic Just syms) as
 >           ts   =  transitions fsa
->           f e  =  union (Set.mapMonotonic (\x -> e {edgeLabel = Symbol x}) new)
+>           f e  =  union (Set.mapMonotonic
+>                          (\x -> e {edgeLabel = Symbol x}) new)
 >           ts'  =  collapse f empty $
 >                   extractMonotonic edgeLabel (Symbol Nothing) ts
 
