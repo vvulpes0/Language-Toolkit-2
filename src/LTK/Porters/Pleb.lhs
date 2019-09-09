@@ -226,7 +226,7 @@ prevents having to descend through the tree to find this information.
 >           bl           =  buildLiteral as . required
 >           (p:ps)       =  tmap (tmap (tmap Just)) pieces
 >           isPF         =  not h && not t &&
->                           all ((== (1 :: Integer)) . size) pieces
+>                           all ((==) [()] . map (const ())) pieces
 >           lfs          =  Substring p h False : lfs' ps
 >           lfs' (x:[])  =  Substring x False t : lfs' []
 >           lfs' (x:xs)  =  Substring x False False : lfs' xs

@@ -25,7 +25,6 @@
 > -- |True iff the automaton recognizes an LTT stringset.
 > isLTT :: (Ord n, Ord e) => FSA n e -> Bool
 > isLTT = both isSF (isSynMonOfLTT . syntacticMonoid)
->     where both g h x = g x && h x
 
 A semigroup (S) [e.g. the syntactic semigroup] is locally testable iff
 for all idempotent e, the generated subsemigroup eSe is an idempotent

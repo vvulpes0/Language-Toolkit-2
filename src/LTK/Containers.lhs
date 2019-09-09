@@ -36,6 +36,7 @@
 >                       -- *Generic versions of Prelude functions and similar
 >                       , anyS
 >                       , allS
+>                       , both
 >                       , tmap
 >                       , keep
 >                       , groupBy
@@ -228,6 +229,10 @@ predicates:
 >     allS f a = all f a
 >   #-}
 
+> -- |True iff the given object satisfies both given predicates.
+> both :: (a -> Bool) -> (a -> Bool) -> a -> Bool
+> both f g x = f x && g x
+
 If something is a `Collapsible` `Container`, then we can use
 properties of each typeclass to build map and filter, here called
 `tmap` and `keep` to avoid namespace collisions.
@@ -276,7 +281,7 @@ properties of each typeclass to build map and filter, here called
 >                 (\(x, y) ->
 >                      let extracted  =  extractMonotonic fst
 >                                        (fst (chooseOne y)) y
->                          (_, y')    =  Set.splitAt (size extracted) y
+>                          (_, y')    =  Set.split (Set.findMax extracted) y
 >                      in (insert (Set.mapMonotonic snd extracted) x, y')
 >                 ) .
 >                 (,) empty . Set.map (\x -> (f x, x))

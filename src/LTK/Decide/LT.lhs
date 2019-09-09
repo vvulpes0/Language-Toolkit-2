@@ -31,7 +31,6 @@ commutative monoid.
 > isSynMonOfLT s = allS (both (isCommutative s) (isIdempotent s) .
 >                        generatedSubsemigroup s) $
 >                  idempotents s
->     where both g h x = g x && h x
 
 An element x is idempotent iff xx == x.
 Here we use the syntactic monoid and simply exclude the identity

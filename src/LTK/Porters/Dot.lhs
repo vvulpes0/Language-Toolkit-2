@@ -24,8 +24,8 @@
 > showish = filter (/= '"') . show
 
 > transitionClasses :: (Ord n, Ord e) => FSA n e -> Set (Set (Transition n e))
-> transitionClasses = collapse (union . groupBy destination) empty .
->                     groupBy source . transitions
+> transitionClasses = refinePartitionBy destination . partitionBy source .
+>                     transitions
 
 > -- |Return value is in the range \([0 .. n]\),
 > -- where \(n\) is the size of the input.

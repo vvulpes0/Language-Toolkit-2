@@ -133,10 +133,9 @@
 >                      , getSubsequences = singleton a
 >                      }
 
-> g :: Ord e =>
->   (Set [e] -> Set [e] -> Set [e])
->   -> ForbiddenSubsequences e -> ForbiddenSubsequences e
->   -> ForbiddenSubsequences e
+> g :: Ord e => (Set [e] -> Set [e] -> Set [e]) ->
+>      ForbiddenSubsequences e -> ForbiddenSubsequences e ->
+>      ForbiddenSubsequences e
 > g f c1 c2 = ForbiddenSubsequences {
 >               attestedAlphabet = union
 >                                  (attestedAlphabet c1)
@@ -144,7 +143,7 @@
 >             , getSubsequences = f
 >                                 (getSubsequences c1)
 >                                 (getSubsequences c2)
->               }
+>             }
 
 > type FSAt = FSA
 
@@ -349,12 +348,12 @@ minimal forbidden subsequence.
 
 > collectMinimalFSSQs :: (Ord n, Ord e) => FSAt n e -> Set [e]
 > collectMinimalFSSQs  =  Set.fromList              .
->                         filterAbsorbed            .
+>                         absorb                    .
 >                         sortBy (comparing isize)  .
 >                         Set.toList                .
 >                         collectFSSQs
->     where  filterAbsorbed (x:xs)  =  x : filterAbsorbed (keep (\y -> x `isNotSSQ` y) xs)
->            filterAbsorbed _       =  []
+>     where  absorb (x:xs)  =  x : absorb (keep (\y -> x `isNotSSQ` y) xs)
+>            absorb _       =  []
 
 This concludes the algorithm for extracting minimal forbidden subsequences,
 and thus for extracting strictly-piecewise factors
@@ -381,14 +380,12 @@ whether a stringset is $\SP$:
 
 > -- |The stringset represented by the forbiddenSubsequences.
 > fsaFromForbiddenSubsequences :: (Ord e, NFData e) =>
->                                 ForbiddenSubsequences e
->                              -> FSA Integer e
-> fsaFromForbiddenSubsequences fssqs =
->     build (attestedAlphabet fssqs) . singleton .
->     makeConstraint .
->     tmap (singleton . forbidden . Subsequence . tmap singleton) .
->     fromCollapsible $
->     getSubsequences fssqs
+>                                 ForbiddenSubsequences e -> FSA Integer e
+> fsaFromForbiddenSubsequences fssqs
+>     = build (attestedAlphabet fssqs) . singleton .
+>       makeConstraint .
+>       tmap (singleton . forbidden . Subsequence . tmap singleton) .
+>       fromCollapsible $ getSubsequences fssqs
 
 %endif
 
