@@ -203,8 +203,12 @@ prevents having to descend through the tree to find this information.
 >                                    automatonFromExpr ex
 >         Unary (Negation ex)     -> complementDeterministic $
 >                                    automatonFromExpr ex
->         Unary (Tierify ts ex)   -> tierify (unionAll ts) $
->                                    automatonFromExpr ex
+>         Unary (Tierify ts ex)   -> let t = unionAll ts
+>                                        t' = insert Nothing $ tmap Just t
+>                                    in tierify t .
+>                                       contractAlphabetTo t' .
+>                                       semanticallyExtendAlphabetTo t $
+>                                       automatonFromExpr ex
 >         Factor x                -> automatonFromPLFactor x
 >         Automaton x             -> x
 >     where f tl         =  renameStates . minimize . tl . automata
