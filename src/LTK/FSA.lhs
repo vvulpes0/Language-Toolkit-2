@@ -1249,8 +1249,7 @@ alphabets unified.
 >                   }
 
 > -- |Remove symbols from the alphabet of an automaton.
-> contractAlphabetTo :: (Ord a, Ord b) => Set b -> FSA a b ->
->                       FSA a b
+> contractAlphabetTo :: (Ord a, Ord b) => Set b -> FSA a b -> FSA a b
 > contractAlphabetTo syms fsa = trimUnreachables $
 >                               FSA syms trans
 >                               (initials fsa)

@@ -107,9 +107,9 @@ where X is either () if the factorization is incomplete,
                   A FilePath of the necessary compiled higher constraints
 
 > factorization :: (Ord n, Ord e, NFData e) =>
->                  [(FilePath, FSA Integer e)]
->               -> FSA n e
->               -> ( ( FSA Integer e
+>                  [(FilePath, FSA Integer e)] ->
+>                  FSA n e ->
+>                  ( ( FSA Integer e
 >                    , ForbiddenSubstrings e
 >                    , ForbiddenSubsequences e
 >                    )
@@ -154,8 +154,8 @@ implied by the local ones, then finally filter away any local factors
 implied by the remaining piecewise ones.
 
 > strictApproximation :: (Ord e, NFData e) =>
->                        FSA Integer e 
->                     -> ( FSA Integer e
+>                        FSA Integer e ->
+>                        ( FSA Integer e
 >                        , ForbiddenSubstrings e
 >                        , ForbiddenSubsequences e
 >                        )
@@ -186,12 +186,12 @@ is to find the smallest subset of factors such that all of them are
 actually required.
 
 > costrictApproximation :: (Ord e, NFData e) =>
->                          FSA Integer e
->                       -> ( FSA Integer e
+>                          FSA Integer e ->
+>                          ( FSA Integer e
 >                          , ForbiddenSubstrings e
 >                          , ForbiddenSubsequences e
->                          )
->                       -> ( FSA Integer e
+>                          ) ->
+>                          ( FSA Integer e
 >                          , ForbiddenSubstrings e
 >                          , ForbiddenSubsequences e
 >                          )
@@ -208,8 +208,8 @@ actually required.
 > literalsFromApproximation :: Ord e =>
 >                              ( a
 >                              , ForbiddenSubstrings e
->                              , ForbiddenSubsequences e)
->                           -> Set (Literal e)
+>                              , ForbiddenSubsequences e
+>                              ) -> Set (Literal e)
 > literalsFromApproximation (_, fs, fq) = unionAll [lfr, lin, lfi, lwo, lq]
 >     where lq       =  tmap
 >                       (forbidden . Subsequence . tmap singleton) $
@@ -224,9 +224,7 @@ actually required.
 >           lwo      =  f True True (forbiddenWords fs)
 
 > trueRequireds :: (Ord e, NFData e) =>
->                  FSA Integer e
->               -> Set (Literal e)
->               -> Set (Literal e)
+>                  FSA Integer e -> Set (Literal e) -> Set (Literal e)
 > trueRequireds fsa = maybe empty id           .
 >                     findGood isGood Nothing  .
 >                     singleton                .
@@ -240,10 +238,8 @@ actually required.
 >                    tmap singleton
 
 > findGood :: Ord a =>
->             (Set a -> Bool)
->          -> Maybe (DecreasingSize (Set a))
->          -> Set (DecreasingSize (Set a))
->          -> Maybe (Set a)
+>             (Set a -> Bool) -> Maybe (DecreasingSize (Set a)) ->
+>             Set (DecreasingSize (Set a)) -> Maybe (Set a)
 > findGood isGood current subsets
 >     | isEmpty subsets = fmap getDecreasing current
 >     | isEmpty s  =  fmap getDecreasing current
@@ -277,9 +273,8 @@ those sets that are known to be non-productive.
 
 
 > reformApproximation :: (Ord e, NFData e) =>
->                        Set e
->                     -> Set (Literal e)
->                     -> ( FSA Integer e
+>                        Set e -> Set (Literal e) ->
+>                        ( FSA Integer e
 >                        , ForbiddenSubstrings e
 >                        , ForbiddenSubsequences e
 >                        )
@@ -314,9 +309,8 @@ those sets that are known to be non-productive.
 Formatting output
 =================
 
-> output :: FilePath
->        -> FSA Integer String
->        -> ( ( FSA Integer String
+> output :: FilePath -> FSA Integer String ->
+>           ( ( FSA Integer String
 >             , ForbiddenSubstrings String
 >             , ForbiddenSubsequences String
 >             )
@@ -325,8 +319,7 @@ Formatting output
 >             , ForbiddenSubsequences String
 >             )
 >           , Either () (Maybe FilePath)
->           )
->        -> String
+>           ) -> String
 > output name fsa ((strictFSA, ffs, fssqs), (_, rfs, rssqs), higher) =
 >     concatMap unlines $ [ [ "[metadata]"
 >                         , "name=" ++ show name
