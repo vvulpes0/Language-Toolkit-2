@@ -56,18 +56,19 @@ MoL'17 as is the notion of an $\SL$ approximation of a non-$\SL$ stringset.
 >
 > @since 0.2
 > -}
-> module LTK.Extract.SL ( ForbiddenSubstrings(..)
->                       , ForbiddenPaths(..)
->                       , TaggedSubstring(..)
->                       -- *Extracting forbidden substrings
->                       , factorsFromPaths
->                       , forbiddenSubstrings
->                       -- *Building automata
->                       , buildFSA
->                       -- *Determining SL
->                       , isSL
->                       , slQ
->                       ) where
+> module LTK.Extract.SL
+>        ( ForbiddenSubstrings(..)
+>        , ForbiddenPaths(..)
+>        , TaggedSubstring(..)
+>        -- *Extracting forbidden substrings
+>        , factorsFromPaths
+>        , forbiddenSubstrings
+>        -- *Building automata
+>        , buildFSA
+>        -- *Determining SL
+>        , isSL
+>        , slQ
+>        ) where
 
 > import Control.DeepSeq (NFData)
 > import Data.Set (Set)
@@ -181,60 +182,56 @@ type of a singleton set.
 > -- |A convenience-type for declaring collections of  forbidden substrings.
 > --  The member types are (lists of) the raw alphabet type (not (Symbol .))
 > data ForbiddenSubstrings e
->     = ForbiddenSubstrings { -- |Symbols that actually label transitions
->                             attestedUnits      ::  Set e
->                             -- |Sequences of symbols that cannot occur
->                             -- as words
->                           , forbiddenWords     ::  Set [e]
->                             -- |Sequences of symbols that cannot occur
->                             -- initially
->                           , forbiddenInitials  ::  Set [e]
->                             -- |Sequences of symbols that cannot occur
->                             -- anywhere
->                           , forbiddenFrees     ::  Set [e]
->                             -- |Sequences of symbols that cannot occur
->                             -- finally
->                           , forbiddenFinals    ::  Set [e]
->                           }
+>     = ForbiddenSubstrings
+>       { -- |Symbols that actually label transitions
+>         attestedUnits      ::  Set e
+>         -- |Sequences of symbols that cannot occur as words
+>       , forbiddenWords     ::  Set [e]
+>         -- |Sequences of symbols that cannot occur initially
+>       , forbiddenInitials  ::  Set [e]
+>         -- |Sequences of symbols that cannot occur anywhere
+>       , forbiddenFrees     ::  Set [e]
+>         -- |Sequences of symbols that cannot occur finally
+>       , forbiddenFinals    ::  Set [e]
+>       }
 >     deriving (Eq, Ord, Show, Read)
 
 > -- |A sequence of symbols, possibly annotated with end-markers.
 > data TaggedSubstring e = Free [e] | Initial [e] | Final [e] | Word [e]
 >                          deriving (Eq, Ord, Read, Show)
 
-> instance Ord e =>
->     Container (ForbiddenSubstrings e) (TaggedSubstring e) where
->         empty         =  ForbiddenSubstrings empty empty empty empty empty
->         isEmpty fs    =  isEmpty (forbiddenWords fs)     &&
->                          isEmpty (forbiddenInitials fs)  &&
->                          isEmpty (forbiddenFrees fs)     &&
->                          isEmpty (forbiddenFinals fs)
->         insert (Free [x]) c
->             = c {forbiddenFrees = insert [x] (forbiddenFrees c)}
->         insert (Free x) c
->             = c {forbiddenFrees = insert x (forbiddenFrees c)}
->         insert (Final x) c
->             = c {forbiddenFinals = insert x (forbiddenFinals c)}
->         insert (Initial x) c
->             = c {forbiddenInitials = insert x (forbiddenInitials c)}
->         insert (Word x) c
->             = c {forbiddenWords = insert x (forbiddenWords c)}
->         contains (Free x) c
->             = contains x (forbiddenFrees c)
->         contains (Final x) c
->             = contains x (forbiddenFinals c)
->         contains (Initial x) c
->             = contains x (forbiddenInitials c)
->         contains (Word x) c
->             = contains x (forbiddenWords c)
->         union         =  g union
->         intersection  =  g intersection
->         difference    =  g difference
+> instance Ord e => Container (ForbiddenSubstrings e) (TaggedSubstring e)
+>     where empty         =  ForbiddenSubstrings empty empty empty empty empty
+>           isEmpty fs    =  isEmpty (forbiddenWords fs)     &&
+>                            isEmpty (forbiddenInitials fs)  &&
+>                            isEmpty (forbiddenFrees fs)     &&
+>                            isEmpty (forbiddenFinals fs)
+>           insert (Free [x]) c
+>               = c {forbiddenFrees = insert [x] (forbiddenFrees c)}
+>           insert (Free x) c
+>               = c {forbiddenFrees = insert x (forbiddenFrees c)}
+>           insert (Final x) c
+>               = c {forbiddenFinals = insert x (forbiddenFinals c)}
+>           insert (Initial x) c
+>               = c {forbiddenInitials = insert x (forbiddenInitials c)}
+>           insert (Word x) c
+>               = c {forbiddenWords = insert x (forbiddenWords c)}
+>           contains (Free x) c
+>               = contains x (forbiddenFrees c)
+>           contains (Final x) c
+>               = contains x (forbiddenFinals c)
+>           contains (Initial x) c
+>               = contains x (forbiddenInitials c)
+>           contains (Word x) c
+>               = contains x (forbiddenWords c)
+>           union         =  g union
+>           intersection  =  g intersection
+>           difference    =  g difference
 
 > g :: Ord e => (Set [e] -> Set [e] -> Set [e]) ->
 >      ForbiddenSubstrings e -> ForbiddenSubstrings e -> ForbiddenSubstrings e
-> g f a b = ForbiddenSubstrings {
->             attestedUnits    =  union (attestedUnits a) (attestedUnits b)
+> g f a b = ForbiddenSubstrings
+>           { attestedUnits    =  union (attestedUnits a) (attestedUnits b)
 >           , forbiddenWords   =  f (forbiddenWords a) (forbiddenWords b)
 >           , forbiddenInitials
 >               = f (forbiddenInitials a) (forbiddenInitials b)
@@ -251,13 +248,13 @@ type of a singleton set.
 > -- each path are labelled by elements of type @Set n@ if @n@ is
 > -- the type that labels states in the underlying FSA.
 > data ForbiddenPaths n e
->     = ForbiddenPaths {
->         initialPaths :: Set (Path n e) -- ^Paths witnessing
->                                        -- forbidden initial factors
->       , freePaths    :: Set (Path n e) -- ^Paths witnessing
->                                        -- forbidden free factors
->       , finalPaths   :: Set (Path n e) -- ^Paths witnessing
->                                        -- forbidden final factors
+>     = ForbiddenPaths
+>       { -- |Paths witnessing forbidden initial factors
+>         initialPaths :: Set (Path n e)
+>         -- |Paths witnessing forbidden free factors
+>       , freePaths    :: Set (Path n e)
+>         -- |Paths witnessing forbidden final factors
+>       , finalPaths   :: Set (Path n e)
 >       }
 >     deriving (Eq, Ord)
 
@@ -377,13 +374,14 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 >           stateQ  =  psgQ psg
 >           initialFront
 >               | contains (State empty) $ states psg
->                   = singleton $
->                     Path { labels         =  empty
->                          , endstate       =  Just . State $ singleton empty
->                          , stateMultiset  =  singleton . State $
->                                              singleton empty
->                          , depth          =  0
->                          }
+>                     = singleton $
+>                       Path
+>                       { labels    =  empty
+>                       , endstate  =  Just . State $ singleton empty
+>                       , stateMultiset
+>                             = singleton . State $ singleton empty
+>                       , depth     =  0
+>                       }
 >               | otherwise = empty
 
 
@@ -409,11 +407,12 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 >     where psgR    =  trimRevPSG psg
 >           stateQ  =  psgQ psg
 >           front0  =  singleton $
->                      Path { labels = empty
->                           , endstate = pure nonFin
->                           , stateMultiset = singleton nonFin
->                           , depth = 0
->                           }
+>                      Path
+>                      { labels = empty
+>                      , endstate = pure nonFin
+>                      , stateMultiset = singleton nonFin
+>                      , depth = 0
+>                      }
 >           nonFin  =  fmap Set.fromList         .
 >                      sequence . Set.toList     .
 >                      difference (states psgR)  .
@@ -426,13 +425,14 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 > trimRevPSG :: (Ord e, Ord n, Enum n) => FSA (Set n) e -> FSA (Set n) e
 > trimRevPSG psg
 >     = LTK.FSA.reverse $
->       psg { transitions
+>       psg
+>       { transitions
 >             = keep
 >               (both
 >                ((/= psgQ psg) . destination)
 >                ((/= State empty) . source)) $
 >               transitions psg
->           }
+>       }
 
 %%  Breadth-first traversal of graph
 %%   Returns list of strings labeling paths from initial frontier to a goal
@@ -449,8 +449,8 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 >           FSA (Set n) e -> Set (State (Set n)) -> [Path (Set (Set n)) e] ->
 >           Set (Path (Set (Set n)) e) -> Set (Path (Set (Set n)) e)
 > gatherFPs psg goal front fps
->     | isEmpty front  =  fps
->     | otherwise      =  gatherFPs psg goal nextFront (union nextFPs fps)
+>     | isEmpty front = fps
+>     | otherwise = gatherFPs psg goal nextFront (union nextFPs fps)
 >     where (nextFront, nextFPs)
 >               = passK goal
 >                 (Set.toList $

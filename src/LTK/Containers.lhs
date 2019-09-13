@@ -22,45 +22,46 @@
 > Containers: a uniform way to work with entities that may
 > contain other entities.
 > -}
-> module LTK.Containers ( Container(..)
->                       , Linearizable(..)
->                       , chooseOne
->                       , discardOne
->                       , Collapsible(..)
->                       , isize
->                       , zsize
->                       , fromCollapsible
->                       -- *Combining multiple Containers
->                       , unionAll
->                       , intersectAll
->                       -- *Generic versions of Prelude functions and similar
->                       , anyS
->                       , allS
->                       , both
->                       , tmap
->                       , keep
->                       , groupBy
->                       , partitionBy
->                       , refinePartitionBy
->                       -- *Multisets
->                       , Multiset
->                       , multiplicity
->                       , multisetFromList
->                       , setFromMultiset
->                       -- *Set of Set with alternate ordering
->                       -- |The 'choose' instance for 'Set' will always pick
->                       -- the least available element.
->                       -- If one wants to process elements
->                       -- in a different order,
->                       -- one can simply wrap the elements in such a way
->                       -- that they sort in the intended order of processing.
->                       -- This section contains some such wrapper types.
->                       , IncreasingSize(..)
->                       , DecreasingSize(..)
->                       -- *Miscellaneous functions
->                       , extractMonotonic
->                       , tr
->                       ) where
+> module LTK.Containers
+>        ( Container(..)
+>        , Linearizable(..)
+>        , chooseOne
+>        , discardOne
+>        , Collapsible(..)
+>        , isize
+>        , zsize
+>        , fromCollapsible
+>        -- *Combining multiple Containers
+>        , unionAll
+>        , intersectAll
+>        -- *Generic versions of Prelude functions and similar
+>        , anyS
+>        , allS
+>        , both
+>        , tmap
+>        , keep
+>        , groupBy
+>        , partitionBy
+>        , refinePartitionBy
+>        -- *Multisets
+>        , Multiset
+>        , multiplicity
+>        , multisetFromList
+>        , setFromMultiset
+>        -- *Set of Set with alternate ordering
+>        -- |The 'choose' instance for 'Set' will always pick
+>        -- the least available element.
+>        -- If one wants to process elements
+>        -- in a different order,
+>        -- one can simply wrap the elements in such a way
+>        -- that they sort in the intended order of processing.
+>        -- This section contains some such wrapper types.
+>        , IncreasingSize(..)
+>        , DecreasingSize(..)
+>        -- *Miscellaneous functions
+>        , extractMonotonic
+>        , tr
+>        ) where
 
 > import safe Data.Monoid (Monoid, mempty, mappend)
 #if MIN_VERSION_base(4,9,0)
@@ -90,56 +91,57 @@ are defined to allow such polymorphism.
 > -- > contains a (intersection c1 c2) == contains a c1 && contains a c2
 > -- > intersection c c == c
 > -- > difference c c == empty
-> class (Eq a) => Container c a | c -> a where
->     isIn :: c -> a -> Bool
->     isNotIn :: c -> a -> Bool
->     contains :: a -> c -> Bool
->     doesNotContain :: a -> c -> Bool
->     isEmpty :: (Eq c) => c -> Bool
->     -- |@(union a b)@ returns a collection of elements that
->     -- are in one of @a@ or @b@, or both.
->     union :: c -> c -> c
->     -- |@(intersection a b)@ returns a collection of elements that
->     -- are in both @a@ and @b@.
->     intersection :: c -> c -> c
->     -- |@(difference a b)@ returns a collection of elements that
->     -- are in @a@ but not in @b@.
->     difference :: c -> c -> c
->     -- |@(symmetricDifference a b)@ returns a collection of elements
->     -- that are in one of @a@ or @b@, but not both.
->     symmetricDifference :: c -> c -> c
->     empty :: c
->     insert :: a -> c -> c
->     singleton :: a -> c
->     -- |@(isSubsetOf y x)@ tells whether @x@ is a subset of @y@.
->     isSubsetOf :: (Eq c) => c -> c -> Bool
->     -- |@(isSupersetOf y x)@ tells whether @x@ is a superset of @y@.
->     isSupersetOf :: (Eq c) => c -> c -> Bool
->     -- |@(isProperSubsetOf y x)@ tells whether @x@ is a proper subset of @y@.
->     isProperSubsetOf :: (Eq c) => c -> c -> Bool
->     -- |@(isProperSupersetOf y x)@ tells whether
->     -- @x@ is a proper superset of @y@.
->     isProperSupersetOf :: (Eq c) => c -> c -> Bool
->     -- Default definitions:
->     isEmpty = (== empty)
->     isIn = flip contains
->     isNotIn c = not . isIn c
->     contains = flip isIn
->     doesNotContain = flip isNotIn
->     insert a c = union (singleton a) c
->     singleton a = insert a empty
->     symmetricDifference a b = union (difference a b) (difference b a)
->     isSubsetOf a b = intersection a b == b
->     isSupersetOf = flip isSubsetOf
->     isProperSubsetOf a b = isSubsetOf a b && a /= b
->     isProperSupersetOf a b = isSupersetOf a b && a /= b
->     {-# MINIMAL
->       (contains | isIn),
->       union,
->       intersection,
->       difference,
->       empty,
->       (insert | singleton) #-}
+> class (Eq a) => Container c a | c -> a
+>     where isIn :: c -> a -> Bool
+>           isNotIn :: c -> a -> Bool
+>           contains :: a -> c -> Bool
+>           doesNotContain :: a -> c -> Bool
+>           isEmpty :: (Eq c) => c -> Bool
+>           -- |@(union a b)@ returns a collection of elements that
+>           -- are in one of @a@ or @b@, or both.
+>           union :: c -> c -> c
+>           -- |@(intersection a b)@ returns a collection of elements that
+>           -- are in both @a@ and @b@.
+>           intersection :: c -> c -> c
+>           -- |@(difference a b)@ returns a collection of elements that
+>           -- are in @a@ but not in @b@.
+>           difference :: c -> c -> c
+>           -- |@(symmetricDifference a b)@ returns a collection of elements
+>           -- that are in one of @a@ or @b@, but not both.
+>           symmetricDifference :: c -> c -> c
+>           empty :: c
+>           insert :: a -> c -> c
+>           singleton :: a -> c
+>           -- |@(isSubsetOf y x)@ tells whether @x@ is a subset of @y@.
+>           isSubsetOf :: (Eq c) => c -> c -> Bool
+>           -- |@(isSupersetOf y x)@ tells whether @x@ is a superset of @y@.
+>           isSupersetOf :: (Eq c) => c -> c -> Bool
+>           -- |@(isProperSubsetOf y x)@ tells whether
+>           -- @x@ is a proper subset of @y@.
+>           isProperSubsetOf :: (Eq c) => c -> c -> Bool
+>           -- |@(isProperSupersetOf y x)@ tells whether
+>           -- @x@ is a proper superset of @y@.
+>           isProperSupersetOf :: (Eq c) => c -> c -> Bool
+>           -- Default definitions:
+>           isEmpty = (== empty)
+>           isIn = flip contains
+>           isNotIn c = not . isIn c
+>           contains = flip isIn
+>           doesNotContain = flip isNotIn
+>           insert a c = union (singleton a) c
+>           singleton a = insert a empty
+>           symmetricDifference a b = union (difference a b) (difference b a)
+>           isSubsetOf a b = intersection a b == b
+>           isSupersetOf = flip isSubsetOf
+>           isProperSubsetOf a b = isSubsetOf a b && a /= b
+>           isProperSupersetOf a b = isSupersetOf a b && a /= b
+>           {-# MINIMAL
+>               (contains | isIn)
+>             , union
+>             , intersection
+>             , difference
+>             , empty
+>             , (insert | singleton) #-}
 
 The `Linearizable` class is used for types that can be traversed
 linearly in one direction.  The class provides a function `choose`
@@ -151,9 +153,10 @@ The first and second parts of this pair may be returned alone by
 
 > -- |The 'Linearizable' class is used for types that can be
 > -- traversed linearly in one direction.
-> class Linearizable l where
->     -- |Return the next element and the collection of remaining elements.
->     choose :: l a -> (a, l a)
+> class Linearizable l
+>     where choose :: l a -> (a, l a)
+>           -- ^Return the next element and
+>           -- the collection of remaining elements.
 
 > -- |Like 'choose', but discards the remaining elements.
 > chooseOne :: (Linearizable l) => l a -> a
@@ -169,18 +172,22 @@ The first and second parts of this pair may be returned alone by
 > -- > collapse (:) [] c
 > --
 > -- performs a linearization.
-> class Linearizable c => Collapsible c where
->     collapse :: (a -> b -> b) -> b -> c a -> b
->     size :: (Integral a) => c b -> a
+> class Linearizable c => Collapsible c
+>     where collapse :: (a -> b -> b) -> b -> c a -> b
+>           size :: (Integral a) => c b -> a
 
->     collapse f = curry (fst . until ((== (0::Integer)) . size . snd) cont)
->         where cont (a, bs) = let (x, xs) = choose bs in (f x a, xs)
->     size = collapse (const succ) 0
->     {-# MINIMAL collapse | size #-}
+>           collapse f = curry (fst . until ((== 0) . isize . snd) cont)
+>               where cont (a, bs) = let (x, xs) = choose bs in (f x a, xs)
+>           size = collapse (const succ) 0
+>           {-# MINIMAL collapse | size #-}
 
 > -- |Analogue to @isEmpty@ for Collapsible structures
 > zsize :: Collapsible c => c b -> Bool
-> zsize = (== (0 :: Integer)) . size
+> zsize = collapse (const $ const False) True
+> {-# INLINE[1] zsize #-}
+> {-# RULES
+> "zsize/Set" zsize = (== 0) . Set.size
+>   #-}
 
 > -- |The size of the input as an integer
 > isize :: Collapsible c => c b -> Integer
@@ -326,41 +333,44 @@ Standard Prelude Types
 
 A Haskell list is a Collapsible Container:
 
-> instance Linearizable [] where
->     choose (x:xs) = (x, xs)
->     choose _      = (error "cannot choose an element from an empty list", [])
-> instance Collapsible [] where
->     collapse = foldr
-> instance (Eq a) => Container [a] a where
->     contains = elem
->     union = (++)
->     intersection a b = filter (isIn a) b -- maintain order of B for subset
->     difference a b = filter (isNotIn b) a
->     empty = []
->     insert = (:)
->     isSubsetOf a b = intersection a b == b
+> instance Linearizable []
+>     where choose (x:xs) = (x, xs)
+>           choose _
+>               = (error "cannot choose an element from an empty list", [])
+> instance Collapsible []
+>     where collapse = foldr
+> instance (Eq a) => Container [a] a
+>     where contains = elem
+>           union = (++)
+>           intersection a b = filter (isIn a) b
+>           -- intersection must maintain order of B for subset to work
+>           difference a b = filter (isNotIn b) a
+>           empty = []
+>           insert = (:)
+>           isSubsetOf a b = intersection a b == b
 
 A Set is like a list with no duplicates, so it should act similarly:
 
-> instance Linearizable Set where
->     choose xs
->         | Set.null xs  = (error "cannot choose an element from an empty set",
->                           Set.empty)
->         | otherwise    = Set.deleteFindMin xs
-> instance Collapsible Set where
->     collapse = Set.fold
->     size = fromIntegral . Set.size
-> instance (Ord a) => Container (Set a) a where
->     contains = Set.member
->     union = Set.union
->     intersection = Set.intersection
->     difference = (Set.\\)
->     empty = Set.empty
->     insert = Set.insert
->     isSubsetOf = flip Set.isSubsetOf
->     isProperSubsetOf = flip Set.isProperSubsetOf
->     isSupersetOf = Set.isSubsetOf
->     isProperSupersetOf = Set.isProperSubsetOf
+> instance Linearizable Set
+>     where choose xs
+>               | Set.null xs
+>                   = ( error "cannot choose an element from an empty set"
+>                     , Set.empty)
+>               | otherwise = Set.deleteFindMin xs
+> instance Collapsible Set
+>     where collapse = Set.fold
+>           size = fromIntegral . Set.size
+> instance (Ord a) => Container (Set a) a
+>     where contains            =  Set.member
+>           union               =  Set.union
+>           intersection        =  Set.intersection
+>           difference          =  (Set.\\)
+>           empty               =  Set.empty
+>           insert              =  Set.insert
+>           isSubsetOf          =  flip Set.isSubsetOf
+>           isProperSubsetOf    =  flip Set.isProperSubsetOf
+>           isSupersetOf        =  Set.isSubsetOf
+>           isProperSupersetOf  =  Set.isProperSubsetOf
 
 
 A new Multiset type, able to contain duplicates but still have
@@ -368,8 +378,7 @@ lookup-time logarithmic in the number of distinct elements.
 
 > -- |A 'Multiset' is a 'Set' that may contain more than one instance
 > -- of any given element.
-> newtype Multiset a = Multiset (Set (a, Integer))
->     deriving (Eq, Ord)
+> newtype Multiset a = Multiset (Set (a, Integer)) deriving (Eq, Ord)
 
 > -- |Analogous to 'isIn', returning the number of occurrences of an
 > -- element in a 'Multiset'.
@@ -389,64 +398,65 @@ lookup-time logarithmic in the number of distinct elements.
 > setFromMultiset :: Multiset a -> Set a
 > setFromMultiset (Multiset a) = Set.mapMonotonic fst a
 
-> instance Linearizable Multiset where
->     choose (Multiset xs)
->         | Set.null xs
->             =  ( error "cannot choose an element from an empty multiset"
->                , Multiset Set.empty)
->         | m == 1       =  (a, f as)
->         | otherwise    =  (a, f ((a, pred m) : as))
->         where ((a,m):as) = Set.toAscList xs
->               f = Multiset . Set.fromDistinctAscList
-> instance Collapsible Multiset where
->     size (Multiset xs) = fromIntegral . sum . map snd $ Set.toList xs
->     collapse f x (Multiset xs) = collapse f x .
->                                  concatMap (uncurry (flip replicate) .
->                                             fmap fromIntegral) $
->                                  Set.toAscList xs
-> instance Ord a => Container (Multiset a) a where
->     contains x = contains x . setFromMultiset
->     insert x (Multiset xs) = Multiset (insert newX noX)
->         where hasX = keep ((== x) . fst) xs
->               noX  = difference xs hasX
->               newX = Set.fold add (x, 1) hasX
->               add (a, c1) (_, c2) = (a, c1 + c2)
->     empty = Multiset empty
->     union (Multiset xs) (Multiset ys) =
->         Multiset (Set.fromDistinctAscList zs)
->         where xs' = Set.toAscList xs
->               ys' = Set.toAscList ys
->               zs  = unionSortedMultis xs' ys'
->     intersection (Multiset xs) (Multiset ys) =
->         Multiset (Set.fromDistinctAscList zs)
->         where xs' = Set.toAscList xs
->               ys' = Set.toAscList ys
->               zs  = intersectSortedMultis xs' ys'
->     difference (Multiset xs) (Multiset ys) =
->         Multiset (Set.fromDistinctAscList zs)
->         where xs' = Set.toAscList xs
->               ys' = Set.toAscList ys
->               zs  = differenceSortedMultis xs' ys'
+> instance Linearizable Multiset
+>     where choose (Multiset xs)
+>               | Set.null xs
+>                   =  ( error
+>                        "cannot choose an element from an empty multiset"
+>                      , Multiset Set.empty)
+>               | m == 1       =  (a, f as)
+>               | otherwise    =  (a, f ((a, pred m) : as))
+>               where ((a,m):as) = Set.toAscList xs
+>                     f = Multiset . Set.fromDistinctAscList
+> instance Collapsible Multiset
+>     where size (Multiset xs) = fromIntegral . sum . map snd $ Set.toList xs
+>           collapse f x (Multiset xs)
+>               = collapse f x .
+>                 concatMap (uncurry (flip replicate) .
+>                            fmap fromIntegral) $
+>                 Set.toAscList xs
+> instance Ord a => Container (Multiset a) a
+>     where contains x = contains x . setFromMultiset
+>           insert x (Multiset xs) = Multiset (insert newX noX)
+>               where hasX = keep ((== x) . fst) xs
+>                     noX  = difference xs hasX
+>                     newX = Set.fold add (x, 1) hasX
+>                     add (a, c1) (_, c2) = (a, c1 + c2)
+>           empty = Multiset empty
+>           union (Multiset xs) (Multiset ys)
+>               = Multiset (Set.fromDistinctAscList zs)
+>                 where xs' = Set.toAscList xs
+>                       ys' = Set.toAscList ys
+>                       zs  = unionSortedMultis xs' ys'
+>           intersection (Multiset xs) (Multiset ys)
+>               = Multiset (Set.fromDistinctAscList zs)
+>                 where xs' = Set.toAscList xs
+>                       ys' = Set.toAscList ys
+>                       zs  = intersectSortedMultis xs' ys'
+>           difference (Multiset xs) (Multiset ys)
+>               = Multiset (Set.fromDistinctAscList zs)
+>                 where xs' = Set.toAscList xs
+>                       ys' = Set.toAscList ys
+>                       zs  = differenceSortedMultis xs' ys'
 
 #if MIN_VERSION_base(4,9,0)
-> instance Ord a => Semigroup (Multiset a) where
->     (<>) = mappend
+> instance Ord a => Semigroup (Multiset a)
+>     where (<>) = mappend
 #endif
 
-> instance Ord a => Monoid (Multiset a) where
->     mempty = empty
->     mappend = union
+> instance Ord a => Monoid (Multiset a)
+>     where mempty = empty
+>           mappend = union
 
-> instance Show a => Show (Multiset a) where
->     showsPrec p m = showParen (p > 10) $
->                     showString "multisetFromList " .
->                     shows (collapse (:) [] m)
-> instance (Ord a, Read a) => Read (Multiset a) where
->     readsPrec p = readParen (p > 10) $ \r ->
->                   do
->                     ("multisetFromList", s) <- lex r
->                     (xs, t) <- reads s
->                     return (multisetFromList xs, t)
+> instance Show a => Show (Multiset a)
+>     where showsPrec p m = showParen (p > 10) $
+>                           showString "multisetFromList " .
+>                           shows (collapse (:) [] m)
+> instance (Ord a, Read a) => Read (Multiset a)
+>     where readsPrec p = readParen (p > 10) $ \r ->
+>                         do ("multisetFromList", s) <- lex r
+>                            (xs, t) <- reads s
+>                            return (multisetFromList xs, t)
 
 > -- |A specialization of 'fromCollapsible'.
 > multisetFromList :: Ord a => [a] -> Multiset a
@@ -488,35 +498,33 @@ Subsets sorted by increasing and decreasing size
 
 > -- |Wrap a 'Collapsible' type to sort in order of increasing size.
 > -- For elements of the same size, treat them normally.
-> newtype IncreasingSize x = IncreasingSize {
->       getIncreasing :: x
->     } deriving (Eq, Read, Show)
+> newtype IncreasingSize x = IncreasingSize
+>     { getIncreasing :: x } deriving (Eq, Read, Show)
 
 > -- |Wrap a 'Collapsible' type to sort in order of decreasing size.
 > -- For elements of the same size, treat them normally.
-> newtype DecreasingSize x = DecreasingSize {
->       getDecreasing :: x
->     } deriving (Eq, Read, Show)
+> newtype DecreasingSize x = DecreasingSize
+>     { getDecreasing :: x } deriving (Eq, Read, Show)
 
-> instance (Collapsible x, Ord (x a)) => Ord (IncreasingSize (x a)) where
->     compare (IncreasingSize x) (IncreasingSize y)
->         = case compare (size x :: Integer) (size y) of
->             LT  ->  LT
->             GT  ->  GT
->             _   ->  compare x y
+> instance (Collapsible x, Ord (x a)) => Ord (IncreasingSize (x a))
+>     where compare (IncreasingSize x) (IncreasingSize y)
+>               = case compare (isize x) (isize y)
+>                 of LT  ->  LT
+>                    GT  ->  GT
+>                    _   ->  compare x y
 
-> instance (Collapsible x, Ord (x a)) => Ord (DecreasingSize (x a)) where
->     compare (DecreasingSize x) (DecreasingSize y)
->         = case compare (size x :: Integer) (size y) of
->             LT  ->  GT
->             GT  ->  LT
->             _   ->  compare x y
+> instance (Collapsible x, Ord (x a)) => Ord (DecreasingSize (x a))
+>     where compare (DecreasingSize x) (DecreasingSize y)
+>               = case compare (isize x) (isize y)
+>                 of LT  ->  GT
+>                    GT  ->  LT
+>                    _   ->  compare x y
 
-> instance Functor IncreasingSize where
->     fmap f (IncreasingSize x) = IncreasingSize (f x)
+> instance Functor IncreasingSize
+>     where fmap f (IncreasingSize x) = IncreasingSize (f x)
 
-> instance Functor DecreasingSize where
->     fmap f (DecreasingSize x) = DecreasingSize (f x)
+> instance Functor DecreasingSize
+>     where fmap f (DecreasingSize x) = DecreasingSize (f x)
 
 
 Miscellaneous functions
@@ -531,11 +539,7 @@ Miscellaneous functions
 > -- "cxlxrlxss grxxn xdxxs"
 > -- >>> tr "abcdefghijklmnopqrstuvwxyz" "nopqrstuvwxyzabcdefghijklm" "cat"
 > -- "png"
-> tr :: (Container (s a) a, Collapsible s, Eq a) =>
->       [a] -- ^search
->    -> [a] -- ^replacement
->    -> s a -- ^string
->    -> s a
+> tr :: (Container (s a) a, Collapsible s, Eq a) => [a] -> [a] -> s a -> s a
 > tr search replace xs = tmap translate xs
 >     where translate x = snd . last . ((x, x) :) . keep ((== x) . fst) $
 >                         zip search (makeInfinite replace)

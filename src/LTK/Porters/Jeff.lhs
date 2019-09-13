@@ -7,18 +7,20 @@
 > This module provides methods to convert automata to and from
 > Jeff's format.
 > -}
-> module LTK.Porters.Jeff ( -- *Importing
->                           readJeff
->                         , transliterate
->                         , transliterateString
->                         -- *Exporting
->                         , exportJeff
->                         , untransliterate
->                         , untransliterateString
->                         ) where
+> module LTK.Porters.Jeff
+>        ( -- *Importing
+>          readJeff
+>        , transliterate
+>        , transliterateString
+>        -- *Exporting
+>        , exportJeff
+>        , untransliterate
+>        , untransliterateString
+>        ) where
 
 > import Control.Applicative ((<*>))
 > import Data.Functor ((<$>))
+> import Data.List (intercalate)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
@@ -54,15 +56,15 @@ Then use that to parse a string in Jeff format and generate an FSA
 > readJeffStateList :: [String] -> Either String (Set (State String))
 > readJeffStateList [] = Right empty
 > readJeffStateList (x:xs)
->     | not (null xs)  = parseFail "state list" (x:xs) "Invalid separator"
->     | otherwise      = Right . Set.fromList . tmap State $ splitOn ',' x
+>     | not (null xs)  =  parseFail "state list" (x:xs) "Invalid separator"
+>     | otherwise      =  Right . Set.fromList . tmap State $ splitOn ',' x
 
 > readJeffTransitionList :: [String] ->
 >                           Either String (Set (Transition String String))
 > readJeffTransitionList []      = Right empty
 > readJeffTransitionList (a:as)  = insert <$>
->                                  (readJeffTransition a) <*>
->                                  (readJeffTransitionList as)
+>                                  readJeffTransition a <*>
+>                                  readJeffTransitionList as
 
 > readJeffTransition :: String -> Either String (Transition String String)
 > readJeffTransition s 
@@ -78,8 +80,8 @@ Then use that to parse a string in Jeff format and generate an FSA
 >     | length initialParse /= 3  = parseFail "FSA" s "Not a Jeff"
 >     | otherwise                 = FSA <$> alpha <*>
 >                                   trans <*> inits <*> fins <*> Right False
->     where initialParse  = (tmap (keep (not . null) . splitOn '\n')
->                           . splitOn '!') s
+>     where initialParse  = tmap (keep (not . null) . splitOn '\n') $
+>                           splitOn '!' s
 >           alpha         = unsymbols <$> tmap edgeLabel <$> trans
 >           trans         = readJeffTransitionList $ initialParse!!1
 >           inits         = readJeffStateList $ initialParse!!0
@@ -96,21 +98,21 @@ that, and what we think may have gone wrong:
 Transliterating Jeff's FSAs into the form used by my compiler:
 
 > makeStress :: String -> String
-> makeStress str  =  case digits of 
->                      "0" -> ""
->                      "1" -> "`"
->                      "2" -> "'"
->                      _   -> str
+> makeStress str = case digits
+>                  of "0" -> ""
+>                     "1" -> "`"
+>                     "2" -> "'"
+>                     _   -> str
 >     where digits = filter (isIn "0123456789") str
 
 > makeWeight :: String -> String
-> makeWeight str  =  case digits of
->                      "0" -> "L"
->                      "1" -> "H"
->                      "2" -> "S"
->                      "3" -> "X"
->                      "4" -> "Y"
->                      _   -> str
+> makeWeight str = case digits
+>                  of "0" -> "L"
+>                     "1" -> "H"
+>                     "2" -> "S"
+>                     "3" -> "X"
+>                     "4" -> "Y"
+>                     _   -> str
 >     where digits = filter (isIn "0123456789") str
 
 > mapEvenOdd :: (a -> b) -> (a -> b) -> [a] -> [b]
@@ -139,17 +141,18 @@ Writing to Jeff's format
 > -- |Convert an 'FSA' to its representation in Jeff's format.
 > exportJeff :: (Ord e, Ord n, Show e) => FSA n e -> String
 > exportJeff f = unlines (inits : trans ++ [fins])
->     where list = keep (/= ' ') . commaSeparateList . tmap nodeLabel
->           fins = list (finals f')
->           inits = list (initials f') ++ "!"
->           trans = bangTerminate . Set.toAscList .
->                   tmap exportJeffTransition $ transitions f'
->           f' = normalize f
+>     where list   =  keep (/= ' ') . intercalate ", " . Set.toAscList .
+>                     tmap (show . nodeLabel)
+>           fins   =  list (finals f')
+>           inits  =  list (initials f') ++ "!"
+>           trans  =  bangTerminate . Set.toAscList .
+>                     tmap exportJeffTransition $ transitions f'
+>           f'     =  normalize f
 
 > bangTerminate :: [String] -> [String]
-> bangTerminate [] = []
-> bangTerminate (x:[]) = [x ++ "!"]
-> bangTerminate (x:xs) = x : bangTerminate xs
+> bangTerminate []      =  []
+> bangTerminate (x:[])  =  [x ++ "!"]
+> bangTerminate (x:xs)  =  x : bangTerminate xs
 
 > exportJeffTransition :: (Show e, Show n) => Transition n e -> String
 > exportJeffTransition t = nl (source t) ++ "," ++
@@ -166,22 +169,15 @@ Writing to Jeff's format
 
 > -- |The inverse of 'transliterateString'.
 > untransliterateString :: String -> String
-> untransliterateString ('L':xs) = "w0." ++ untransliterateStress xs
-> untransliterateString ('H':xs) = "w1." ++ untransliterateStress xs
-> untransliterateString ('S':xs) = "w2." ++ untransliterateStress xs
-> untransliterateString ('X':xs) = "w3." ++ untransliterateStress xs
-> untransliterateString ('Y':xs) = "w4." ++ untransliterateStress xs
-> untransliterateString xs       = xs
+> untransliterateString ('L':xs)  =  "w0." ++ untransliterateStress xs
+> untransliterateString ('H':xs)  =  "w1." ++ untransliterateStress xs
+> untransliterateString ('S':xs)  =  "w2." ++ untransliterateStress xs
+> untransliterateString ('X':xs)  =  "w3." ++ untransliterateStress xs
+> untransliterateString ('Y':xs)  =  "w4." ++ untransliterateStress xs
+> untransliterateString xs        =  xs
 
 > untransliterateStress :: String -> String
-> untransliterateStress [] = "s0"
-> untransliterateStress "`" = "s1"
-> untransliterateStress "'" = "s2"
-> untransliterateStress xs  = xs
-
-> commaSeparateList :: (Collapsible c, Show b) => c b -> String
-> commaSeparateList xs
->     | zsize xs       = ""
->     | isize xs == 1  = show x
->     | otherwise      = show x ++ ", " ++ commaSeparateList xs'
->     where (x, xs') = choose xs
+> untransliterateStress []   =  "s0"
+> untransliterateStress "`"  =  "s1"
+> untransliterateStress "'"  =  "s2"
+> untransliterateStress xs   =  xs

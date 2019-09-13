@@ -10,14 +10,15 @@
 > exporting, you should similarly use 'extractSymbolsATT' to unmerge
 > the resulting files.
 > -}
-> module LTK.Porters.ATT ( embedSymbolsATT
->                        , extractSymbolsATT
->                        , invertATT
->                        -- *Importing
->                        , readATT
->                        -- *Exporting
->                        , exportATT
->                        ) where
+> module LTK.Porters.ATT
+>        ( embedSymbolsATT
+>        , extractSymbolsATT
+>        , invertATT
+>        -- *Importing
+>        , readATT
+>        -- *Exporting
+>        , exportATT
+>        ) where
 
 > import Data.List (intercalate)
 > import Data.Set (Set)
@@ -36,13 +37,14 @@
 > -- The three strings should represent the transitions,
 > -- input symbols, and output symbols, respectively.
 > embedSymbolsATT :: String -> Maybe String -> Maybe String -> String
-> embedSymbolsATT x mi mo = unlines .
->                           (++) (lines x) . maybe [] id . m mi $ m mo Nothing
+> embedSymbolsATT x mi mo
+>     = unlines . (++) (lines x) . maybe [] id . m mi $ m mo Nothing
 >     where presep   = (:) separator
 >           multisep = maybe
 >                      (fmap presep)
 >                      (\a ->
->                       maybe (Just (presep a)) (Just . (++) (presep a)))
+>                       maybe (Just $ presep a) (Just . (++) (presep a))
+>                      )
 >           m = multisep . fmap lines
 
 > -- |Convert the output of @(to ATT)@ into strings suitable for inclusion.
@@ -85,9 +87,9 @@ Reading an AT&T format automaton
 > makeAlphabet :: [String] -> (Set (String), Maybe String)
 > makeAlphabet ss = findEps (Set.empty, Nothing) ps
 >     where ps = foldr maybeInsert [] (map words ss)
->           maybeInsert (a:b:_) = (:) (a, b)
->           maybeInsert _       = id
->           findEps (l, x) []   = (l, x)
+>           maybeInsert (a:b:_)  =  (:) (a, b)
+>           maybeInsert _        =  id
+>           findEps (l, x) []    =  (l, x)
 >           findEps (l, x) ((s, t):as)
 >               = flip findEps as $
 >                 if t == "0" then (l, Just s) else (Set.insert s l, x)
@@ -96,21 +98,21 @@ Reading an AT&T format automaton
 >                    ( Set (Transition String String)  -- transitions
 >                    , Set String                      -- alphabet
 >                    , State String                    -- initial state
->                    , Set (State String))             -- final states
+>                    , Set (State String)              -- final states
+>                    )
 > makeTransitions ss meps = foldr update
->                           (Set.empty, Set.empty, State "", Set.empty)
->                           (map words ss)
+>                           (Set.empty, Set.empty, State "", Set.empty) $
+>                           map words ss
 >     where eps = maybe "" id meps
->           update (a:[])    (ts, as, qi, fs)
+>           update (a:[]) (ts, as, qi, fs)
 >               = (ts, as, qi, Set.insert (State a) fs)
 >           update (s:d:l:_) (ts, as, _, fs)
->               = ( Set.insert (Transition { source      = State s
->                                          , destination = State d
->                                          , edgeLabel   = if l == eps
->                                                          then Epsilon
->                                                          else Symbol l
->                                          }
->                              ) ts
+>               = ( flip Set.insert ts $
+>                   Transition
+>                   { source      = State s
+>                   , destination = State d
+>                   , edgeLabel   = if l == eps then Epsilon else Symbol l
+>                   }
 >                 , if l == eps then as else Set.insert l as
 >                 , State s -- the first line updates this last in foldr
 >                 , fs
@@ -129,10 +131,11 @@ Creating an AT&T format automaton
 >               dumpInitials (initials f')  ++
 >               dumpTransitions ts          ++
 >               dumpFinals (finals f')      ++
->               syms ++ syms
+>               syms ++ syms -- once for input, once for output
 >     where syms = separator : dumpAlphabet (alphabet f')
 >           f'   = if (Set.size (initials f) == 1)
->                  then renameStatesBy (subtract (1::Integer)) $ renameStates f
+>                  then renameStatesBy (subtract (1::Integer)) $
+>                       renameStates f
 >                  else renameStates f
 >           ts   = Set.map (\t -> (source t, destination t, edgeLabel t)) $
 >                  transitions f'
@@ -145,8 +148,7 @@ Creating an AT&T format automaton
 > dumpInitials :: (Ord n, Show n, Num n) => Set (State n) -> [String]
 > dumpInitials qis
 >     | Set.size qis < 2 = []
->     | otherwise        = map (\q -> dumpTr (State 0, q, eps)) $
->                          Set.toAscList qis
+>     | otherwise = map (\q -> dumpTr (State 0, q, eps)) $ Set.toAscList qis
 >     where eps = Epsilon :: Symbol String
 
 > dumpTransitions :: (Ord n, Ord e, Show n, Show e) =>
@@ -157,9 +159,9 @@ Creating an AT&T format automaton
 >           (State n, State n, Symbol e) -> String
 > dumpTr (s, d, l) = intercalate "\t" $
 >                    [show $ nodeLabel s, show $ nodeLabel d, l', l']
->     where l' = case l of
->                  Symbol e -> showish e
->                  _        -> defaultEpsilon
+>     where l' = case l
+>                of Symbol e -> showish e
+>                   _        -> defaultEpsilon
 
 > dumpFinals :: (Ord n, Show n) => Set (State n) -> [String]
 > dumpFinals = map (show . nodeLabel) . Set.toAscList

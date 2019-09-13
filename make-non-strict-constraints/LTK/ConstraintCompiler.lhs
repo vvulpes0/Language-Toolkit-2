@@ -9,6 +9,7 @@
 > compile :: (NFData e, Ord e, Show e) =>
 >            Set e -> [[Literal e]] -> FSA Integer e
 > compile = fmap (. makeConstraint) compile'
+
 > compile' :: (NFData e, Ord e) =>
 >             Set e -> Conjunction e -> FSA Integer e
 > compile' alpha constraint = normalize' $ build alpha (singleton constraint)

@@ -90,13 +90,14 @@
 > @since 0.2
 > -}
 
-> module LTK.Extract.SP ( ForbiddenSubsequences(..)
->                       , forbiddenSubsequences
->                       , fsaFromForbiddenSubsequences
->                       , isSP
->                       , isSSQ
->                       , subsequenceClosure
->                       ) where
+> module LTK.Extract.SP
+>        ( ForbiddenSubsequences(..)
+>        , forbiddenSubsequences
+>        , fsaFromForbiddenSubsequences
+>        , isSP
+>        , isSSQ
+>        , subsequenceClosure
+>        ) where
 
 > import Control.DeepSeq (NFData)
 > import Data.List (sortBy)
@@ -112,38 +113,36 @@
 
 > -- | A convenience-type for declaring collections of forbidden subsequences.
 > -- The member types are (lists of) the raw alphabet type (not (Symbol .))
-> data ForbiddenSubsequences e = ForbiddenSubsequences {
->       attestedAlphabet  ::  Set e
->     , getSubsequences   ::  Set [e]
->     } deriving (Eq, Ord, Read, Show)
+> data ForbiddenSubsequences e
+>     = ForbiddenSubsequences
+>       { attestedAlphabet  ::  Set e
+>       , getSubsequences   ::  Set [e]
+>       } deriving (Eq, Ord, Read, Show)
 
 %endif
 
-> instance Ord e => Container (ForbiddenSubsequences e) [e] where
->     isEmpty c     =  isEmpty (getSubsequences c)
->     isIn c        =  isIn (getSubsequences c)
->     union         =  g union
->     intersection  =  g intersection
->     difference    =  g difference
->     empty         =  ForbiddenSubsequences {
->                        attestedAlphabet = empty
->                      , getSubsequences = empty
->                      }
->     singleton a   =  ForbiddenSubsequences {
->                        attestedAlphabet = fromCollapsible a
->                      , getSubsequences = singleton a
->                      }
+> instance Ord e => Container (ForbiddenSubsequences e) [e]
+>     where isEmpty c     =  isEmpty (getSubsequences c)
+>           isIn c        =  isIn (getSubsequences c)
+>           union         =  g union
+>           intersection  =  g intersection
+>           difference    =  g difference
+>           empty         =  ForbiddenSubsequences
+>                            { attestedAlphabet = empty
+>                            , getSubsequences = empty
+>                            }
+>           singleton a   =  ForbiddenSubsequences
+>                            { attestedAlphabet = fromCollapsible a
+>                            , getSubsequences = singleton a
+>                            }
 
 > g :: Ord e => (Set [e] -> Set [e] -> Set [e]) ->
 >      ForbiddenSubsequences e -> ForbiddenSubsequences e ->
 >      ForbiddenSubsequences e
-> g f c1 c2 = ForbiddenSubsequences {
->               attestedAlphabet = union
->                                  (attestedAlphabet c1)
->                                  (attestedAlphabet c2)
->             , getSubsequences = f
->                                 (getSubsequences c1)
->                                 (getSubsequences c2)
+> g f c1 c2 = ForbiddenSubsequences
+>             { attestedAlphabet = union (attestedAlphabet c1) $
+>                                  attestedAlphabet c2
+>             , getSubsequences = f (getSubsequences c1) $ getSubsequences c2
 >             }
 
 > type FSAt = FSA
@@ -315,10 +314,11 @@ $\Language{\Automaton{M}}$.
 > -- for all words \(w\), \(v\sqsubseteq w\) implies
 > -- that \(w\) is not accepted by \(A\).
 > forbiddenSubsequences :: (Ord n, Ord e) => FSA n e -> ForbiddenSubsequences e
-> forbiddenSubsequences fsa = ForbiddenSubsequences {
->                               attestedAlphabet = alphabet fsa
->                             , getSubsequences  = collectMinimalFSSQs fsa
->                             }
+> forbiddenSubsequences fsa
+>     = ForbiddenSubsequences
+>       { attestedAlphabet = alphabet fsa
+>       , getSubsequences  = collectMinimalFSSQs fsa
+>       }
 
 %endif
 

@@ -10,37 +10,38 @@
 > as well as unions and intersections thereof.
 > -}
 
-> module LTK.Factors ( -- *Constructions
->                      required
->                    , forbidden
->                    , buildLiteral
->                    , build
->                    , makeConstraint
->                    -- *Logical Expressions
->                    , Factor(..)
->                    , Literal(..)
->                    , Disjunction(..)
->                    , Conjunction(..)
->                    -- *Symbols
->                    -- |@w/n/s/x/@ is a syllable whose weight is level \(n\)
->                    -- and whose stress is level \(s\).
->                    -- Stress ranges from 0-2,
->                    -- while weight is in theory not limited.
->                    -- Here, only weights up to level 4 are defined.
->                    -- For both weight and stress,
->                    -- \"plus\" means \"greater than zero\".
->                    -- For stress, \"minus\" means \"less than two\".
->                    -- Arbitrary weight is indicated by using @x@ for \(n\).
->                    -- Arbitrary stress is indicated by omission of @s/x/@.
->                    , defaultAlphabet
->                    , w0s0, w0s1, w0s2, w0plus, w0minus, w0
->                    , w1s0, w1s1, w1s2, w1plus, w1minus, w1
->                    , w2s0, w2s1, w2s2, w2plus, w2minus, w2
->                    , w3s0, w3s1, w3s2, w3plus, w3minus, w3
->                    , w4s0, w4s1, w4s2, w4plus, w4minus, w4
->                    , wpluss0, wpluss1, wpluss2, wplusplus, wplusminus, wplus
->                    , wxs0, wxs1, wxs2, wxplus, wxminus, wx
->                    ) where
+> module LTK.Factors
+>        ( -- *Constructions
+>          required
+>        , forbidden
+>        , buildLiteral
+>        , build
+>        , makeConstraint
+>        -- *Logical Expressions
+>        , Factor(..)
+>        , Literal(..)
+>        , Disjunction(..)
+>        , Conjunction(..)
+>        -- *Symbols
+>        -- |@w/n/s/x/@ is a syllable whose weight is level \(n\)
+>        -- and whose stress is level \(s\).
+>        -- Stress ranges from 0-2,
+>        -- while weight is in theory not limited.
+>        -- Here, only weights up to level 4 are defined.
+>        -- For both weight and stress,
+>        -- \"plus\" means \"greater than zero\".
+>        -- For stress, \"minus\" means \"less than two\".
+>        -- Arbitrary weight is indicated by using @x@ for \(n\).
+>        -- Arbitrary stress is indicated by omission of @s/x/@.
+>        , defaultAlphabet
+>        , w0s0, w0s1, w0s2, w0plus, w0minus, w0
+>        , w1s0, w1s1, w1s2, w1plus, w1minus, w1
+>        , w2s0, w2s1, w2s2, w2plus, w2minus, w2
+>        , w3s0, w3s1, w3s2, w3plus, w3minus, w3
+>        , w4s0, w4s1, w4s2, w4plus, w4minus, w4
+>        , wpluss0, wpluss1, wpluss2, wplusplus, wplusminus, wplus
+>        , wxs0, wxs1, wxs2, wxplus, wxminus, wx
+>        ) where
 
 > import Control.DeepSeq (NFData)
 > import Data.Set (Set)
@@ -50,8 +51,8 @@
 
 > -- |A substring or subsequence, from which to build constraints.
 > data Factor e
->     = Substring {
->         substring :: [Set e] -- ^The sequence of symbol types,
+>     = Substring
+>       { substring :: [Set e] -- ^The sequence of symbol types,
 >                              -- e.g. @[wxs0, wxs0]@
 >                              -- for two consecutive unstressed syllables.
 >       , headAnchored :: Bool -- ^Anchored to the head of the word?
@@ -61,15 +62,15 @@
 >     deriving (Eq, Ord, Read, Show)
 
 > -- |A constraint.
-> data Literal e      =  Literal Bool (Factor e) deriving (Eq, Ord, Read, Show)
+> data Literal e = Literal Bool (Factor e) deriving (Eq, Ord, Read, Show)
 
 > -- |Multiple constraints, joined by @OR@.
-> data Disjunction e  =  Disjunction (Set (Literal e))
->                        deriving (Eq, Ord, Read, Show)
+> data Disjunction e = Disjunction (Set (Literal e))
+>                      deriving (Eq, Ord, Read, Show)
 
 > -- |Multiple disjunctions, joined by @AND@.
-> data Conjunction e  =  Conjunction (Set (Disjunction e))
->                        deriving (Eq, Ord, Read, Show) -- Primitive Constraint
+> data Conjunction e = Conjunction (Set (Disjunction e))
+>                      deriving (Eq, Ord, Read, Show) -- Primitive Constraint
 
 > -- |The factor is required to appear in every string.
 > -- Note that a conjunctive constraint of
@@ -82,36 +83,38 @@
 > forbidden :: Factor e -> Literal e
 > forbidden = Literal False
 
-> buildFactor :: (Enum n, Ord n, Ord e) => Set e -> Factor e -> Bool -> FSA n e
+> buildFactor :: (Enum n, Ord n, Ord e) =>
+>                Set e -> Factor e -> Bool -> FSA n e
 > buildFactor alpha (Substring factor anchoredToHead anchoredToTail)
 >     = flip (flip f alpha) factor
->     where f = case (anchoredToHead, anchoredToTail) of
->                 (True,   True)   ->  word
->                 (True,   False)  ->  initialLocal
->                 (False,  True)   ->  finalLocal
->                 (False,  False)  ->  local
+>     where f = case (anchoredToHead, anchoredToTail)
+>               of (True,   True)   ->  word
+>                  (True,   False)  ->  initialLocal
+>                  (False,  True)   ->  finalLocal
+>                  (False,  False)  ->  local
 > buildFactor alpha (Subsequence factor)
 >     =  (\isPositive ->
->             FSA { alphabet         =  alpha
->                 , transitions      =  trans
->                 , initials         =  singleton . State $ toEnum 0
->                 , finals           =  if isPositive then fin else fin'
->                 , isDeterministic  =  True})
->     where tagged         = zip factor $ tmap toEnum [0..]
->           trans'         = unionAll $
->                            tmap
->                            (\(symset, st) ->
->                             union
->                             (tmap (succtrans st) (intersection alpha symset))
->                             (tmap (selftrans st) (difference alpha symset))
->                            )
->                            tagged
->           trans          = union
->                            (tmap (selftrans nextState) alpha)
->                            trans'
->           fin'           = Set.fromList $ tmap (State . snd) tagged
->           nextState      = succ . maximum $ tmap snd tagged
->           fin            = singleton (State nextState)
+>         FSA { alphabet     =  alpha
+>             , transitions  =  tran
+>             , initials     =  singleton . State $ toEnum 0
+>             , finals       =  if isPositive then fin else fin'
+>             , isDeterministic = True
+>             }
+>        )
+>     where tagged     =  zip factor $ iterate succ (toEnum 0)
+>           trans'     =  unionAll $
+>                         tmap
+>                         (\(symset, st) ->
+>                          union
+>                          (tmap (succtrans st) $ intersection alpha symset)
+>                          (tmap (selftrans st) $ difference alpha symset)
+>                         )
+>                         tagged
+>           tran       =  union trans' $
+>                         tmap (selftrans nextState) alpha
+>           fin'       =  Set.fromList $ tmap (State . snd) tagged
+>           nextState  =  succ . maximum $ tmap snd tagged
+>           fin        =  singleton (State nextState)
 
 > -- |Build an 'FSA' representing a single constraint.
 > buildLiteral :: (Enum n, Ord n, Ord e) => Set e -> Literal e -> FSA n e
@@ -141,8 +144,8 @@
 > -- |Combine inner lists by 'Disjunction',
 > -- and form a 'Conjunction' of the results.
 > makeConstraint :: (Ord e) => [[Literal e]] -> Conjunction e
-> makeConstraint = Conjunction . Set.fromList .
->                  tmap (Disjunction . Set.fromList)
+> makeConstraint
+>     = Conjunction . Set.fromList . tmap (Disjunction . Set.fromList)
 
 > w0s0, w0s1, w0s2, w1s0, w1s1, w1s2 :: Set String
 > w2s0, w2s1, w2s2, w3s0, w3s1, w3s2 :: Set String
@@ -248,13 +251,15 @@
 > word False alpha []  =  complementDeterministic $
 >                         singletonWithAlphabet alpha []
 > word isPositive alpha symseq
->     = renameStates . (if isPositive then id else complementDeterministic) .
->       determinize $ FSA { alphabet         =  alpha
->                         , transitions      =  trans
->                         , initials         =  singleton $ State 0
->                         , finals           =  singleton $ State nextState
->                         , isDeterministic  =  False
->                         }
+>     = renameStates .
+>       (if isPositive then id else complementDeterministic) .
+>       determinize $
+>       FSA { alphabet         =  alpha
+>           , transitions      =  trans
+>           , initials         =  singleton $ State 0
+>           , finals           =  singleton $ State nextState
+>           , isDeterministic  =  False
+>           }
 >     where tagged     =  zip symseq [0 :: Integer ..]
 >           trans'     =  unionAll $
 >                         tmap
@@ -285,26 +290,28 @@
 >           , finals           =  if isPositive then fin else fin'
 >           , isDeterministic  =  True
 >           }
->     where tagged         = zip symseq $ tmap toEnum [0..]
->           trans'         = unionAll $
->                            tmap
->                            (\(symset, st) ->
->                             union
->                             (tmap (succtrans st) (intersection alpha symset))
->                             (tmap (sinktrans sinkState st)
->                              (difference alpha symset))
->                            )
->                            tagged
->           trans          = unionAll
->                            [(tmap (selftrans nextState) alpha),
->                             (tmap (selftrans sinkState) alpha),
->                             trans']
->           nextState      = succ . maximum $ tmap snd tagged
->           sinkState      = succ nextState
->           fin'           = insert
->                            (State sinkState)
->                            (Set.fromList $ tmap (State . snd) tagged)
->           fin            = singleton (State nextState)
+>     where tagged     =  zip symseq $ iterate succ (toEnum 0)
+>           trans'     =  unionAll $
+>                         tmap
+>                         (\(symset, st) ->
+>                          union
+>                          (tmap (succtrans st) $ intersection alpha symset)
+>                          (tmap (sinktrans sinkState st) $
+>                           difference alpha symset
+>                          )
+>                         )
+>                         tagged
+>           trans      =  unionAll
+>                         [ tmap (selftrans nextState) alpha
+>                         , tmap (selftrans sinkState) alpha
+>                         , trans'
+>                         ]
+>           nextState  =  succ . maximum $ tmap snd tagged
+>           sinkState  =  succ nextState
+>           fin'       =  insert
+>                         (State sinkState)
+>                         (Set.fromList $ tmap (State . snd) tagged)
+>           fin        =  singleton (State nextState)
 
 For final and non-anchored factors, it would be nice to use KMP.
 However, for that to work properly, I believe we would have to expand
@@ -339,29 +346,41 @@ negative).  Making these from NFAs is cheaper, it seems.
 > local True  alpha [] = complementDeterministic $ local False alpha []
 > local False alpha [] = emptyWithAlphabet alpha
 > local isPositive alpha symseq
->     = renameStates . (if isPositive then id else complementDeterministic) .
->       determinize $ FSA { alphabet         =  alpha
->                         , transitions      =  trans
->                         , initials         =  singleton $ State 0
->                         , finals           =  singleton $ State nextState
->                         , isDeterministic  =  False
->                         }
->     where tagged = zip symseq [0 :: Integer ..]
->           trans'         = unionAll $
->                            tmap
->                            (\(symset, st) ->
->                             (tmap (succtrans st) (intersection alpha symset))
->                            )
->                            tagged
->           trans          = unionAll
->                            [(tmap (selftrans 0) alpha),
->                             (tmap (selftrans nextState) alpha),
->                             trans']
->           nextState      = succ . maximum $ tmap snd tagged
+>     = renameStates .
+>       (if isPositive then id else complementDeterministic) .
+>       determinize $
+>       FSA
+>       { alphabet     =  alpha
+>       , transitions  =  trans
+>       , initials     =  singleton $ State 0
+>       , finals       =  singleton $ State nextState
+>       , isDeterministic = False
+>       }
+>     where tagged  = zip symseq [0 :: Integer ..]
+>           trans'  = unionAll $
+>                     tmap
+>                     (\(symset, st) ->
+>                      tmap (succtrans st) $ intersection alpha symset
+>                     )
+>                     tagged
+>           trans   = unionAll
+>                     [tmap (selftrans 0) alpha
+>                     , tmap (selftrans nextState) alpha
+>                     , trans'
+>                     ]
+>           nextState = succ . maximum $ tmap snd tagged
 
 > selftrans, succtrans :: (Enum n) => n -> e -> Transition n e
-> selftrans n x  = Transition (Symbol x) (State n) (State n)
-> succtrans n x  = Transition (Symbol x) (State n) (State $ succ n)
+> selftrans  =  transTo id
+> succtrans  =  transTo succ
 
 > sinktrans :: n -> n -> e -> Transition n e
-> sinktrans sinkState n x = Transition (Symbol x) (State n) (State sinkState)
+> sinktrans sinkState = transTo (const sinkState)
+
+> transTo :: (n -> n) -> n -> e -> Transition n e
+> transTo f n x
+>     = Transition
+>       { edgeLabel = Symbol x
+>       , source = State n
+>       , destination = State $ f n
+>       }

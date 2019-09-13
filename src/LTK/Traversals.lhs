@@ -12,16 +12,17 @@
 >
 > Find paths through an automaton.
 > -}
-> module LTK.Traversals ( Path(..)
->                       , word
->                       , initialsPaths
->                       , initialsNDPath
->                       , rejectingPaths
->                       , acyclicPaths
->                       , extensions
->                       , boundedCycleExtensions
->                       , nondeterministicAcyclicExtensions
->                       ) where
+> module LTK.Traversals
+>        ( Path(..)
+>        , word
+>        , initialsPaths
+>        , initialsNDPath
+>        , rejectingPaths
+>        , acyclicPaths
+>        , extensions
+>        , boundedCycleExtensions
+>        , nondeterministicAcyclicExtensions
+>        ) where
 
 > import Data.Monoid (Monoid, mappend, mconcat, mempty)
 #if MIN_VERSION_base(4,9,0)
@@ -43,17 +44,19 @@ A Path is
 * the length of the path (depth of the terminal state)
 
 > -- |A path through an 'FSA'.
-> data Path n e = Path { -- |Edge labels are gathered in reverse order,
->                        -- so 'labels' is a reversed string.
->                        labels        :: [Symbol e]
->                        -- |Current 'State', if any.
->                      , endstate      :: Maybe (State n)
->                        -- |States seen so far, with multiplicity.
->                      , stateMultiset :: Multiset (State n)
->                        -- |The number of edges taken so far.
->                      , depth         :: Integer
->                      }
->               deriving (Eq, Show)
+> data Path n e
+>     = Path
+>       { -- |Edge labels are gathered in reverse order,
+>         -- so 'labels' is a reversed string.
+>         labels        :: [Symbol e]
+>         -- |Current 'State', if any.
+>       , endstate      :: Maybe (State n)
+>         -- |States seen so far, with multiplicity.
+>       , stateMultiset :: Multiset (State n)
+>         -- |The number of edges taken so far.
+>       , depth         :: Integer
+>       }
+>     deriving (Eq, Show)
 
 > -- |The reversal of the 'labels' of the 'Path'.
 > word :: Path n e -> [Symbol e]
@@ -61,10 +64,11 @@ A Path is
 
 In order to have a Multiset of Path, Path must be Ord:
 
-> instance (Ord e, Ord n) => Ord (Path n e) where
->     compare p1 p2 = mconcat [compare d1 d2, compare l1 l2, compare e1 e2]
->        where (e1, l1, d1)  =  (endstate p1, labels p1, depth p1)
->              (e2, l2, d2)  =  (endstate p2, labels p2, depth p2)
+> instance (Ord e, Ord n) => Ord (Path n e)
+>     where compare p1 p2
+>               = mconcat [compare d1 d2, compare l1 l2, compare e1 e2]
+>               where (e1, l1, d1)  =  (endstate p1, labels p1, depth p1)
+>                     (e2, l2, d2)  =  (endstate p2, labels p2, depth p2)
 
 #if MIN_VERSION_base(4,9,0)
 Semigroup instance to satisfy base-4.9
@@ -87,12 +91,14 @@ The extensions of a path p are paths extending p by a single edge
 
 > extend :: (Ord e, Ord n) =>
 >           Path n e -> Set (Transition n e) -> Set (Path n e)
-> extend p = tmap (\t -> Path { labels    =  (edgeLabel t : labels p)
->                             , endstate  =  (Just (destination t))
->                             , stateMultiset
->                                 = (insert (destination t) (stateMultiset p))
->                             , depth     = (depth p + 1)
->                             })
+> extend p = tmap (\t ->
+>                  Path { labels    =  (edgeLabel t : labels p)
+>                       , endstate  =  (Just (destination t))
+>                       , stateMultiset
+>                             = (insert (destination t) (stateMultiset p))
+>                       , depth     = (depth p + 1)
+>                       }
+>                 )
 
 The nondeterministic extensions of a path p are paths extending p
 by a single edge nondeterminstically.  That is, the states of the
@@ -104,34 +110,38 @@ path are sets.
 > nondeterministicExtend p ts
 >     | isEmpty ts = singleton p
 >     | otherwise
->         = tmap (\xs ->
->                 let newState  =  State $ collapse f empty xs
->                 in p { labels         =  chooseOne (tmap edgeLabel xs) :
->                                          labels p
->                      , endstate       =  Just newState
->                      , stateMultiset  =  insert newState (stateMultiset p)
->                      , depth          =  depth p + 1
->                      }) tgroups
->     where tgroups      =  partitionBy edgeLabel ts
->           connectable  =  maybe (const False) (isIn . nodeLabel) (endstate p)
->           f x          =  if connectable . nodeLabel $ source x
->                           then insert (nodeLabel $ destination x)
->                           else id
+>         = tmap
+>           (\xs ->
+>            let newState  =  State $ collapse f empty xs
+>            in p { labels    =  chooseOne (tmap edgeLabel xs) : labels p
+>                 , endstate  =  Just newState
+>                 , stateMultiset 
+>                       =  insert newState (stateMultiset p)
+>                 , depth     =  depth p + 1
+>                 }
+>           ) tgroups
+>     where tgroups = partitionBy edgeLabel ts
+>           connectable
+>               = maybe (const False) (isIn . nodeLabel) (endstate p)
+>           f x = if connectable . nodeLabel $ source x
+>                 then insert (nodeLabel $ destination x)
+>                 else id
 
 > -- |Paths extending a given path by a single edge.
 > extensions :: (Ord e, Ord n) =>
 >               FSA n e -> Path n e -> Set (Path n e)
-> extensions fsa p = extend p .
->                    keep ((== endstate p) . Just . source) $ transitions fsa
+> extensions fsa p
+>     = extend p . keep ((== endstate p) . Just . source) $ transitions fsa
 
 Acyclic extensions of a path are extensions other than back-edges
 
 > acyclicExtensions :: (Ord e, Ord n) => FSA n e -> Path n e -> Set (Path n e)
-> acyclicExtensions fsa p = extend p .
->                           keep (both
->                                 (isNotIn (stateMultiset p) . destination)
->                                 ((== endstate p) . Just . source)) $
->                           transitions fsa
+> acyclicExtensions fsa p
+>     = extend p .
+>       keep (both
+>             (isNotIn (stateMultiset p) . destination)
+>             ((== endstate p) . Just . source)) $
+>       transitions fsa
 
 > -- |The extensions of a non-deterministic path other than back-edges
 > nondeterministicAcyclicExtensions :: (Ord e, Ord n) =>
@@ -234,4 +244,5 @@ rejectingPaths fsa bound
 > rejectingPaths :: (Ord e, Ord n) => FSA n e -> Integer -> Set (Path n e)
 > rejectingPaths fsa bound = traversalQDFS rejecting
 >                            fsa bound (initialsPaths fsa) empty
->     where rejecting f p = doesNotContain (endstate p) . tmap Just $ finals f
+>     where rejecting f p = doesNotContain (endstate p) .
+>                           tmap Just $ finals f

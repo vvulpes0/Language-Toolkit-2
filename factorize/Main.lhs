@@ -8,7 +8,7 @@
 >                           , putMVar
 >                           , takeMVar
 >                           )
-> import Control.DeepSeq (NFData, ($!!))
+> import Control.DeepSeq (NFData)
 > import Data.Functor ((<$>))
 > import Data.List (sortBy)
 > import Data.Set (Set)
@@ -16,10 +16,8 @@
 > import System.Environment (getArgs)
 > import System.Exit (die)
 > import System.FilePath ((</>), takeBaseName)
-> import System.IO ( IOMode(ReadMode, WriteMode)
->                  , hGetContents
+> import System.IO ( IOMode(WriteMode)
 >                  , hPutStrLn
->                  , stderr
 >                  , withFile
 >                  )
 > import qualified Data.Set as Set
@@ -30,30 +28,24 @@
 > import LTK.FSA
 > import LTK.Porters
 
-> continue :: IO ()
-> continue = pure () -- do nothing; carry on
-
-vvvvv From Haskell documentation on Control.Concurrent vvvvv
+vvvvv Adapted from Haskell documentation on Control.Concurrent vvvvv
 https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 
 > waitForChildren :: MVar [MVar ()] -> IO ()
-> waitForChildren children = do
->   cs <- takeMVar children
->   case cs of
->     []    ->  return ()
->     m:ms  ->  do
->             putMVar children ms
->             takeMVar m
->             waitForChildren children
+> waitForChildren children = f =<< takeMVar children
+>     where f []      =  return ()
+>           f (m:ms)  =  putMVar children ms >>
+>                        takeMVar m >>
+>                        waitForChildren children
 
 > forkChild :: MVar [MVar ()] -> IO () -> IO ThreadId
-> forkChild children io = do
->   mvar <- newEmptyMVar
->   childs <- takeMVar children
->   putMVar children (mvar : childs)
->   forkFinally io (\_ -> putMVar mvar ())
+> forkChild children io
+>     = do mvar <- newEmptyMVar
+>          childs <- takeMVar children
+>          putMVar children (mvar : childs)
+>          forkFinally io (\_ -> putMVar mvar ())
 
-^^^^^ From Haskell documentation on Control.Concurrent ^^^^^
+^^^^^ Adapted from Haskell documentation on Control.Concurrent ^^^^^
 
 > hypothesesFile :: FilePath
 > hypothesesFile = "Compiled" </> "constraints"
@@ -62,40 +54,37 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 > outputDirectory = "Results"
 
 > main :: IO ()
-> main = do
->   children <- newMVar []
->   filesToRead <- getArgs
->   haveHypotheses <- doesFileExist hypothesesFile
->   if not haveHypotheses
->   then die "Cannot factor without hypotheses.  Exiting."
->   else continue
->   existence <- sequence (map doesFileExist filesToRead)
->   let nonexistentFiles = tmap fst . keep (not . snd) $
->                          zip filesToRead existence
->   if not (isEmpty nonexistentFiles)
->   then do
->     (mapM_ (hPutStrLn stderr . (++ ".") . ("Cannot find " ++))
->      nonexistentFiles)
->     die "Exiting."
->   else continue
->   createDirectoryIfMissing True outputDirectory
->   -- Files to be factored, hypotheses, and output directory all exist
->   withFile hypothesesFile ReadMode $ \h -> do
->          hypotheses <- mapM get =<< lines <$> hGetContents h
->          mapM_ (forkChild children . processFile hypotheses) filesToRead
->          waitForChildren children
->       where get fp = (withFile fp ReadMode $ \h -> do
->                         fsa <- from Jeff <$> hGetContents h
->                         return $!! (fp, fsa)
->                      )
+> main = do children <- newMVar []
+>           filesToRead <- getArgs
+>           createDirectoryIfMissing True outputDirectory
+>           eHypotheses <- collectErrs "\n" <$> getHypotheses hypothesesFile
+>           either (\m -> const $ die m) (f children) eHypotheses filesToRead
+>           waitForChildren children
+>     where f c h = mapM_ (forkChild c . processFile h)
+
+> collectErrs :: Monoid m => m -> [Either m a] -> Either m [a]
+> collectErrs x = foldr (either mkErr (fmap . (:))) (Right [])
+>     where mkErr m = either
+>                     (Left . mappend m . mappend x)
+>                     (const $ Left m)
+
+> getHypotheses :: FilePath ->
+>                  IO [Either String (FilePath, FSA Integer String)]
+> getHypotheses fp = (fmap f $ doesFileExist fp) >>= id
+>     where f True  =  sequence . map getHypothesis =<< (lines <$> readFile fp)
+>           f _     =  pure . (:[]) . Left $ "Could not find '" ++ fp ++ "'."
+
+> getHypothesis :: FilePath ->
+>                  IO (Either String (FilePath, FSA Integer String))
+> getHypothesis fp = (fmap f $ doesFileExist fp) >>= id
+>     where f True  =  Right <$> (,) fp <$> from Jeff <$> readFile fp
+>           f _     =  pure . Left $ "Could not find '" ++ fp ++ "'."
 
 > processFile :: [(FilePath, FSA Integer String)] -> FilePath -> IO ()
-> processFile hypotheses fp =
->     withFile fp ReadMode $ \h -> do
->       fsa <- normalize <$> from Jeff <$> hGetContents h
->       withFile (outputDirectory </> lect) WriteMode $ \out ->
->           hPutStrLn out (output name fsa (factorization hypotheses fsa))
+> processFile hypotheses fp = f =<< normalize <$> from Jeff <$> readFile fp
 >     where bn = takeBaseName fp
+>           f x = withFile (outputDirectory </> lect) WriteMode $ \out ->
+>                 hPutStrLn out . output name x $ factorization hypotheses x
 >           lect = takeWhile (isIn "0123456789") bn
 >           name = tr "_" " " $ dropWhile (isIn "0123456789_") bn
 
@@ -119,25 +108,26 @@ where X is either () if the factorization is incomplete,
 >                    )
 >                  , Either () (Maybe FilePath)
 >                  )
-> factorization hypotheses fsa' = ( strict
->                                 , costrict
->                                 , if scs == fsa
->                                   then Right Nothing
->                                   else if isEmpty workingHypotheses
->                                        then Left ()
->                                        else Right . Just . fst $
->                                             chooseOne workingHypotheses
->                                 ) 
->     where fsa                =  renameStates fsa' `asTypeOf` normalize fsa'
->           strict             =  strictApproximation fsa
->           costrict           =  costrictApproximation fsa strict
->           getFSA (a, _, _)   =  a
->           scs                =  intersection (getFSA strict) $
->                                 getFSA costrict
->           workingHypotheses  =  keep
->                                 ((== fsa) . intersection scs .
->                                  contractAlphabetTo (alphabet fsa) . snd)
->                                 hypotheses
+> factorization hypotheses fsa'
+>     = ( strict
+>       , costrict
+>       , if scs == fsa
+>         then Right Nothing
+>         else if isEmpty workingHypotheses
+>              then Left ()
+>              else Right . Just . fst $
+>                   chooseOne workingHypotheses
+>       ) 
+>     where fsa       =  renameStates fsa' `asTypeOf` normalize fsa'
+>           strict    =  strictApproximation fsa
+>           costrict  =  costrictApproximation fsa strict
+>           scs       =  intersection (getFSA strict) $ getFSA costrict
+>           getFSA (a, _, _) =  a
+>           workingHypotheses
+>               =  keep
+>                  ((== fsa) . intersection scs .
+>                   contractAlphabetTo (alphabet fsa) . snd
+>                  ) hypotheses
 
 
 Constructing approximations
@@ -288,11 +278,11 @@ those sets that are known to be non-productive.
 >           Set.toAscList literals
 >         , collapse (insert . makeTag)
 >           (empty {attestedUnits = alpha}) substrings
->         , ForbiddenSubsequences {
->                 attestedAlphabet = alpha
->               , getSubsequences  = tmap (\(Subsequence xs) -> singlify xs) $
->                 difference factors substrings
->               }
+>         , ForbiddenSubsequences
+>           { attestedAlphabet = alpha
+>           , getSubsequences  = tmap (\(Subsequence xs) -> singlify xs) $
+>             difference factors substrings
+>           }
 >         )
 >     where factors = tmap (\(Literal _ f) -> f) literals
 >           isSubstring (Substring _ _ _) = True
@@ -320,33 +310,33 @@ Formatting output
 >             )
 >           , Either () (Maybe FilePath)
 >           ) -> String
-> output name fsa ((strictFSA, ffs, fssqs), (_, rfs, rssqs), higher) =
->     concatMap unlines $ [ [ "[metadata]"
->                         , "name=" ++ show name
->                         , "alphabet=" ++ formatAlphabet (alphabet strictFSA)
->                         , "is_sl=" ++ show (formatBool (strictFSA == fsa &&
->                                                         isEmpty fssqs))
->                         , "k_sl=" ++ show (kFromFFs ffs)
->                         , "k_sp=" ++ show (kFromFSSQs fssqs)
->                         , "k_cosl=" ++ show (kFromFFs rfs)
->                         , "k_cosp=" ++ show (kFromFSSQs rssqs)
->                         , ""
->                         , "[forbidden substrings]"
->                         ]
->                       , formatForbiddenSubstrings ffs
->                       , ["", "[forbidden subsequences]"]
->                       , formatForbiddenSubsequences fssqs
->                       , ["", "[required substrings (at least one)]"]
->                       , formatForbiddenSubstrings rfs
->                       , ["", "[required subsequences (at least one)]"]
->                       , formatForbiddenSubsequences rssqs
->                       , [ ""
->                         , "[nonstrict constraints]"
->                         , "complete=" ++
->                           show (formatBool (higher /= Left ()))
->                         , "file=" ++ either (const "") (maybe "" show) higher
->                         ]
->                       ]
+> output name fsa ((strictFSA, ffs, fssqs), (_, rfs, rssqs), higher)
+>     = concatMap unlines $
+>       [ [ "[metadata]"
+>         , "name=" ++ show name
+>         , "alphabet=" ++ formatAlphabet (alphabet strictFSA)
+>         , "is_sl=" ++ show (formatBool (strictFSA == fsa && isEmpty fssqs))
+>         , "k_sl=" ++ show (kFromFFs ffs)
+>         , "k_sp=" ++ show (kFromFSSQs fssqs)
+>         , "k_cosl=" ++ show (kFromFFs rfs)
+>         , "k_cosp=" ++ show (kFromFSSQs rssqs)
+>         , ""
+>         , "[forbidden substrings]"
+>         ]
+>       , formatForbiddenSubstrings ffs
+>       , ["", "[forbidden subsequences]"]
+>       , formatForbiddenSubsequences fssqs
+>       , ["", "[required substrings (at least one)]"]
+>       , formatForbiddenSubstrings rfs
+>       , ["", "[required subsequences (at least one)]"]
+>       , formatForbiddenSubsequences rssqs
+>       , [ ""
+>         , "[nonstrict constraints]"
+>         , "complete=" ++
+>           show (formatBool (higher /= Left ()))
+>         , "file=" ++ either (const "") (maybe "" show) higher
+>         ]
+>       ]
 >     where formatBool True = "yes"
 >           formatBool _    = "no"
 

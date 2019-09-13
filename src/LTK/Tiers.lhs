@@ -25,11 +25,11 @@ these symbols are self loops on every state.
 > -- This could simply be the entire alphabet of the FSA.
 > -- Precondition: the given FSA must be in normal form.
 > tier :: (Ord n, Ord e) => FSA n e -> Set e
-> tier fsa = Set.difference (alphabet fsa) (unsymbols tc)
->     where f q  =  Set.mapMonotonic (edgeLabel) .
+> tier fsa = Set.difference (alphabet fsa) $ unsymbols tc
+>     where f q  =  Set.mapMonotonic edgeLabel .
 >                   Set.filter (\t -> source t == q && destination t == q) $
 >                   transitions fsa
->           tc   =  intersectAll (tmap f (states fsa))
+>           tc   =  intersectAll (tmap f $ states fsa)
 
 > -- |Remove symbols not relevant to the given FSA's associated projection
 > -- (as determined by @tier@).
