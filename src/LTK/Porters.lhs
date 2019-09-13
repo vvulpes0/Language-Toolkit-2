@@ -19,7 +19,7 @@
 >        -- |We use types to create a bit of magic
 >        -- in order to read and write automata in
 >        -- various formats.
->        , Type()
+>        , Type
 >        , Dot(Dot)
 >        , Jeff(Jeff)
 >        , Pleb(Pleb)
@@ -54,12 +54,12 @@
 
 > -- |A type that can be written from an 'FSA'.
 > class Exportable t
->     where fromFSA  ::  (Ord n, Ord e, Show n, Show e) => FSA n e -> t
->           extract  ::  t -> String
+>     where fromFSA  ::  (Ord n, Ord e, Show n, Show e) =>
+>                        (t -> t) -> FSA n e -> String
 
 > -- |A type that can be read and turned into an 'FSA'.
 > class Importable t
->     where toFSA :: t -> Either String (FSA Integer String)
+>     where toFSA :: (t -> t) -> String -> Either String (FSA Integer String)
 
 > -- |Create an 'FSA' from a @String@ treated as the given 'Type'.
 > from :: (Importable i) => Type i -> String -> FSA Integer String
@@ -68,72 +68,68 @@
 > -- |Try to create an 'FSA' from a @String@ treated as the given 'Type'.
 > fromE :: (Importable i) =>
 >          Type i -> String -> Either String (FSA Integer String)
-> fromE ty = toFSA . ty
+> fromE ty = toFSA ty
 
 > -- |Create a @String@ from an 'FSA', formatted appropriately for
 > -- the given 'Type'.
 > to :: (Ord n, Ord e, Show n, Show e, Exportable x) =>
 >       Type x -> FSA n e -> String
-> to ty = extract . flip asTypeOf (ty "") . fromFSA
+> to ty = fromFSA ty
 
 > -- |An importable or exportable format.
-> type Type t = String -> t
+> type Type t = t -> t
 
 === Instances for Jeff's format
 
 > -- |Jeff's format.
-> newtype Jeff = Jeff String
+> newtype Jeff = Jeff Jeff
 
 > instance Exportable Jeff
->     where fromFSA           =  Jeff . exportJeff
->           extract (Jeff s)  =  s
+>     where fromFSA _ = exportJeff
 
 > instance Importable Jeff
->     where toFSA  =  fmap renameStates . readJeff . extract
+>     where toFSA _ = fmap renameStates . readJeff
 
 === instances for Dot format
 
 > -- |The GraphViz Dot format.
-> newtype Dot = Dot String
+> newtype Dot = Dot Dot
 
 > instance Exportable Dot
->     where fromFSA          =  Dot . exportDot
->           extract (Dot s)  =  s
+>     where fromFSA _ = exportDot
 
 === instances for Pleb format
 
 > -- |The format defined by the (P)iecewise / (L)ocal (E)xpression (B)uilder.
-> newtype Pleb = Pleb String
+> newtype Pleb = Pleb Pleb
 
 > instance Importable Pleb
->     where toFSA (Pleb s) = readPleb s
+>     where toFSA _ = readPleb
 
 === instances for ATT format
 
 > -- |The AT&T finite-state transducer format, input projection
-> newtype ATT = ATT String
+> newtype ATT = ATT ATT
 
 > instance Importable ATT
->     where toFSA (ATT s) = Right $ readATT s
+>     where toFSA _ = Right . readATT
 
 > instance Exportable ATT
->     where fromFSA          =  ATT . exportATT
->           extract (ATT s)  =  s
+>     where fromFSA _ = exportATT
 
 > -- |The AT&T finite-state transducer format, output projection
-> newtype ATTO = ATTO String
+> newtype ATTO = ATTO ATTO
 
 > instance Importable ATTO
->     where toFSA (ATTO s) = Right . readATT $ invertATT s
+>     where toFSA _ = Right . readATT . invertATT
 
 > instance Exportable ATTO
->     where fromFSA           = ATTO . exportATT
->           extract (ATTO s)  = invertATT s
+>     where fromFSA _ = invertATT . exportATT
 
 > -- |A corpus of strings
-> newtype Corpus = Corpus String
+> newtype Corpus = Corpus Corpus
 
 > instance Importable Corpus
->     where toFSA (Corpus s) = Right .
->                              renameStates . renameSymbolsBy (:[]) .
->                              readCorpus $ lines s
+>     where toFSA _ = Right .
+>                     renameStates . renameSymbolsBy (:[]) .
+>                     readCorpus . lines
