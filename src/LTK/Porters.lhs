@@ -25,6 +25,7 @@
 >        , Pleb(Pleb)
 >        , ATT(ATT)
 >        , ATTO(ATTO)
+>        , Corpus(Corpus)
 >        -- *Miscellaneous
 >        , formatSet
 >        , transliterate
@@ -35,11 +36,12 @@
 >        , Exportable(..)
 >        ) where
 
-> import LTK.FSA          (FSA, renameStates)
+> import LTK.FSA          (FSA, renameStates, renameSymbolsBy)
 > import LTK.Porters.ATT  ( exportATT
 >                         , invertATT
 >                         , readATT
 >                         )
+> import LTK.Porters.Corpus (readCorpus)
 > import LTK.Porters.Dot  (exportDot, formatSet)
 > import LTK.Porters.Jeff ( exportJeff
 >                         , readJeff
@@ -127,3 +129,11 @@
 > instance Exportable ATTO
 >     where fromFSA           = ATTO . exportATT
 >           extract (ATTO s)  = invertATT s
+
+> -- |A corpus of strings
+> newtype Corpus = Corpus String
+
+> instance Importable Corpus
+>     where toFSA (Corpus s) = Right .
+>                              renameStates . renameSymbolsBy (:[]) .
+>                              readCorpus $ lines s
