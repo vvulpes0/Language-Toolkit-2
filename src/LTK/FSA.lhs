@@ -1310,24 +1310,31 @@ alphabets unified.
 >                   (Set.delete Nothing (alphabet fsa))
 >                   fsa
 
+Tierify:
+* Ensure that all of T is accounted for in the input
+* Remove symbols from the input that are not in T
+* Insert self-loops on all symbols not in T, including:
+  * the other symbols from the input's alphabet
+  * the Nothing placeholder
+
 > -- |Convert a semantic automaton that represents a Local constraint
 > -- into a new one that represents the same constraint in the associated
 > -- Tier-Local class.
 > tierify :: (Ord a, Ord b) => Set b -> FSA a (Maybe b) -> FSA a (Maybe b)
-> tierify t fsa = f'' { alphabet = alphabet f'
->                     , transitions = union ts ts'
->                     }
->     where f'   =  semanticallyExtendAlphabetTo t fsa
->           f''  =  contractAlphabetTo
->                   (Set.delete Nothing $ alphabet f')
->                   f'
->           ts   =  transitions f''
->           ts'  =  Set.mapMonotonic l $ states f''
+> tierify t fsa = semanticallyExtendAlphabetTo as f''
+>     where f'   =  contractAlphabetTo (tmap Just t) $
+>                   semanticallyExtendAlphabetTo t fsa
+>           f''  =  f'
+>                   { alphabet = insert Nothing $ alphabet f'
+>                   , transitions = union (transitions f') .
+>                                   Set.mapMonotonic l $ states f'
+>                   }
 >           l q  =  Transition
 >                   { edgeLabel    =  Symbol Nothing
 >                   , source       =  q
 >                   , destination  =  q
 >                   }
+>           as   =  collapse (maybe id insert) empty $ alphabet fsa
 
 > -- |Remove symbols from the alphabet of an automaton.
 > contractAlphabetTo :: (Ord a, Ord b) => Set b -> FSA a b -> FSA a b

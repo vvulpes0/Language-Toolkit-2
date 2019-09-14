@@ -186,7 +186,7 @@ The first and second parts of this pair may be returned alone by
 > zsize = collapse (const $ const False) True
 > {-# INLINE[1] zsize #-}
 > {-# RULES
-> "zsize/Set" zsize = (== 0) . Set.size
+> "zsize/Set" zsize = Set.null
 >   #-}
 
 > -- |The size of the input as an integer
