@@ -64,7 +64,7 @@ Examples:
 > derivative :: (Num a) => [a] -> [a]
 > derivative = drop 1 .
 >              zipWith (*) exponents
->     where exponents = [0..]
+>     where exponents = iterate (+ 1) 1
 
 > filter :: (a -> Bool) -> [a] -> [a]
 > filter _ []  =  []
@@ -136,7 +136,7 @@ surround the symbols by two spaces rather than one:
 map f (x:xs)  =  f x : map xs
 map _ _       =  []
 
-double = map (*2) -- only one space here
+double = map (* 2) -- only one space here
 ```
 
 ## Exports
