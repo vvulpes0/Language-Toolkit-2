@@ -58,6 +58,8 @@
 >        -- This section contains some such wrapper types.
 >        , IncreasingSize(..)
 >        , DecreasingSize(..)
+>        -- *Miscellaneous classes
+>        , HasAlphabet(..)
 >        -- *Miscellaneous functions
 >        , extractMonotonic
 >        , tr
@@ -580,3 +582,9 @@ with a variant that is at least still faster than filter.
 > -- @since 0.2
 > extractMonotonic :: (Ord a, Ord b) => (a -> b) -> b -> Set a -> Set a
 > extractMonotonic f a = extractRange f a a
+
+
+
+> -- |Allow for overloading of the term alphabet.
+> class HasAlphabet g
+>     where alphabet :: g e -> Set e

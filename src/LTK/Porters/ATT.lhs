@@ -74,7 +74,7 @@ Reading an AT&T format automaton
 > -- it discards weights and returns only the input projection.
 > readATT :: String -> FSA Integer String
 > readATT x = renameStates $
->             FSA { alphabet         =  union al as
+>             FSA { sigma            =  union al as
 >                 , transitions      =  ts
 >                 , initials         =  singleton qi
 >                 , finals           =  fs

@@ -94,7 +94,7 @@
 >                  (False,  False)  ->  local
 > buildFactor alpha (Subsequence factor)
 >     =  (\isPositive ->
->         FSA { alphabet     =  alpha
+>         FSA { sigma        =  alpha
 >             , transitions  =  tran
 >             , initials     =  singleton . State $ toEnum 0
 >             , finals       =  if isPositive then fin else fin'
@@ -254,7 +254,7 @@
 >     = renameStates .
 >       (if isPositive then id else complementDeterministic) .
 >       determinize $
->       FSA { alphabet         =  alpha
+>       FSA { sigma            =  alpha
 >           , transitions      =  trans
 >           , initials         =  singleton $ State 0
 >           , finals           =  singleton $ State nextState
@@ -284,7 +284,7 @@
 > initialLocal True  a [] = complementDeterministic $ initialLocal False a []
 > initialLocal False a [] = emptyWithAlphabet a
 > initialLocal isPositive alpha symseq
->     = FSA { alphabet         =  alpha
+>     = FSA { sigma            =  alpha
 >           , transitions      =  trans
 >           , initials         =  singleton . State $ toEnum 0
 >           , finals           =  if isPositive then fin else fin'
@@ -325,7 +325,7 @@ negative).  Making these from NFAs is cheaper, it seems.
 > finalLocal False a [] = emptyWithAlphabet a
 > finalLocal isPositive alpha symseq
 >     = renameStates . (if isPositive then id else complementDeterministic) .
->       determinize $ FSA { alphabet         =  alpha
+>       determinize $ FSA { sigma            =  alpha
 >                         , transitions      =  trans
 >                         , initials         =  singleton $ State 0
 >                         , finals           =  singleton $ State nextState
@@ -350,7 +350,7 @@ negative).  Making these from NFAs is cheaper, it seems.
 >       (if isPositive then id else complementDeterministic) .
 >       determinize $
 >       FSA
->       { alphabet     =  alpha
+>       { sigma        =  alpha
 >       , transitions  =  trans
 >       , initials     =  singleton $ State 0
 >       , finals       =  singleton $ State nextState

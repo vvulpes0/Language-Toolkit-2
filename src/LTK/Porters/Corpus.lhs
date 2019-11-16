@@ -19,7 +19,7 @@
 > readCorpus = f . foldr addWord (empty, empty, empty)
 >     where f (alpha, trans, fin)
 >               = FSA
->                 { alphabet = alpha
+>                 { sigma = alpha
 >                 , transitions = trans
 >                 , initials = singleton $ State []
 >                 , finals = fin

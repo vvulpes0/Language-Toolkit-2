@@ -74,6 +74,10 @@ library
                 , LTK.Extract.TSL
                 , LTK.Factors
                 , LTK.FSA
+                , LTK.Learn.SL
+                , LTK.Learn.SP
+                , LTK.Learn.StringExt
+                , LTK.Learn.TSL
                 , LTK.Porters
                 , LTK.Porters.ATT
                 , LTK.Porters.Corpus

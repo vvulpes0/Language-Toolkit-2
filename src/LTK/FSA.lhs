@@ -118,7 +118,7 @@ itself.
 > -- graph, the edges of which are labelled by formal symbols.
 > data FSA n e
 >     = FSA
->       { alphabet         ::  Set e
+>       { sigma            ::  Set e
 >       , transitions      ::  Set (Transition n e)
 >       , initials         ::  Set (State n)
 >       , finals           ::  Set (State n)
@@ -160,7 +160,7 @@ the string plus two.
 >                          Set e -> [e] -> FSA n e
 > singletonWithAlphabet as str
 >     = FSA
->       { alphabet = as
+>       { sigma = as
 >       , transitions = trans str
 >       , initials = begins
 >       , finals = fins
@@ -444,6 +444,9 @@ of parallelism if possible.
 >     where rnf (FSA a t i f d)
 >               = rnf a `seq` rnf t `seq` rnf i `seq` rnf f `seq` rnf d
 
+> instance HasAlphabet (FSA n)
+>     where alphabet = sigma
+
 
 Acceptance and the Transition Function
 ======================================
@@ -560,7 +563,7 @@ and guarantees totality of the result.
 >                          FSA (Maybe n1, Maybe n2) e
 > cartesianConstruction isFinal' f1 f2
 >     = FSA
->       { alphabet         =  alpha
+>       { sigma            =  alpha
 >       , transitions      =  ts
 >       , initials         =  qi
 >       , finals           =  qf
@@ -693,7 +696,7 @@ Other Combinations
 >                  -> FSA (Either n1 n2) e
 > autConcatenation f1 f2
 >     = FSA
->       { alphabet = union (alphabet f1') (alphabet f2')
+>       { sigma = union (alphabet f1') (alphabet f2')
 >       , transitions
 >           = unionAll
 >             [ transitions f1'
@@ -725,7 +728,7 @@ Other Combinations
 > kleeneClosure :: (Ord n, Ord e) => FSA n e -> FSA (Either n Bool) e
 > kleeneClosure f
 >     = FSA
->       { alphabet = alphabet f'
+>       { sigma = alphabet f'
 >       , transitions
 >           = unionAll [ transitions f'
 >                      , toOldInitials
@@ -793,7 +796,7 @@ equivalence class.
 > minimizeOver :: (Ord e, Ord n) =>
 >                 (FSA n e -> Set (Set (State n))) -> FSA n e -> FSA (Set n) e
 > minimizeOver r fsa = FSA
->                      { alphabet = alphabet fsa
+>                      { sigma = alphabet fsa
 >                      , transitions = trans
 >                      , initials = qi
 >                      , finals = fin
@@ -994,7 +997,7 @@ The primitive right-ideal is {xa} for all a,
 i.e. the reachability relation:
 
 > ignoreSymbols :: (Ord n, Ord e) => FSA n e -> FSA n ()
-> ignoreSymbols f = f { alphabet = empty
+> ignoreSymbols f = f { sigma = empty
 >                     , transitions = Set.map x (transitions f)
 >                     , isDeterministic = False
 >                     }
@@ -1155,7 +1158,7 @@ state is considered accepting in the syntactic monoid.
 > -- The initial state is the identity function, and the result is complete.
 > syntacticMonoid :: (Ord e, Ord n) =>
 >                    FSA n e -> FSA ([Maybe n], [Symbol e]) e
-> syntacticMonoid m = FSA { alphabet = alphabet m
+> syntacticMonoid m = FSA { sigma = alphabet m
 >                         , transitions = t
 >                         , initials = i
 >                         , finals = f
@@ -1291,7 +1294,7 @@ alphabets unified.
 > semanticallyExtendAlphabetTo ::
 >     (Ord a, Ord b) => Set b -> FSA a (Maybe b) -> FSA a (Maybe b)
 > semanticallyExtendAlphabetTo syms fsa
->     = fsa { alphabet = union as new
+>     = fsa { sigma       = union as new
 >           , transitions = union ts ts'
 >           }
 >     where as   =  alphabet fsa
@@ -1325,7 +1328,7 @@ Tierify:
 >     where f'   =  contractAlphabetTo (tmap Just t) $
 >                   semanticallyExtendAlphabetTo t fsa
 >           f''  =  f'
->                   { alphabet = insert Nothing $ alphabet f'
+>                   { sigma       = insert Nothing $ alphabet f'
 >                   , transitions = union (transitions f') .
 >                                   Set.mapMonotonic l $ states f'
 >                   }
@@ -1340,7 +1343,7 @@ Tierify:
 > contractAlphabetTo :: (Ord a, Ord b) => Set b -> FSA a b -> FSA a b
 > contractAlphabetTo syms fsa = trimUnreachables $
 >                               fsa
->                               { alphabet = syms
+>                               { sigma       = syms
 >                               , transitions = trans
 >                               }
 >     where trans = keep
@@ -1407,7 +1410,7 @@ type to improve memory usage and processing speed.
 > -- deterministic even if the original was.
 > renameSymbolsBy :: (Ord e, Ord e1, Ord n) =>
 >                    (e -> e1) -> FSA n e -> FSA n e1
-> renameSymbolsBy f a = a { alphabet         =  alpha
+> renameSymbolsBy f a = a { sigma            =  alpha
 >                         , transitions      =  tmap (fmap f) $ transitions a
 >                         , isDeterministic  =  isDeterministic a && samea
 >                         }
@@ -1419,7 +1422,7 @@ type to improve memory usage and processing speed.
 > renameSymbolsByMonotonic :: (Ord e, Ord e1, Ord n) =>
 >                             (e -> e1) -> FSA n e -> FSA n e1
 > renameSymbolsByMonotonic f a
->     = a { alphabet     =  alpha
+>     = a { sigma        =  alpha
 >         , transitions  =  Set.mapMonotonic (fmap f) (transitions a)
 >         }
 >     where alpha  =  Set.mapMonotonic f (alphabet a)

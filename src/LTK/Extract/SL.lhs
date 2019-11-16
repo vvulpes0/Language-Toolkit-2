@@ -304,7 +304,7 @@ type of a singleton set.
 >                               ForbiddenPaths (Set (Set n)) e
 > forbiddenPathsWithAlphabet alph fsa =
 >     ForbiddenPaths fInitP fFreeP fFinP
->         where f'      =  fsa {alphabet = union alph $ alphabet fsa}
+>         where f'      =  fsa {sigma = union alph $ alphabet fsa}
 >               psg     =  powersetGraph f'
 >               fInitP  =  initialFPs f'
 >               fFreeP  =  freeFPsPSG psg
