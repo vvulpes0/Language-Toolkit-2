@@ -408,7 +408,7 @@ Semigroup instance to satisfy base-4.9
 
 > apply :: (Ord e, Ord n1, Ord n2, Enum n2) =>
 >          (a -> b -> FSA n1 e) -> a -> b -> FSA n2 e
-> apply f = curry (renameStates . uncurry f)
+> apply f = curry (renameStates . minimize . uncurry f)
 
 > pfold :: (a -> a -> a) -> [a] -> a
 > pfold = fmap (. treeFromList) treeFold
@@ -994,7 +994,12 @@ the set of elements {ax} for all elements a:
 > follow f xs q = collapse (flip (.) . delta f) id xs $ singleton q
 
 The primitive right-ideal is {xa} for all a,
-i.e. the reachability relation:
+i.e. the reachability relation.
+We already have a function that computes this: @epsilonClosure@.
+In order to make use of that, we just replace every edge by Epsilon.
+Ideally we would use an uninhabited type for the alphabet,
+but since Haskell does not have such a type out of the box,
+we use the unit type @()@ instead.
 
 > ignoreSymbols :: (Ord n, Ord e) => FSA n e -> FSA n ()
 > ignoreSymbols f = f { sigma = empty
@@ -1187,7 +1192,7 @@ state is considered accepting in the syntactic monoid.
 >                     , Set (State ([Maybe n], [Symbol e]))
 >                     )
 > syntacticMonoid' f n former@(ot, os, ofi, s)
->     | zsize s    =  former
+>     | isEmpty s  =  former
 >     | otherwise  =  syntacticMonoid' f n next
 >     where next      =  (union nt ot, union ns os, union nf ofi, ns)
 >           alpha     =  alphabet f
@@ -1216,14 +1221,14 @@ state is considered accepting in the syntactic monoid.
 >           os'       =  tmap (fmap fst) os
 >           fins      =  nodeLabel . sequence . map (fmap Just) .
 >                        Set.toList $ finals f
->           hasFinal  =  not . zsize . intersection fins .
+>           hasFinal  =  not . isEmpty . intersection fins .
 >                        take n . fst . nodeLabel
 
 > replaceDestinationFromMap ::
 >     (Container (c (State (a, b))) (State (a, b)), Collapsible c, Eq a) =>
 >     c (State (a, b)) -> Transition (a, b) e -> Transition (a, b) e
 > replaceDestinationFromMap m t
->     | zsize m'   =  t
+>     | isEmpty m' =  t
 >     | otherwise  =  t {destination = chooseOne m'}
 >     where m'  =  keep ((==) (fn $ destination t) . fn) m
 >           fn  =  fst . nodeLabel
@@ -1241,7 +1246,7 @@ state is considered accepting in the syntactic monoid.
 >     c (Transition (n, n') e) -> c (Transition (n, n') e) ->
 >     c (Transition (n, n') e)
 > mergeByDestFst' p l
->     | zsize l = p
+>     | isEmpty l = p
 >     | otherwise
 >           = mergeByDestFst'
 >             (union p   .

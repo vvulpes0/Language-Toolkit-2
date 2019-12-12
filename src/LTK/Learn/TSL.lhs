@@ -27,84 +27,23 @@
 > -- If a word is short enough to not contain any \(k\)-factors,
 > -- the entire word, appropriately anchored, is included in the set.
 > fTSL :: Ord a => Int -> [a] -> TSLG a
-> fTSL k w = let (as, inf, fs) = fTSL' empty False empty empty k w
->            in TSLG { tslgAlpha  =  as
->                    , tslgInf    =  inf
->                    , tslgK      =  k
->                    , tslgF      =  fSL k w
->                    , tslgFp1    =  fSL (k + 1) w
->                    , tslg       =  fs
->                    }
-
-> fTSL' :: Ord a =>
->          Set a -> Bool ->
->          Set (Set a, Bool, Set a, [a], Set a) ->
->          Set (Set a, (Bool, [a], Bool), Set a) ->
->          Int -> [a] ->
->          (Set a, Bool, Set (Set a, (Bool, [a], Bool), Set a))
-> fTSL' as inf o c k [] = (as, inf, c')
->     where c' = collapse f c o
->           f (p, z, s', s, i) x = (if z && sh then gb else id) .
->                                  (if not sh  then gt else id) $ x
->               where gb = Set.insert (s', (True, r, True), Set.union p i)
->                     gt = Set.insert (s', (False, r, True), i)
->                     r  = reverse s
->                     sh = null $ drop (k - 2) s
-> fTSL' as inf o c k (x:v)
->     = fTSL' (insert x as) (inf || (not . null $ drop (k - 1) v))
->       (insert (as, isNotIn as x, singleton x, [x], empty) o')
->       c' k v
->     where (o', c') = collapse f (empty, c) o
->           f (p, z, s', s, i) (a, b)
->               | null s = (insert (insert x p, True, s', s, i) a, b)
->               | not $ null (drop (k - 2) s) -- have a (k-1)-factor
->                   = if isIn s x
->                     then ( a
->                          , insert
->                            (insert x s', (False, reverse (x:s), False), i)
->                            b
->                          )
->                     else ( flip insert a
->                            (p, z && isNotIn p x, s', s, insert x i)
->                          , (if isNotIn i x
->                             then Set.insert ( insert x s'
->                                             , (False, reverse (x:s), False)
->                                             , i
->                                             )
->                             else id
->                            ) $ b
->                          )
->               | otherwise
->                   = ( (if isNotIn i x
->                        then insert
->                             (p, isNotIn p x, Set.insert x s', x : s, i)
->                        else id
->                       ) .
->                       (if isNotIn s x
->                        then Set.insert
->                             (p, z && isNotIn p x, s', s, insert x i)
->                        else id
->                       ) $ a
->                     , (if z && isNotIn (union i p) x &&
->                           not (null $ drop (k - 3) s)
->                        then insert ( insert x s'
->                                    , (True, reverse (x : s), False)
->                                    , union i p
->                                    )
->                        else id
->                       ) $ b
->                     )
-
-That gigantic function gets the subsequence-interveners pairs of a word.
-Given a tier-alphabet T, the set of permitted tier-factors is the subset
-of this set consisting of all and only those elements for which:
-
-* the subsequence component only contains elements from T, and
-* the interveners component is disjoint with T.
+> fTSL k w = TSLG { tslgAlpha  =  as
+>                 , tslgInf    =  inf
+>                 , tslgK      =  k
+>                 , tslgF      =  fSL k w
+>                 , tslgFp1    =  fSL (k + 1) w
+>                 , tslg       =  fs
+>                 }
+>     where fs   =  keep (\(_,b,_) -> f b) $ ssqis w
+>           f (h, b, t)
+>               = let a = alength (h, b, t)
+>                 in (h && t && a <= k) || a == k
+>           as   =  collapse (union . (\(a,_,_) -> a)) empty fs
+>           inf  =  anyS (\(_,(h,_,t),_) -> not h && not t) fs
 
 > tslgTier :: Ord a => TSLG a -> Set a
 > tslgTier g = Set.filter (not . n) (alphabet g)
->     where n x = r x && p x
+>     where n   = both r p
 >           r x = isSubsetOf (slg $ tslgF g) $ gDrop x (slg $ tslgFp1 g)
 >           p x = isSubsetOf (slg $ tslgFp1 g) $ gIn x (slg $ tslgF g)
 
@@ -184,3 +123,47 @@ of this set consisting of all and only those elements for which:
 > gDo :: (Ord a, Ord b, Ord x, Ord y) =>
 >        (a -> Set b) -> (x, a, y) -> Set (x, b, y)
 > gDo f (h, s, t) = Set.map (\a -> (h, a, t)) $ f s
+
+
+
+> alength :: (Bool, [a], Bool) -> Int
+> alength (h, s, t) = f h + f t + length s
+>     where f x = if x then 1 else 0
+
+> ssqis :: Ord a => [a] -> Set (Set a, (Bool, [a], Bool), Set a)
+> ssqis xs = Set.fromList . (eFF :) . (eTF :) . interleave c $ map f o
+>     where f (a, (_, y, z), b) = (a, (True, y, z), b)
+>           (c, o) = ssqis' xs
+>           eFF = (empty, (False, empty, False), empty)
+>           eTF = (empty, (True, empty, False), empty)
+
+The output of the @ssqis'@ function is a pair, each component of which
+is a triple listing the elements taken, the subsequence proper,
+and the skipped elements, respectively.
+The first component of the outer pair
+is the complete subsequence-intervener structures,
+where no elements prior to the beginning of the subsequence
+are listed as skipped.
+The other component lists those structures
+that still need a beginning to be complete.
+
+> ssqis' :: Ord a => [a]
+>        -> ( [(Set a, (Bool, [a], Bool), Set a)]
+>           , [(Set a, (Bool, [a], Bool), Set a)]
+>           )
+> ssqis' []      =  (tailFish, tailFish)
+>     where tailFish = [(empty, (False, [], True), empty)]
+> ssqis' (x:xs)  =  ( (singleton x, e x, empty) : interleave c took
+>                   , (singleton x, e x, empty) : interleave skips took
+>                   )
+>     where (c, o) =  ssqis' xs
+>           took   =  foldr f [] o
+>           skips  =  foldr g [] o
+>           f (r,s,t) w  =  if isIn t x
+>                           then w
+>                           else (insert x r, h x s, t) : w
+>           g (r,s,t) w  =  if isIn r x
+>                           then w
+>                           else (r, s, insert x t) : w
+>           h a (r,s,t)  =  (r, a : s, t)
+>           e a = (False, [a], False)

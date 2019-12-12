@@ -28,7 +28,7 @@ Please try to avoid lines longer than 72 characters.
 Consider 80 a hard limit.
 
 ## Breaking lines
-Try to break after a composition (`.`) or application (`$`) operator
+Try to break before a composition (`.`) or application (`$`) operator
 if possible.
 If that won't work, but there is another binary operator that would,
 feel free to break after that.

@@ -34,6 +34,7 @@
 >        -- *Combining multiple Containers
 >        , unionAll
 >        , intersectAll
+>        , interleave
 >        -- *Generic versions of Prelude functions and similar
 >        , anyS
 >        , allS
@@ -62,6 +63,7 @@
 >        , HasAlphabet(..)
 >        -- *Miscellaneous functions
 >        , extractMonotonic
+>        , sequencesOver
 >        , tr
 >        ) where
 
@@ -93,56 +95,58 @@ are defined to allow such polymorphism.
 > -- > contains a (intersection c1 c2) == contains a c1 && contains a c2
 > -- > intersection c c == c
 > -- > difference c c == empty
-> class (Eq a) => Container c a | c -> a
->     where isIn :: c -> a -> Bool
->           isNotIn :: c -> a -> Bool
->           contains :: a -> c -> Bool
->           doesNotContain :: a -> c -> Bool
->           isEmpty :: (Eq c) => c -> Bool
+> class Container c a | c -> a
+>     where isIn :: Eq a => c -> a -> Bool
+>           isNotIn :: Eq a => c -> a -> Bool
+>           contains :: Eq a => a -> c -> Bool
+>           doesNotContain :: Eq a => a -> c -> Bool
+>           isEmpty :: c -> Bool
 >           -- |@(union a b)@ returns a collection of elements that
 >           -- are in one of @a@ or @b@, or both.
 >           union :: c -> c -> c
->           -- |@(intersection a b)@ returns a collection of elements that
->           -- are in both @a@ and @b@.
->           intersection :: c -> c -> c
->           -- |@(difference a b)@ returns a collection of elements that
->           -- are in @a@ but not in @b@.
->           difference :: c -> c -> c
->           -- |@(symmetricDifference a b)@ returns a collection of elements
->           -- that are in one of @a@ or @b@, but not both.
->           symmetricDifference :: c -> c -> c
+>           -- |@(intersection a b)@ returns a collection of elements
+>           -- that are in both @a@ and @b@.
+>           intersection :: Eq a => c -> c -> c
+>           -- |@(difference a b)@ returns a collection of elements
+>           -- that are in @a@ but not in @b@.
+>           difference :: Eq a => c -> c -> c
+>           -- |@(symmetricDifference a b)@ returns a collection of
+>           -- elements that are in one of @a@ or @b@, but not both.
+>           symmetricDifference :: Eq a => c -> c -> c
 >           empty :: c
 >           insert :: a -> c -> c
 >           singleton :: a -> c
->           -- |@(isSubsetOf y x)@ tells whether @x@ is a subset of @y@.
->           isSubsetOf :: (Eq c) => c -> c -> Bool
->           -- |@(isSupersetOf y x)@ tells whether @x@ is a superset of @y@.
->           isSupersetOf :: (Eq c) => c -> c -> Bool
+>           -- |@(isSubsetOf y x)@ tells if @x@ is a subset of @y@.
+>           isSubsetOf :: Eq a => c -> c -> Bool
+>           -- |@(isSupersetOf y x)@ tells if @x@ is a superset of @y@.
+>           isSupersetOf :: Eq a => c -> c -> Bool
 >           -- |@(isProperSubsetOf y x)@ tells whether
 >           -- @x@ is a proper subset of @y@.
->           isProperSubsetOf :: (Eq c) => c -> c -> Bool
+>           isProperSubsetOf :: Eq a => c -> c -> Bool
 >           -- |@(isProperSupersetOf y x)@ tells whether
 >           -- @x@ is a proper superset of @y@.
->           isProperSupersetOf :: (Eq c) => c -> c -> Bool
+>           isProperSupersetOf :: Eq a => c -> c -> Bool
 >           -- Default definitions:
->           isEmpty = (== empty)
 >           isIn = flip contains
 >           isNotIn c = not . isIn c
 >           contains = flip isIn
 >           doesNotContain = flip isNotIn
 >           insert a c = union (singleton a) c
 >           singleton a = insert a empty
->           symmetricDifference a b = union (difference a b) (difference b a)
->           isSubsetOf a b = intersection a b == b
+>           symmetricDifference a b
+>               = union (difference a b) (difference b a)
+>           isSubsetOf a b = isEmpty (difference b a)
 >           isSupersetOf = flip isSubsetOf
->           isProperSubsetOf a b = isSubsetOf a b && a /= b
->           isProperSupersetOf a b = isSupersetOf a b && a /= b
+>           isProperSubsetOf a b = isSubsetOf a b
+>                                  && not (isEmpty (difference b a))
+>           isProperSupersetOf = flip isProperSubsetOf
 >           {-# MINIMAL
 >               (contains | isIn)
 >             , union
 >             , intersection
 >             , difference
 >             , empty
+>             , isEmpty
 >             , (insert | singleton) #-}
 
 The `Linearizable` class is used for types that can be traversed
@@ -167,6 +171,19 @@ The first and second parts of this pair may be returned alone by
 > discardOne :: (Linearizable l) => l a -> l a
 > discardOne  = snd . choose
 
+> -- |Combine two linearizable containers such that the elements
+> -- of the first and second are inserted in an interleaving manner.
+> -- For lists, this guarantees that a finite initial segment will
+> -- contain elements from each, in contrast to the @(++)@ operator.
+> interleave :: (Linearizable c, Container (c a) a)
+>               => c a -> c a -> c a
+> interleave xs ys
+>     | isEmpty xs = ys
+>     | isEmpty ys = xs
+>     | otherwise  = let (a, as) = choose xs
+>                        (b, bs) = choose ys
+>                    in insert a . insert b $ interleave as bs
+
 > -- |The 'Collapsible' class is used for types that can be collapsed
 > -- to a single value, like a fold over a list.  Any structure \(c\)
 > -- that is 'Collapsible' must necessarily be 'Linearizable', since:
@@ -179,7 +196,8 @@ The first and second parts of this pair may be returned alone by
 >           size :: (Integral a) => c b -> a
 
 >           collapse f = curry (fst . until ((== 0) . isize . snd) cont)
->               where cont (a, bs) = let (x, xs) = choose bs in (f x a, xs)
+>               where cont (a, bs) = let (x, xs) = choose bs
+>                                    in (f x a, xs)
 >           size = collapse (const succ) 0
 >           {-# MINIMAL collapse | size #-}
 
@@ -208,14 +226,14 @@ container with either unions or intersections:
 
 > -- |Combine 'Container's with 'intersection'.
 > -- An empty source yields an empty result.
-> intersectAll :: (Container c a, Collapsible s) => s c -> c
+> intersectAll :: (Container c a, Eq a, Collapsible s) => s c -> c
 > intersectAll xs
->     | size xs == (0 :: Integer)  = empty
->     | otherwise                  = collapse intersection x xs'
->     where (x, xs')               = choose xs
+>     | zsize xs  = empty
+>     | otherwise = collapse intersection x xs'
+>     where (x, xs') = choose xs
 
-It is nice to have tests for existential and universal satisfaction of
-predicates:
+It is nice to have tests for existential and universal satisfaction
+of predicates:
 
 > -- |True iff some element satisfies a predicate.
 > anyS :: Collapsible s => (a -> Bool) -> s a -> Bool
@@ -306,10 +324,11 @@ so we use Set.split with Set.findMax instead.
 >                 ) .
 >                 (,) empty . Set.map (\x -> (f x, x))
 
-> -- |A convenience function for the common partition refinement operation.
+> -- |A convenience function for the partition refinement operation.
 > --
 > -- @since 0.2
-> refinePartitionBy :: (Ord a, Ord n) => (n -> a) -> Set (Set n) -> Set (Set n)
+> refinePartitionBy :: (Ord a, Ord n)
+>                      => (n -> a) -> Set (Set n) -> Set (Set n)
 > refinePartitionBy f = collapse (union . partitionBy f) empty
 
 > -- |Build a 'Container' from the elements of a 'Collapsible'.
@@ -336,27 +355,30 @@ Standard Prelude Types
 A Haskell list is a Collapsible Container:
 
 > instance Linearizable []
->     where choose (x:xs) = (x, xs)
->           choose _
->               = (error "cannot choose an element from an empty list", [])
+>     where choose xs = ( if null xs
+>                         then error "cannot choose from an empty list"
+>                         else head xs
+>                       , drop 1 xs
+>                       )
 > instance Collapsible []
 >     where collapse = foldr
-> instance (Eq a) => Container [a] a
+> instance Container [a] a
 >     where contains = elem
->           union = (++)
+>           union = interleave
 >           intersection a b = filter (isIn a) b
->           -- intersection must maintain order of B for subset to work
 >           difference a b = filter (isNotIn b) a
 >           empty = []
+>           isEmpty = null
 >           insert = (:)
->           isSubsetOf a b = intersection a b == b
 
+These definitions for intersection and difference do not care
+about multiplicity, and neither do the derived subset operations.
 A Set is like a list with no duplicates, so it should act similarly:
 
 > instance Linearizable Set
 >     where choose xs
 >               | Set.null xs
->                   = ( error "cannot choose an element from an empty set"
+>                   = ( error "cannot choose from an empty set"
 >                     , Set.empty)
 >               | otherwise = Set.deleteFindMin xs
 > instance Collapsible Set
@@ -368,6 +390,7 @@ A Set is like a list with no duplicates, so it should act similarly:
 >           intersection        =  Set.intersection
 >           difference          =  (Set.\\)
 >           empty               =  Set.empty
+>           isEmpty             =  Set.null
 >           insert              =  Set.insert
 >           isSubsetOf          =  flip Set.isSubsetOf
 >           isProperSubsetOf    =  flip Set.isProperSubsetOf
@@ -404,14 +427,15 @@ lookup-time logarithmic in the number of distinct elements.
 >     where choose (Multiset xs)
 >               | Set.null xs
 >                   =  ( error
->                        "cannot choose an element from an empty multiset"
+>                        "cannot choose from an empty multiset"
 >                      , Multiset Set.empty)
 >               | m == 1       =  (a, f as)
 >               | otherwise    =  (a, f ((a, pred m) : as))
 >               where ((a,m):as) = Set.toAscList xs
 >                     f = Multiset . Set.fromDistinctAscList
 > instance Collapsible Multiset
->     where size (Multiset xs) = fromIntegral . sum . map snd $ Set.toList xs
+>     where size (Multiset xs) = fromIntegral . sum . map snd
+>                                $ Set.toList xs
 >           collapse f x (Multiset xs)
 >               = collapse f x .
 >                 concatMap (uncurry (flip replicate) .
@@ -425,6 +449,7 @@ lookup-time logarithmic in the number of distinct elements.
 >                     newX = Set.fold add (x, 1) hasX
 >                     add (a, c1) (_, c2) = (a, c1 + c2)
 >           empty = Multiset empty
+>           isEmpty (Multiset xs) = isEmpty xs
 >           union (Multiset xs) (Multiset ys)
 >               = Multiset (Set.fromDistinctAscList zs)
 >                 where xs' = Set.toAscList xs
@@ -548,6 +573,14 @@ Miscellaneous functions
 >           makeInfinite []      =  []
 >           makeInfinite (y:[])  =  repeat y
 >           makeInfinite (y:ys)  =  y : makeInfinite ys
+
+> -- |All possible sequences over a given alphabet,
+> -- generated in a breadth-first manner.
+> sequencesOver :: [a] -> [[a]]
+> sequencesOver a = [] :
+>                   if null a
+>                   then []
+>                   else concatMap (\w -> map (: w) a) (sequencesOver a)
 
 A fast method to extract elements from a set
 that works to find elements whose image under a monotonic function

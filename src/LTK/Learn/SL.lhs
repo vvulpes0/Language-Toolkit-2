@@ -58,30 +58,23 @@
 >                     , slg = union (slg g1) (slg g2)
 >                     }
 >           isSubGOf g1 g2 = isSubsetOf (slg g1) (slg g2)
->           genFSA g = n . intersectAll .
->                      map (buildLiteral (alphabet g) . forbidden . f) .
->                      Set.toList $ complG g
+>           genFSA g = n . intersectAll
+>                      . map (buildLiteral (alphabet g) . forbidden . f)
+>                      . Set.toList $ complG g
 >               where f (h, b, t) = Substring (map singleton b) h t
 >                     n x = normalize x `asTypeOf` x
 
 > complG :: Ord a => SLG a -> Set (Bool, [a], Bool)
 > complG g = difference (allFs (slgK g) (alphabet g)) (slg g)
 
+> astrings :: Int -> [a] -> [(Bool, [a], Bool)]
+> astrings k = concatMap f . takeWhile ((<= k) . length) . sequencesOver
+>     where f s = case compare (length s) (k - 1)
+>                 of LT -> [(True, s, True)]
+>                    EQ -> [(True, s, False), (False, s, True)]
+>                    GT -> [(False, s, False)]
+
 > -- |All possible factors of width \(k\) under adjacency,
 > -- as well as shorter fully-anchored factors.
 > allFs :: Ord a => Int -> Set a -> Set (Bool, [a], Bool)
-> allFs k s = allFs' k s (singleton []) empty 0
-
-> allFs' :: Ord a =>
->           Int -> Set a -> Set [a] -> Set (Bool, [a], Bool) -> Int ->
->           Set (Bool, [a], Bool)
-> allFs' k s o c n
->     | n == k     =  union c g
->     | otherwise  =  allFs' k s o' (union c g) (n + 1)
->     where f x  =  union (Set.mapMonotonic (x :) o)
->           o'   =  collapse f empty s
->           g
->               | n == k      =  g' False False
->               | n == k - 1  =  union (g' False True) (g' True False)
->               | otherwise   =  g' True True
->           g' h t = Set.mapMonotonic (\b -> (h, b, t)) o
+> allFs k = Set.fromList . astrings k . Set.toList

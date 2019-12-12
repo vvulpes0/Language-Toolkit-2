@@ -13,19 +13,20 @@
 > import qualified Data.Set as Set
 
 > import LTK.Factors
-> import LTK.FSA hiding (reverse)
+> import LTK.FSA
 > import LTK.Learn.StringExt
 
-For SL, it suffices to gather the factors of width exactly \(k\),
-except in the case of shorter words, because the markedness of words
-of length less than \(k\) is arbitrary.  The same does not hold for SP,
-where closure under deletion guarantees that any subsequence of
-a permitted subsequence is also permitted.
+When gathering subsequences of words to build a positive grammar,
+we should keep in mind that if a given subsequence is considered
+acceptable, the definition of SP guarantees that in turn all of
+its subsequences are also acceptable.  Therefore unlike for SL, it
+makes sense to also gather the factors of width less than \(k\)
+when generating a grammar from positive data.
 
 > -- |Return the set of factors under precedence of length \(k\) or less
 > -- in the given word.
 > fSP :: Ord a => Int -> [a] -> SPG a
-> fSP k = f . fSP' True empty empty empty k
+> fSP k = f . fSP' True k
 >     where f (s, g) = SPG { spgAlpha  =  s
 >                          , spgK      =  k
 >                          , spg       =  g
@@ -35,27 +36,15 @@ a permitted subsequence is also permitted.
 > -- If the first argument is True,
 > -- gather those of length less than or equal to \(k\).
 > -- Otherwise, only gather those of length exactly \(k\).
-> fSP' :: Ord a =>
->         Bool -> Set a -> Set [a] -> Set [a] -> Int -> [a] ->
->         (Set a, Set [a])
-> fSP' lt as o c _ []     =  if lt
->                            then (as, insert [] . union c $ tmap reverse o)
->                            else (as, c)
-> fSP' lt as o c k (x:v)  =  fSP' lt (insert x as) (insert [x] o') c' k v
->     where (o', c') = collapse f (o, c) o
->           f s (a, b)
->               | null (drop (k - 2) s) = (Set.insert (x : s) a, b)
->               | otherwise             = (a, Set.insert (reverse (x : s)) b)
-
-The function fSP' is written in a more complicated way
-than one might expect.  This is to prevent having to generate
-the same set of subsequences repeatedly in longer words.
-In a naive implementation, finding the 3-factors of the string
-"abcdefghijkl" might require finding the 2-factors of "jkl"
-a total of nine times: once for each prior potential initial symbol.
-
-The modified function as provided here avoids this situation
-and is tail-recursive.
+> fSP' :: Ord a => Bool -> Int -> [a] -> (Set a, Set [a])
+> fSP' lt k = foldr g (empty, empty) . ssqs
+>     where f = if lt then null . drop k else (==) k . length
+>           g x (xs, ys)
+>             = ( case x
+>                 of (s:[]) -> Set.insert s xs
+>                    _      -> xs
+>               , (if f x then Set.insert x else id) ys
+>               )
 
 > -- |A representation of an SP grammar.
 > data SPG a = SPG { spgAlpha :: Set a
@@ -85,11 +74,21 @@ and is tail-recursive.
 > complG g = difference (allFs (spgK g) (alphabet g)) (spg g)
 
 > allFs :: Ord a => Int -> Set a -> Set [a]
-> allFs k s = allFs' k s (singleton []) empty 0
+> allFs k = Set.fromList . takeWhile ((<= k) . length)
+>           . sequencesOver . Set.toList
 
-> allFs' :: Ord a => Int -> Set a -> Set [a] -> Set [a] -> Int -> Set [a]
-> allFs' k s o c n
->     | n == k     =  union c o
->     | otherwise  =  allFs' k s o' (union c o) (n + 1)
->     where f x  =  union (Set.mapMonotonic (x :) o)
->           o'   =  collapse f empty s
+
+Efficient subsequence finding for omega-words
+=============================================
+
+The @ssqs'@ function computes non-empty subsequences with multiplicity.
+For example, the sequence "a" appears twice for "aba".
+We then add in the empty subsequence for @ssqs@
+
+> ssqs' :: [a] -> [[a]]
+> ssqs' [] = []
+> ssqs' (x:xs) = [x] : interleave (map (x:) ys) ys
+>     where ys = ssqs' xs
+
+> ssqs :: [a] -> [[a]]
+> ssqs = ([]:) . ssqs'
