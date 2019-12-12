@@ -58,11 +58,12 @@
 >                     , slg = union (slg g1) (slg g2)
 >                     }
 >           isSubGOf g1 g2 = isSubsetOf (slg g1) (slg g2)
->           genFSA g = n . intersectAll
+>           genFSA g = n . foldr intersection free
 >                      . map (buildLiteral (alphabet g) . forbidden . f)
 >                      . Set.toList $ complG g
 >               where f (h, b, t) = Substring (map singleton b) h t
 >                     n x = normalize x `asTypeOf` x
+>                     free = totalWithAlphabet $ alphabet g
 
 > complG :: Ord a => SLG a -> Set (Bool, [a], Bool)
 > complG g = difference (allFs (slgK g) (alphabet g)) (slg g)
