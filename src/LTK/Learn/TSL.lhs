@@ -17,7 +17,7 @@
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
-> import LTK.FSA hiding (reverse)
+> import LTK.FSA
 > import LTK.Learn.StringExt
 > import LTK.Learn.SL
 
@@ -95,26 +95,26 @@
 > gIn x = gSet (putIn x)
 
 > putIn :: Ord a => a -> [a] -> Set [a]
-> putIn x = putIn' x Set.empty []
+> putIn a = Set.fromList . putIn' a
 
-> putIn' :: Ord a => a -> Set [a] -> [a] -> [a] -> Set [a]
-> putIn' x c r s
->     | (u:v) <- s = putIn' x c' (u : r) v
->     | otherwise  = c'
->     where c' = insert (reverse (x : r) ++ s) c
+> putIn' :: a -> [a] -> [[a]]
+> putIn' a xs = (a : xs) :
+>               case xs
+>               of []      ->  []
+>                  (y:ys)  ->  map (y :) $ putIn' a ys
 
 > gDrop :: Ord a => a -> Set (Bool, [a], Bool) -> Set (Bool, [a], Bool)
 > gDrop x = gSet (dropOneOf x)
 
 > dropOneOf :: Ord a => a -> [a] -> Set [a]
-> dropOneOf x = dropOneOf' x Set.empty []
+> dropOneOf x = Set.fromList . dropOneOf' x
 
-> dropOneOf' :: Ord a => a -> Set [a] -> [a] -> [a] -> Set [a]
-> dropOneOf' _ c _ [] = c
-> dropOneOf' x c r (u:v) = dropOneOf' x c' (u : r) v
->     where c' = if u == x
->                then Set.insert ((reverse r) ++ v) c
->                else c
+> dropOneOf' :: Eq a => a -> [a] -> [[a]]
+> dropOneOf' _ [] = []
+> dropOneOf' a (x:xs)
+>     | x /= a = ns
+>     | otherwise = xs : ns
+>     where ns = map (x :) $ dropOneOf' a xs
 
 > gSet :: (Ord a, Ord b, Ord x, Ord y) =>
 >         (a -> Set b) -> Set (x, a, y) -> Set (x, b, y)
