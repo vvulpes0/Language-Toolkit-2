@@ -58,7 +58,7 @@
 >                     , slg = union (slg g1) (slg g2)
 >                     }
 >           isSubGOf g1 g2 = isSubsetOf (slg g1) (slg g2)
->           genFSA g = n . foldr intersection free
+>           genFSA g = n . flatIntersection . (free :)
 >                      . map (buildLiteral (alphabet g) . forbidden . f)
 >                      . Set.toList $ complG g
 >               where f (h, b, t) = Substring (map singleton b) h t

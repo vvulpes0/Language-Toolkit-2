@@ -64,7 +64,7 @@ when generating a grammar from positive data.
 >                     , spg = union (spg g1) (spg g2)
 >                     }
 >           isSubGOf g1 g2 = isSubsetOf (spg g1) (spg g2)
->           genFSA g = n . foldr intersection free .
+>           genFSA g = n . flatIntersection . (free :) .
 >                      map (buildLiteral (alphabet g) . forbidden . f) .
 >                      Set.toList $ complG g
 >               where f = Subsequence . map singleton

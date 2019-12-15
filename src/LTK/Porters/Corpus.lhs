@@ -43,6 +43,6 @@
 >                 } : f (y:xs) zs
 >           f _ _ = []
 >           inits xs = [] :
->                      if null xs
->                      then []
->                      else map (head xs :) (inits (drop 1 xs))
+>                      case xs
+>                      of []      ->  []
+>                         (a:as)  ->  map (a :) (inits as)

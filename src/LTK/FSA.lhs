@@ -408,7 +408,7 @@ Semigroup instance to satisfy base-4.9
 
 > apply :: (Ord e, Ord n1, Ord n2, Enum n2) =>
 >          (a -> b -> FSA n1 e) -> a -> b -> FSA n2 e
-> apply f = curry (renameStates . minimize . uncurry f)
+> apply f = curry (renameStates . uncurry f)
 
 > pfold :: (a -> a -> a) -> [a] -> a
 > pfold = fmap (. treeFromList) treeFold

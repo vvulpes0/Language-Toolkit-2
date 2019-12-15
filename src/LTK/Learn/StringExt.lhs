@@ -13,6 +13,8 @@
 >                            , isRecognizedBy
 >                            ) where
 
+> import Control.DeepSeq (NFData)
+
 > import LTK.Containers
 > import LTK.FSA (FSA)
 
@@ -39,7 +41,7 @@
 > -- by which one can determine
 > -- whether or not a given object is in a given set.
 > class Grammar g
->     where genFSA :: Ord a => g a -> FSA Integer a
+>     where genFSA :: (NFData a, Ord a) => g a -> FSA Integer a
 >           augmentG :: Ord a => g a -> g a -> g a
 >           isSubGOf :: Ord a => g a -> g a -> Bool
 >           emptyG :: Ord a => g a
