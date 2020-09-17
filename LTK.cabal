@@ -79,6 +79,8 @@ library
                 , LTK.Learn.SP
                 , LTK.Learn.StringExt
                 , LTK.Learn.TSL
+                , LTK.Learn.TSL.AugmentedSubsequences
+                , LTK.Learn.TSL.ViaSL
                 , LTK.Porters
                 , LTK.Porters.ATT
                 , LTK.Porters.Corpus
