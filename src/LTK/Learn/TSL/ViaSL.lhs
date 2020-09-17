@@ -11,9 +11,6 @@
 > a strictly local grammar can be reinterpreted as a tier-based grammar.
 > 
 > For the original work, see https://doi.org/10.1007/978-3-319-53733-7_4
-> 
-> Unlike @LTK.Learn.TSL.AugmentedSubsequences@,
-> the learner provided here is not globally consistent.
 > -}
 
 > module LTK.Learn.TSL.ViaSL(TSLG, fTSL) where

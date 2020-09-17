@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEBBY 1 "2019-09-07" "Version 0.2" "Language Toolkit"
+.TH PLEBBY 1 "2020-09-16" "Version 0.2" "Language Toolkit"
 .SH NAME
 plebby \- Piecewise / Local Expression Builder Interpreter
 .SH SYNOPSIS
@@ -240,6 +240,51 @@ Determine whether
 represents a Tier-Based Locally Threshold Testable stringset
 in the current
 .BR universe .
+.RE
+.
+.SS Grammatical Inference
+.B :learnSL
+.RI < int >
+.RI < file >
+.RS
+Read
+.RI < file >
+as a sequence of newline-terminated words
+composed of space-separated symbols,
+and construct an
+.RI < int >-SL
+automaton compatible with this data.
+Symbols not in the data are always rejected.
+.RE
+.
+.PP
+.B :learnSP
+.RI < int >
+.RI < file >
+.RS
+Read
+.RI < file >
+as a sequence of newline-terminated words
+composed of space-separated symbols,
+and construct an
+.RI < int >-SP
+automaton compatible with this data.
+Symbols not in the data are always rejected.
+.RE
+.
+.PP
+.B :learnTSL
+.RI < int >
+.RI < file >
+.RS
+Read
+.RI < file >
+as a sequence of newline-terminated words
+composed of space-separated symbols,
+and construct an
+.RI < int >-TSL
+automaton compatible with this data.
+Symbols not in the data are always rejected.
 .RE
 .
 .SS Comparing Expressions

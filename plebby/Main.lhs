@@ -39,6 +39,10 @@
 >                         , isSF
 >                         )
 > import LTK.FSA
+> import LTK.Learn.SL  (fSL)
+> import LTK.Learn.SP  (fSP)
+> import LTK.Learn.TSL (fTSL)
+> import LTK.Learn.StringExt (Grammar(..), learn)
 > import LTK.Porters      ( ATT(ATT), ATTO(ATTO), Dot(Dot), Jeff(Jeff)
 >                         , formatSet, fromE, to
 >                         )
@@ -84,6 +88,7 @@
 
 > data ArgType = ArgE
 >              | ArgF
+>              | ArgI
 >              | ArgV
 >                deriving (Eq, Ord, Read, Show)
 
@@ -97,6 +102,9 @@
 >              | ErrorMsg String
 >              | Help [(String, [ArgType], String)]
 >              | Import FilePath
+>              | LearnSL Int FilePath
+>              | LearnSP Int FilePath
+>              | LearnTSL Int FilePath
 >              | Loadstate FilePath
 >              | Read FilePath
 >              | ReadATT FilePath FilePath FilePath
@@ -144,6 +152,24 @@
 >         = case words str
 >           of (_:a:[])  ->  L (Import a)
 >              _         ->  R d
+>     | isStartOf str ":learnsl"
+>         = case words str
+>           of (_:a:b:[])  ->  if all (isIn "0123456789") a
+>                              then L (LearnSL (read a) b)
+>                              else R d
+>              _           ->  R d
+>     | isStartOf str ":learnsp"
+>         = case words str
+>           of (_:a:b:[])  ->  if all (isIn "0123456789") a
+>                              then L (LearnSP (read a) b)
+>                              else R d
+>              _           ->  R d
+>     | isStartOf str ":learntsl"
+>         = case words str
+>           of (_:a:b:[])  ->  if all (isIn "0123456789") a
+>                              then L (LearnTSL (read a) b)
+>                              else R d
+>              _           ->  R d
 >     | isStartOf str ":loadstate"
 >         = case words str
 >           of (_:a:[])  ->  L (Loadstate a)
@@ -304,6 +330,21 @@
 >                   , [ArgE]
 >                   , "determine if expr is Strictly Tier-Local"
 >                   )
+>                 , ( ":learnSL"
+>                   , error ":learnSL not defined here"
+>                   , [ArgI, ArgF]
+>                   , "infer k-SL grammar, bind result to 'it'"
+>                   )
+>                 , ( ":learnSP"
+>                   , error ":learnSP not defined here"
+>                   , [ArgI, ArgF]
+>                   , "infer k-SP grammar, bind result to 'it'"
+>                   )
+>                 , ( ":learnTSL"
+>                   , error ":learnTSL not defined here"
+>                   , [ArgI, ArgF]
+>                   , "infer k-TSL grammar, bind result to 'it'"
+>                   )
 >                 , ( ":loadstate"
 >                   , error ":loadstate not defined here"
 >                   , [ArgF]
@@ -429,6 +470,9 @@
 >                  ("failed to read \"" ++ file ++ "\"") >>
 >                  return e
 >                 )
+>          LearnSL k file -> selearn (fSL k) file
+>          LearnSP k file -> selearn (fSP k) file
+>          LearnTSL k file -> selearn (fTSL k) file
 >          Loadstate file
 >              -> catchIOError (read <$> readFile file)
 >                 (const $
@@ -568,6 +612,19 @@
 >                   else ""
 >                  )
 >                 )
+>           selearn :: Grammar g => ([String] -> g String) -> FilePath -> IO Env
+>           selearn method file
+>               = catchIOError
+>                 (insertExpr e <$> fromAutomaton <$> genFSA
+>                  <$> learn method
+>                  <$> map (Just . words) <$> lines
+>                  <$> readFile file
+>                 )
+>                 (const $
+>                  hPutStrLn stderr
+>                  ("failed to read \"" ++ file ++ "\"") >>
+>                  return e
+>                 )
 >           ratt f1 f2 f3 typ
 >               = catchIOError
 >                 (either
@@ -601,6 +658,7 @@
 > doHelp :: [(String, [ArgType], String)] -> String
 > doHelp xs = showArg ArgE ++ " = expression, "  ++
 >             showArg ArgF ++ " = file, "        ++
+>             showArg ArgI ++ " = int, "         ++
 >             showArg ArgV ++ " = variable\n\n"  ++
 >             unlines s2
 >     where cs = zipWith (\a b -> a ++ b) (p1 xs) (map showArgs (p2 xs))
@@ -611,8 +669,9 @@
 >           alignl l s = take l (s ++ cycle " ")
 >           showArg ArgE  =  "<e>"
 >           showArg ArgF  =  "<f>"
+>           showArg ArgI  =  "<i>"
 >           showArg _     =  "<v>"
->           showArgs = intercalate " " . map showArg
+>           showArgs = concatMap ((' ':) . showArg)
 >           p1 = map (\(a,_,_) -> a)
 >           p2 = map (\(_,b,_) -> b)
 >           p3 = map (\(_,_,c) -> c)
