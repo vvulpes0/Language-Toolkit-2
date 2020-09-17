@@ -7,6 +7,8 @@
 > This module implements an algorithm to decide whether a given FSA
 > is Piecewise Testable (PT) based on the semigroup characterization
 > of Simon from his 1975 work "Piecewise testable events".
+>
+> @since 0.2
 > -}
 > module LTK.Decide.PT (isPT) where
 

@@ -7,7 +7,7 @@ name:                LTK
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.2.0.0
+version:             0.3.0.0
 
 synopsis:            A set of tools for analyzing languages via logic and automata
 category:            Formal Languages
@@ -39,10 +39,11 @@ homepage:            https://github.com/vvulpes0/Language-Toolkit-2
 license:             MIT
 license-file:        LICENSE
 author:              Dakotah Lambert, James Rogers
-copyright:           (c) 2014-2019 Dakotah Lambert
+copyright:           (c) 2014-2020 Dakotah Lambert
 maintainer:          49007668+vvulpes0@users.noreply.github.com
 tested-with:         GHC ==8.0.2
                    , GHC ==8.6.5
+                   , GHC ==8.10.1
 build-type:          Simple
 extra-source-files:  man/dotify.1
                    , man/plebby.1
@@ -74,7 +75,15 @@ library
                 , LTK.Extract.TSL
                 , LTK.Factors
                 , LTK.FSA
+                , LTK.Learn.SL
+                , LTK.Learn.SP
+                , LTK.Learn.StringExt
+                , LTK.Learn.TSL
+                , LTK.Learn.TSL.AugmentedSubsequences
+                , LTK.Learn.TSL.ViaSL
                 , LTK.Porters
+                , LTK.Porters.ATT
+                , LTK.Porters.Corpus
                 , LTK.Porters.Dot
                 , LTK.Porters.Jeff
                 , LTK.Porters.Pleb
@@ -82,18 +91,18 @@ library
                 , LTK.Traversals
   -- Modules included in this library but not exported.
   -- other-modules:
-  build-depends: base >=4.2 && <4.13
+  build-depends: base >=4.2 && <4.15
                , containers >=0.5 && <0.7
                , deepseq >=1.1 && <1.5
                , parallel >=1.0 && <3.3
   hs-source-dirs:      src
   default-language:    Haskell2010
-  ghc-options: -Wall -O2
+  ghc-options: -Wall -O2 -feager-blackholing
 
 executable dotify
   hs-source-dirs: dotify
   main-is: Main.lhs
-  build-depends: base >=4.2 && <4.13
+  build-depends: base >=4.2 && <4.15
                , LTK
   default-language: Haskell2010
   ghc-options: -Wall -O2 -threaded "-with-rtsopts=-N -qg1 -C0.001"
@@ -101,20 +110,21 @@ executable dotify
 executable factorize
   hs-source-dirs: factorize
   main-is: Main.lhs
-  build-depends: base >=4.6 && <4.13
+  build-depends: base >=4.6 && <4.15
                , LTK
                , containers >=0.1 && <0.7
                , deepseq >=1.2 && <1.5
                , directory >=1.0 && <1.4
                , filepath >=1.0 && <1.5
   default-language: Haskell2010
-  ghc-options: -Wall -O2 -threaded "-with-rtsopts=-N -qg1 -C0.001"
+  ghc-options: -Wall -O2 -threaded -feager-blackholing
+               "-with-rtsopts=-N -qg1 -C0.001"
 
 executable make-non-strict-constraints
   hs-source-dirs: make-non-strict-constraints
   main-is: Main.lhs
   other-modules: LTK.ConstraintCompiler
-  build-depends: base >=4.0 && <4.13
+  build-depends: base >=4.0 && <4.15
                , LTK
                , containers >=0.1 && <0.7
                , deepseq >=1.2 && <1.5
@@ -125,9 +135,9 @@ executable make-non-strict-constraints
 executable plebby
   hs-source-dirs: plebby
   main-is: Main.lhs
-  build-depends: base >=4.2 && <4.13
+  build-depends: base >=4.2 && <4.15
                , LTK
-               , haskeline >=0.2 && <0.8
+               , haskeline >=0.2 && <0.9
                , process >=1.1 && <1.7
                , transformers >=0.2 && <0.6
   default-language: Haskell2010

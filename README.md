@@ -1,5 +1,5 @@
 # The Language Toolkit
-![Current Version](https://img.shields.io/badge/version-0.2-informational.svg)
+![Current Version](https://img.shields.io/badge/version-0.3-informational.svg)
 ![Licence](https://img.shields.io/github/license/vvulpes0/Language-Toolkit-2)
 ![Issues](https://img.shields.io/github/issues/vvulpes0/Language-Toolkit-2)
 
@@ -70,7 +70,7 @@ which are fully documented in the
 
 ## Running factorize
 One of the two primary programs, along with plebby.
-This also takes Jeff-format automata as input,
+This takes Jeff-format automata as input,
 but that will likely change in the future.
 First, `cd` to a directory you want to factor things in.
 The simplest initial setup is the following:
@@ -117,4 +117,4 @@ In addition to the Pleb syntax, you will want to know two special commands:
 * :quit, to exit the interpreter
 
 A full description of the interpreter itself is
-in the included manual page `pleb.1`.
+in the included manual page `plebby.1`.

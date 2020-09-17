@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEBBY 1 "2019-08-31" "Version 0.2" "Language Toolkit"
+.TH PLEBBY 1 "2020-09-16" "Version 0.3" "Language Toolkit"
 .SH NAME
 plebby \- Piecewise / Local Expression Builder Interpreter
 .SH SYNOPSIS
@@ -29,6 +29,26 @@ Write the current state to
 .RE
 .
 .PP
+.B :writeATT
+.RI < file >
+.RI < file >
+.RI < file >
+.RI < expr >
+.RS
+Write an AT&T transducer representation of
+.RI < expr >
+to the three
+.RI < file >
+argmuents, which represent the transitions, input symbols, and output symbols,
+respectively.
+If
+.B _
+is given as the name of a symbol table,
+then that table is not written.
+The input and output tables are identical, so writing both is redundant.
+.RE
+.
+.PP
 .B :write
 .RI < file >
 .RI < expr >
@@ -47,6 +67,30 @@ Restore a state previously written by
 .B :savestate
 from
 .RI < file >.
+.RE
+.
+.PP
+.B :readATT
+.RI < file "> <" file "> <" file >
+.RS
+Read an AT&T format transducer from the three
+.RI < file >
+arguments (transitions, input symbols, and output symbols),
+and store the input-projection of the result in the special variable
+.BR it .
+If
+.B _
+is given as the name of a symbol table,
+then no file is read for that table.
+.RE
+.
+.PP
+.B :readATTO
+.RI < file "> <" file "> <" file >
+.RS
+Equivalent to
+.B :readATT
+except that it is the output-projection that is stored.
 .RE
 .
 .PP
@@ -196,6 +240,51 @@ Determine whether
 represents a Tier-Based Locally Threshold Testable stringset
 in the current
 .BR universe .
+.RE
+.
+.SS Grammatical Inference
+.B :learnSL
+.RI < int >
+.RI < file >
+.RS
+Read
+.RI < file >
+as a sequence of newline-terminated words
+composed of space-separated symbols,
+and construct an
+.RI < int >-SL
+automaton compatible with this data.
+Symbols not in the data are always rejected.
+.RE
+.
+.PP
+.B :learnSP
+.RI < int >
+.RI < file >
+.RS
+Read
+.RI < file >
+as a sequence of newline-terminated words
+composed of space-separated symbols,
+and construct an
+.RI < int >-SP
+automaton compatible with this data.
+Symbols not in the data are always rejected.
+.RE
+.
+.PP
+.B :learnTSL
+.RI < int >
+.RI < file >
+.RS
+Read
+.RI < file >
+as a sequence of newline-terminated words
+composed of space-separated symbols,
+and construct an
+.RI < int >-TSL
+automaton compatible with this data.
+Symbols not in the data are always rejected.
 .RE
 .
 .SS Comparing Expressions
@@ -379,7 +468,7 @@ from all current bindings.
 This may result in an empty symbol set,
 which cannot be assigned directly.
 Non-satisfiable factors are uniformly replaced by
-.B ~<>
+.B !<>
 for simplicity.
 .
 .SH OPTIONS

@@ -7,105 +7,90 @@
 > This module provides methods to convert automata to the GraphViz
 > Dot format.  At the moment, only export is supported.
 > -}
-> module LTK.Porters.Dot ( -- *Exporting
->                          exportDot
->                        , exportDotWithName
->                        -- *Miscellaneous
->                        , formatSet
->                        ) where
+> module LTK.Porters.Dot
+>        ( -- *Exporting
+>          exportDot
+>        , exportDotWithName
+>        -- *Miscellaneous
+>        , formatSet
+>        ) where
 
-> import LTK.FSA
+> import Data.List (intercalate)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
-> nq :: String -> String
-> nq = keep (/= '"')
+> import LTK.FSA
 
-> collectBy :: (Collapsible t,
->               Container (t a) a, Container (t (t a)) (t a), Eq b) =>
->              (a -> b) -> t a -> t (t a)
-> collectBy f xs
->     | zsize xs   = empty
->     | otherwise  = insert firstKind . collectBy f $
->                       difference xs firstKind
->     where first      = chooseOne xs
->           firstKind  = keep ((==) (f first) . f) xs
+> showish :: (Show a) => a -> String
+> showish = filter (/= '"') . show
 
 > transitionClasses :: (Ord n, Ord e) => FSA n e -> Set (Set (Transition n e))
-> transitionClasses = unionAll .
->                     tmap (collectBy destination) .
->                     collectBy source .
+> transitionClasses = refinePartitionBy destination . partitionBy source .
 >                     transitions
-
-> commaSeparateList :: (Collapsible c) => c String -> String
-> commaSeparateList xs
->     | zsize xs       = ""
->     | isize xs == 1  = x
->     | otherwise      = x ++ ", " ++ commaSeparateList xs'
->     where (x, xs') = choose xs
 
 > -- |Return value is in the range \([0 .. n]\),
 > -- where \(n\) is the size of the input.
 > -- A value of \(n\) indicates that the element was
 > -- not in the input.
 > shortLabelIn :: (Collapsible s, Eq n) => s n -> n -> Int
-> shortLabelIn xs x
->     | zsize xs   = 0
->     | a == x     = 0
->     | otherwise  = 1 + shortLabelIn as x
->     where (a, as) = choose xs
+> shortLabelIn xs x = collapse (\y a -> if y == x then 0 else 1 + a) 0 xs
 
 > dotifyTransitionSet :: (Collapsible c, Eq e, Show e) =>
 >                        c (Symbol e, Int, Int) -> String
 > dotifyTransitionSet ts
 >     | zsize ts   = ""
 >     | otherwise  = (show src) ++ " -> " ++ (show dest) ++
->                       " [label=\"" ++ syms ++ "\"];"
+>                    " [label=\"" ++ syms ++ "\"];"
 >     where (_, src, dest)  = chooseOne ts
 >           first (a,_,_)   = a
 >           list            = collapse (:) [] ts
->           syms            = nq . commaSeparateList $
->                             tmap (sym . first) list
->           sym (Symbol a)  = deescape . nq $ show a
->           sym Epsilon     = "\x03b5" -- ε
+>           syms            = intercalate ", " $ map (sym . first) list
+>           sym (Symbol a)  = deescape $ showish a
+>           sym Epsilon     = "\x03B5" -- ε
 
 > dotifyTransitions :: (Ord n, Ord e, Show n, Show e) => FSA n e -> [String]
 > dotifyTransitions f = collapse (:) [] .
->                       tmap (dotifyTransitionSet .
->                             tmap (remakeTransition)) $
->                       transitionClasses f
->     where remakeTransition t  = ( edgeLabel t
->                                 , shortLabelIn sts (source t)
->                                 , shortLabelIn sts (destination t))
->           sts                  = states f
+>                       tmap
+>                       (dotifyTransitionSet .
+>                        tmap (remakeTransition)
+>                       ) $ transitionClasses f
+>     where remakeTransition t
+>               = ( edgeLabel t
+>                 , shortLabelIn sts (source t)
+>                 , shortLabelIn sts (destination t)
+>                 )
+>           sts = states f
 
 > dotifyInitial :: Int -> [String]
-> dotifyInitial n = [fakeStart ++ " [style=\"invis\", width=\"0\", height=\"0\", label=\"\"];",
->                    fakeStart ++ " -> " ++ realStart ++ ";"]
->     where realStart  = show n
->           fakeStart  = '_' : realStart ++ "_"
+> dotifyInitial n
+>     = [ fakeStart ++
+>         " [style=\"invis\", width=\"0\", height=\"0\", label=\"\"];"
+>       , fakeStart ++ " -> " ++ realStart ++ ";"
+>       ]
+>     where realStart  =  show n
+>           fakeStart  =  '_' : realStart ++ "_"
 
 > dotifyFinal :: Int -> [String]
 > dotifyFinal = (:[]) . (++ " [peripheries=\"2\"];") . show
 
 > dotifyInitials :: (Ord e, Ord n, Show n) => FSA n e -> [String]
-> dotifyInitials f = unionAll .
->                    tmap (dotifyInitial .
->                          shortLabelIn (states f)) $
+> dotifyInitials f = collapse
+>                    (union . dotifyInitial . shortLabelIn (states f))
+>                    empty $
 >                    initials f
 
 > dotifyFinals :: (Ord e, Ord n, Show n) => FSA n e -> [String]
-> dotifyFinals f = unionAll .
->                  tmap (dotifyFinal .
->                        shortLabelIn (states f)) $
+> dotifyFinals f = collapse
+>                  (union . dotifyFinal . shortLabelIn (states f))
+>                  empty $
 >                  finals f
 
 > dotifyStates :: (Ord e, Ord n, Show n) => FSA n e -> [String]
-> dotifyStates f = collapse (:) [] $ tmap makeLabel sts
+> dotifyStates f = map makeLabel $ fromCollapsible sts
 >     where sts          = states f
 >           idOf         = shortLabelIn sts
 >           makeLabel x  = show (idOf x) ++ " [label=\"" ++
->                          (deescape . nq . show $ nodeLabel x) ++ "\"];"
+>                          (deescape . showish $ nodeLabel x) ++ "\"];"
 
 > -- |Convert an 'FSA' to its representation in the GraphViz @dot@ format.
 > exportDot :: (Ord e, Ord n, Show e, Show n) => FSA n e -> String
@@ -115,23 +100,27 @@
 > -- with a provided name.
 > exportDotWithName :: (Ord e, Ord n, Show e, Show n) =>
 >                      String -> FSA n e -> String
-> exportDotWithName name f =
->     unlines $ ["digraph " ++ name ++ " {",
->                "graph [rankdir=\"LR\"];",
->                "node  [fixedsize=\"false\", fontsize=\"12.0\", height=\"0.5\", width=\"0.5\"];",
->                "edge  [fontsize=\"12.0\", arrowsize=\"0.5\"];"] ++
->     dotifyInitials f     ++
->     dotifyStates f       ++
->     dotifyFinals f       ++
->     dotifyTransitions f  ++
->     ["}"]
+> exportDotWithName name f
+>     = unlines $
+>       [ "digraph " ++ name ++ " {"
+>       , "graph [rankdir=\"LR\"];"
+>       , "node  [fixedsize=\"false\", fontsize=\"12.0\", " ++
+>             "height=\"0.5\", width=\"0.5\"];"
+>       , "edge  [fontsize=\"12.0\", arrowsize=\"0.5\"];"
+>       ] ++
+>       dotifyInitials f     ++
+>       dotifyStates f       ++
+>       dotifyFinals f       ++
+>       dotifyTransitions f  ++
+>       ["}"]
 
 > -- |Turn a 'Data.Set.Set' into a 'String':
 > --
 > -- >>> formatSet (fromList [1, 2, 3])
 > -- "{1, 2, 3}"
 > formatSet :: Show n => Set n -> String
-> formatSet =  ((++ "}") . ('{' :) . commaSeparateList . tmap (nq . show) . Set.toAscList)
+> formatSet =  (++ "}") . ('{' :) . intercalate ", " . map showish .
+>              Set.toAscList
 
 > deescape :: String -> String
 > deescape ('\\' : '&' : xs) = deescape xs

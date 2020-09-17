@@ -1,98 +1,141 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module : LTK.Porters
-> Copyright : (c) 2018-2019 Dakotah Lambert
+> Copyright : (c) 2018-2020 Dakotah Lambert
 > License   : MIT
 > 
 > This module provides methods to convert automata to and from
 > various formats.
 > -}
 
-> module LTK.Porters ( -- *Conversions
->                      -- |In the following definitions,
->                      -- @(Type t)@ is shorthand for @(String -> t)@.
->                      from
->                    , fromE
->                    , to
->                    -- *Formats
->                    -- |We use types to create a bit of magic
->                    -- in order to read and write automata in
->                    -- various formats.
->                    , Type()
->                    , Dot(Dot)
->                    , Jeff(Jeff)
->                    , Pleb(Pleb)
->                    -- *Miscellaneous
->                    , formatSet
->                    , transliterate
->                    , transliterateString
->                    , untransliterate
->                    , untransliterateString
->                    , Importable(..)
->                    , Exportable(..)
->                    ) where
+> module LTK.Porters
+>        ( -- *Conversions
+>          -- |In the following definitions,
+>          -- @(Type t)@ is shorthand for @(String -> t)@.
+>          from
+>        , fromE
+>        , to
+>        -- *Formats
+>        -- |We use types to create a bit of magic
+>        -- in order to read and write automata in
+>        -- various formats.
+>        , Type
+>        , Dot(Dot)
+>        , Jeff(Jeff)
+>        , Pleb(Pleb)
+>        , ATT(ATT)
+>        , ATTO(ATTO)
+>        , Corpus(Corpus)
+>        -- *Miscellaneous
+>        , formatSet
+>        , transliterate
+>        , transliterateString
+>        , untransliterate
+>        , untransliterateString
+>        , Importable(..)
+>        , Exportable(..)
+>        ) where
 
-> import LTK.FSA          (FSA, renameStates)
+> import LTK.FSA          (FSA, renameStates, renameSymbolsBy)
+> import LTK.Porters.ATT  ( exportATT
+>                         , invertATT
+>                         , readATT
+>                         )
+> import LTK.Porters.Corpus (readCorpus)
 > import LTK.Porters.Dot  (exportDot, formatSet)
-> import LTK.Porters.Jeff ( readJeff
->                         , exportJeff
+> import LTK.Porters.Jeff ( exportJeff
+>                         , readJeff
 >                         , transliterate
 >                         , transliterateString
 >                         , untransliterate
->                         , untransliterateString)
-> import LTK.Porters.Pleb ( readPleb )
+>                         , untransliterateString
+>                         )
+> import LTK.Porters.Pleb (readPleb)
 
 > -- |A type that can be written from an 'FSA'.
-> class Exportable t where
->     fromFSA  ::  (Ord n, Ord e, Show n, Show e) => FSA n e -> t
->     extract  ::  t -> String
+> class Exportable t
+>     where fromFSA  ::  (Ord n, Ord e, Show n, Show e) =>
+>                        (t -> t) -> FSA n e -> String
 
 > -- |A type that can be read and turned into an 'FSA'.
-> class Importable t where
->     toFSA       ::  t -> Either String (FSA Integer String)
+> class Importable t
+>     where toFSA :: (t -> t) -> String -> Either String (FSA Integer String)
 
 > -- |Create an 'FSA' from a @String@ treated as the given 'Type'.
 > from :: (Importable i) => Type i -> String -> FSA Integer String
 > from ty = either error id . fromE ty
 
 > -- |Try to create an 'FSA' from a @String@ treated as the given 'Type'.
-> fromE :: (Importable i) => Type i -> String -> Either String (FSA Integer String)
-> fromE ty = toFSA . ty
+> fromE :: (Importable i) =>
+>          Type i -> String -> Either String (FSA Integer String)
+> fromE ty = toFSA ty
 
 > -- |Create a @String@ from an 'FSA', formatted appropriately for
 > -- the given 'Type'.
 > to :: (Ord n, Ord e, Show n, Show e, Exportable x) =>
 >       Type x -> FSA n e -> String
-> to ty = extract . flip asTypeOf (ty "") . fromFSA
+> to ty = fromFSA ty
 
 > -- |An importable or exportable format.
-> type Type t = String -> t
+> type Type t = t -> t
 
 === Instances for Jeff's format
 
 > -- |Jeff's format.
-> newtype Jeff = Jeff String
+> newtype Jeff = Jeff Jeff
 
-> instance Exportable Jeff where
->     fromFSA           =  Jeff . exportJeff
->     extract (Jeff s)  =  s
+> instance Exportable Jeff
+>     where fromFSA _ = exportJeff
 
-> instance Importable Jeff where
->     toFSA  =  fmap renameStates . readJeff . extract
+> instance Importable Jeff
+>     where toFSA _ = fmap renameStates . readJeff
 
 === instances for Dot format
 
 > -- |The GraphViz Dot format.
-> newtype Dot = Dot String
+> newtype Dot = Dot Dot
 
-> instance Exportable Dot where
->     fromFSA          =  Dot . exportDot
->     extract (Dot s)  =  s
+> instance Exportable Dot
+>     where fromFSA _ = exportDot
 
 === instances for Pleb format
 
 > -- |The format defined by the (P)iecewise / (L)ocal (E)xpression (B)uilder.
-> newtype Pleb = Pleb String
+> newtype Pleb = Pleb Pleb
 
-> instance Importable Pleb where
->     toFSA (Pleb s) = readPleb s
+> instance Importable Pleb
+>     where toFSA _ = readPleb
+
+=== instances for ATT format
+
+> -- |The AT&T finite-state transducer format, input projection
+> --
+> -- @since 0.3
+> newtype ATT = ATT ATT
+
+> instance Importable ATT
+>     where toFSA _ = Right . readATT
+
+> instance Exportable ATT
+>     where fromFSA _ = exportATT
+
+> -- |The AT&T finite-state transducer format, output projection
+> --
+> -- @since 0.3
+> newtype ATTO = ATTO ATTO
+
+> instance Importable ATTO
+>     where toFSA _ = Right . readATT . invertATT
+
+> instance Exportable ATTO
+>     where fromFSA _ = invertATT . exportATT
+
+> -- |A corpus of strings
+> --
+> -- @since 0.3
+> newtype Corpus = Corpus Corpus
+
+> instance Importable Corpus
+>     where toFSA _ = Right .
+>                     renameStates . renameSymbolsBy (:[]) .
+>                     readCorpus . lines

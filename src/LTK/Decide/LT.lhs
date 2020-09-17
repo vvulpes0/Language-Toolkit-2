@@ -8,13 +8,15 @@
 > is Locally Testable (LT) based on the semigroup characterization
 > of Brzozowski and Simon from their 1973 work
 > "Characterizations of locally testable events".
+>
+> @since 0.2
 > -}
 > module LTK.Decide.LT (isLT) where
 
-> import LTK.FSA
-
 > import Data.Set (Set)
 > import qualified Data.Set as Set
+
+> import LTK.FSA
 
 > -- |True iff the automaton recognizes an LT stringset.
 > isLT :: (Ord n, Ord e) => FSA n e -> Bool
@@ -27,9 +29,8 @@ commutative monoid.
 > isSynMonOfLT :: (Ord n, Ord e) =>
 >                 FSA (n, [Symbol e]) e -> Bool
 > isSynMonOfLT s = allS (both (isCommutative s) (isIdempotent s) .
->                        generatedSubsemigroup s) $
->                  idempotents s
->     where both g h x = g x && h x
+>                        generatedSubsemigroup s
+>                       ) $ idempotents s
 
 An element x is idempotent iff xx == x.
 Here we use the syntactic monoid and simply exclude the identity
@@ -43,17 +44,20 @@ if it does not appear in the syntactic semigroup.
 > generatedSubsemigroup :: (Ord n, Ord e) =>
 >                          FSA (n, [Symbol e]) e -> State (n, [Symbol e]) ->
 >                          Set (State (n, [Symbol e]))
-> generatedSubsemigroup f x = collapse (union . follow f (snd $ nodeLabel x))
->                             empty (primitiveIdealR f x)
+> generatedSubsemigroup f x
+>     = collapse (union . follow f (snd $ nodeLabel x)) empty $
+>       primitiveIdealR f x
 
 > isIdempotent :: (Ord n, Ord e) =>
->                 FSA (n, [Symbol e]) e -> Set (State (n, [Symbol e])) -> Bool
+>                 FSA (n, [Symbol e]) e -> Set (State (n, [Symbol e])) ->
+>                 Bool
 > isIdempotent f = isSubsetOf (idempotents f)
 
 Testing commutativity by checking that all elements commute with one another.
 
 > isCommutative :: (Ord n, Ord e) =>
->                  FSA (n, [Symbol e]) e -> Set (State (n, [Symbol e])) -> Bool
+>                  FSA (n, [Symbol e]) e -> Set (State (n, [Symbol e])) ->
+>                  Bool
 > isCommutative f ss = allS (uncurry commute) (pairs ss)
 >     where commute u v = follow f (snd $ nodeLabel u) v ==
 >                         follow f (snd $ nodeLabel v) u

@@ -8,6 +8,8 @@
 > is Star-Free (SF) based on the semigroup characterization
 > of Schutzenberger as reported by Pin in his chapter
 > "Syntactic Semigroups" of "Handbook of Formal Languages"
+>
+> @since 0.2
 > -}
 > module LTK.Decide.SF (isSF) where
 

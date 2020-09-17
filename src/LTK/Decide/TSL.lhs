@@ -6,11 +6,13 @@
 
 > This module implements an algorithm to decide whether a given FSA
 > is Tier-Based Strictly Local (TSL) by my own algorithm.
+>
+> @since 0.2
 > -}
 > module LTK.Decide.TSL (isTSL) where
 
-> import LTK.FSA (FSA)
 > import LTK.Decide.SL (isSL)
+> import LTK.FSA (FSA)
 > import LTK.Tiers (project)
 
 > -- |True iff the automaton recognizes a TSL stringset.
