@@ -5,6 +5,8 @@
 > License   : MIT
 
 > This module implements a string extension learner for the SL class.
+>
+> @since 0.3
 > -}
 
 > module LTK.Learn.SL (SLG(..), fSL) where

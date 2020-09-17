@@ -115,7 +115,7 @@ path are sets.
 >            let newState  =  State $ collapse f empty xs
 >            in p { labels    =  chooseOne (tmap edgeLabel xs) : labels p
 >                 , endstate  =  Just newState
->                 , stateMultiset 
+>                 , stateMultiset
 >                       =  insert newState (stateMultiset p)
 >                 , depth     =  depth p + 1
 >                 }
