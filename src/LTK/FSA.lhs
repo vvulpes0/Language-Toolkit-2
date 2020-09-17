@@ -118,7 +118,8 @@ itself.
 > -- graph, the edges of which are labelled by formal symbols.
 > data FSA n e
 >     = FSA
->       { sigma            ::  Set e
+>       { -- |@since 0.3
+>         sigma            ::  Set e
 >       , transitions      ::  Set (Transition n e)
 >       , initials         ::  Set (State n)
 >       , finals           ::  Set (State n)

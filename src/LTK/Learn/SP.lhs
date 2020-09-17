@@ -5,6 +5,8 @@
 > License   : MIT
 
 > This module implements a string extension learner for the SP class.
+>
+> @since 0.3
 > -}
 
 > module LTK.Learn.SP (SPG, fSP) where

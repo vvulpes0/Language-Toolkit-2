@@ -6,6 +6,8 @@
 > 
 > A generic implementation of Jeff Heinz's "String Extension Learning".
 > For details, see https://www.aclweb.org/anthology/P10-1092
+>
+> @since 0.3
 > -}
 > module LTK.Learn.StringExt ( Grammar(..)
 >                            , learn

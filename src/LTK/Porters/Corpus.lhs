@@ -6,6 +6,8 @@
 > 
 > This module provides methods to construct
 > prefix-trees of corpora.
+>
+> @since 0.3
 > -}
 > module LTK.Porters.Corpus (readCorpus) where
 

@@ -175,6 +175,8 @@ The first and second parts of this pair may be returned alone by
 > -- of the first and second are inserted in an interleaving manner.
 > -- For lists, this guarantees that a finite initial segment will
 > -- contain elements from each, in contrast to the @(++)@ operator.
+> --
+> -- @since 0.3
 > interleave :: (Linearizable c, Container (c a) a)
 >               => c a -> c a -> c a
 > interleave xs ys
@@ -254,6 +256,8 @@ of predicates:
 >   #-}
 
 > -- |True iff the given object satisfies both given predicates.
+> --
+> -- @since 0.3
 > both :: (a -> Bool) -> (a -> Bool) -> a -> Bool
 > both f g x = f x && g x
 
@@ -576,6 +580,8 @@ Miscellaneous functions
 
 > -- |All possible sequences over a given alphabet,
 > -- generated in a breadth-first manner.
+> --
+> -- @since 0.3
 > sequencesOver :: [a] -> [[a]]
 > sequencesOver a = [] :
 >                   if null a
@@ -619,5 +625,7 @@ with a variant that is at least still faster than filter.
 
 
 > -- |Allow for overloading of the term alphabet.
+> --
+> -- @since 0.3
 > class HasAlphabet g
 >     where alphabet :: g e -> Set e

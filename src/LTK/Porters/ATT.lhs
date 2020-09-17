@@ -9,6 +9,8 @@
 > the contents of which can be merged via 'embedSymbolsATT'.  When
 > exporting, you should similarly use 'extractSymbolsATT' to unmerge
 > the resulting files.
+>
+> @since 0.3
 > -}
 > module LTK.Porters.ATT
 >        ( embedSymbolsATT

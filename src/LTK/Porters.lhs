@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module : LTK.Porters
-> Copyright : (c) 2018-2019 Dakotah Lambert
+> Copyright : (c) 2018-2020 Dakotah Lambert
 > License   : MIT
 > 
 > This module provides methods to convert automata to and from
@@ -109,6 +109,8 @@
 === instances for ATT format
 
 > -- |The AT&T finite-state transducer format, input projection
+> --
+> -- @since 0.3
 > newtype ATT = ATT ATT
 
 > instance Importable ATT
@@ -118,6 +120,8 @@
 >     where fromFSA _ = exportATT
 
 > -- |The AT&T finite-state transducer format, output projection
+> --
+> -- @since 0.3
 > newtype ATTO = ATTO ATTO
 
 > instance Importable ATTO
@@ -127,6 +131,8 @@
 >     where fromFSA _ = invertATT . exportATT
 
 > -- |A corpus of strings
+> --
+> -- @since 0.3
 > newtype Corpus = Corpus Corpus
 
 > instance Importable Corpus
