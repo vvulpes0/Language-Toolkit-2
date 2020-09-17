@@ -1122,8 +1122,7 @@ the source as accepting.
 > -- stateset in the powerset of \(Q\).
 > -- From a node \(\{q_1,q_2,\ldots,q_n\}\),
 > -- there is an edge labelled \(\sigma\) that leads to
-> -- \(\{\delta(q_1,\sigma), \delta(q_2,\sigma), \ldots,
-> --   \delta(q_n, \sigma)\}\),
+> -- \(\{\delta(q_1,\sigma), \delta(q_2,\sigma), \ldots, \delta(q_n, \sigma)\}\),
 > -- where \(\delta\) is the transition function of the input.
 > -- The initial state is \(Q\), and the result is complete.
 > powersetGraph :: (Ord e, Ord n) => FSA n e -> FSA (Set n) e
@@ -1158,8 +1157,7 @@ state is considered accepting in the syntactic monoid.
 > -- where \(q_i\) maps to the \(i^\text{th}\) element of the list.
 > -- From a node \(\langle q_1,q_2,\ldots,q_n\rangle\),
 > -- there is an edge labelled \(\sigma\) that leads to
-> -- \(\langle\delta(q_1,\sigma), \delta(q_2,\sigma), \ldots,
-> --   \delta(q_n, \sigma)\rangle\),
+> -- \(\langle\delta(q_1,\sigma), \delta(q_2,\sigma), \ldots, \delta(q_n, \sigma)\rangle\),
 > -- where \(\delta\) is the transition function of the input.
 > -- The initial state is the identity function, and the result is complete.
 > syntacticMonoid :: (Ord e, Ord n) =>
