@@ -15,8 +15,7 @@
  stateset in the powerset of <span class="mathjax">\(Q\)</span>.
  From a node <span class="mathjax">\(\{q_1,q_2,\ldots,q_n\}\)</span>,
  there is an edge labelled <span class="mathjax">\(\sigma\)</span> that leads to
- ({delta(q_1,sigma), delta(q_2,sigma), ldots,
-   delta(q_n, sigma)}),
+ <span class="mathjax">\(\{\delta(q_1,\sigma), \delta(q_2,\sigma), \ldots, \delta(q_n, \sigma)\}\)</span>,
  where <span class="mathjax">\(\delta\)</span> is the transition function of the input.
  The initial state is <span class="mathjax">\(Q\)</span>, and the result is complete.</p></div></div><div class="top"><p class="src"><a id="v:syntacticMonoid" class="def">syntacticMonoid</a> :: (<a href="https://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Ord.html#t:Ord" title="Data.Ord">Ord</a> e, <a href="https://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Ord.html#t:Ord" title="Data.Ord">Ord</a> n) =&gt; <a href="LTK-FSA.html#t:FSA" title="LTK.FSA">FSA</a> n e -&gt; <a href="LTK-FSA.html#t:FSA" title="LTK.FSA">FSA</a> ([<a href="https://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Maybe.html#t:Maybe" title="Data.Maybe">Maybe</a> n], [<a href="LTK-FSA.html#t:Symbol" title="LTK.FSA">Symbol</a> e]) e <a href="#v:syntacticMonoid" class="selflink">#</a></p><div class="doc"><p>Given an automaton <span class="mathjax">\(M\)</span> with stateset <span class="mathjax">\(Q\)</span>,
  the syntactic monoid of <span class="mathjax">\(M\)</span> is an automaton with
@@ -25,8 +24,7 @@
  where <span class="mathjax">\(q_i\)</span> maps to the <span class="mathjax">\(i^\text{th}\)</span> element of the list.
  From a node <span class="mathjax">\(\langle q_1,q_2,\ldots,q_n\rangle\)</span>,
  there is an edge labelled <span class="mathjax">\(\sigma\)</span> that leads to
- (langledelta(q_1,sigma), delta(q_2,sigma), ldots,
-   delta(q_n, sigma)rangle),
+ <span class="mathjax">\(\langle\delta(q_1,\sigma), \delta(q_2,\sigma), \ldots, \delta(q_n, \sigma)\rangle\)</span>,
  where <span class="mathjax">\(\delta\)</span> is the transition function of the input.
  The initial state is the identity function, and the result is complete.</p></div></div><div class="top"><p class="src"><a id="v:residue" class="def">residue</a> :: (<a href="https://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Ord.html#t:Ord" title="Data.Ord">Ord</a> n, <a href="https://hackage.haskell.org/packages/archive/base/latest/doc/html/Data-Ord.html#t:Ord" title="Data.Ord">Ord</a> e, <a href="https://hackage.haskell.org/packages/archive/base/latest/doc/html/Prelude.html#t:Enum" title="Prelude">Enum</a> n) =&gt; <a href="LTK-FSA.html#t:FSA" title="LTK.FSA">FSA</a> n e -&gt; <a href="LTK-FSA.html#t:FSA" title="LTK.FSA">FSA</a> n e -&gt; <a href="LTK-FSA.html#t:FSA" title="LTK.FSA">FSA</a> n e <a href="#v:residue" class="selflink">#</a></p><div class="doc"><p><code>(residue a b)</code> is equivalent to <code>(difference a b)</code>.
  In the context of an approximation and its source,
