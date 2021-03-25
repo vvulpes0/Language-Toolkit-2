@@ -48,6 +48,7 @@
 
 > import LTK.FSA
 > import LTK.Factors (Factor(..), buildLiteral, required)
+> import LTK.Extract.SP (subsequenceClosure)
 
 > -- |A syntactic unit.
 > data Token = TSymbol Char
@@ -87,7 +88,8 @@
 
 > -- |A subexpression that consists of a unary operator and its operand.
 > data UnaryExpr
->     = Iteration Expr
+>     = DownClose Expr
+>     | Iteration Expr
 >     | Negation Expr
 >     | Tierify [SymSet] Expr
 >       deriving (Eq, Ord, Read, Show)
@@ -162,6 +164,7 @@
 >                    NAry (Conjunction es)    ->  f Conjunction es
 >                    NAry (Disjunction es)    ->  f Disjunction es
 >                    NAry (Domination es)     ->  f Domination es
+>                    Unary (DownClose ex)     ->  g DownClose ex
 >                    Unary (Iteration ex)     ->  g Iteration ex
 >                    Unary (Negation ex)      ->  g Negation ex
 >                    Unary (Tierify ts ex)
@@ -201,6 +204,9 @@ prevents having to descend through the tree to find this information.
 >              -> f (mconcat .
 >                    intersperse (totalWithAlphabet (singleton Nothing))
 >                   ) es
+>          Unary (DownClose ex)
+>              -> renameStates . minimize . subsequenceClosure $
+>                 automatonFromExpr ex
 >          Unary (Iteration ex)
 >              -> renameStates . minimize . kleeneClosure $
 >                 automatonFromExpr ex
@@ -244,6 +250,7 @@ prevents having to descend through the tree to find this information.
 >           usedSymbolsN (Conjunction es)    =  us es
 >           usedSymbolsN (Disjunction es)    =  us es
 >           usedSymbolsN (Domination es)     =  us es
+>           usedSymbolsU (DownClose ex)      =  usedSymbols ex
 >           usedSymbolsU (Iteration ex)      =  usedSymbols ex
 >           usedSymbolsU (Negation ex)       =  usedSymbols ex
 >           usedSymbolsU (Tierify ts _)      =  unionAll ts
@@ -327,7 +334,8 @@ prevents having to descend through the tree to find this information.
 > parseUnaryExpr :: Dictionary SymSet -> Dictionary Expr -> Parse UnaryExpr
 > parseUnaryExpr dict subexprs
 >     = (makeLifter
->        [ (["*", "∗"],       Iteration)
+>        [ (["↓", "$"],       DownClose)
+>        , (["*", "∗"],       Iteration)
 >        , (["¬", "~", "!"],  Negation)
 >        ] <*> parseExpr dict subexprs
 >       ) <|> (Tierify <$> pt <*> parseExpr dict subexprs)

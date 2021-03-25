@@ -268,6 +268,11 @@ Allow it to occur zero or more times.
 This has the same caveat as the concatenation operator:
 factor-expressions that are not fully anchored
 may have arbitrary strings at the non-anchored ends.
+.TP
+.B $
+The downward closure of the operand.
+Accept all and only those strings that can be formed
+by deleting zero or more symbols from a string accepted by the operand.
 .PP
 .B [
 .RI < symbols "> ["
@@ -315,6 +320,9 @@ there is a unicode syntax that provides the following synonyms:
 .TP
 .B *
 <U+2217> [asterisk operator]
+.TP
+.B $
+<U+2139> [downwards arrow]
 .PP
 No special setup is needed to use these synonyms,
 except possibly configuring your environment
