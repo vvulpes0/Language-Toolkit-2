@@ -17,7 +17,8 @@
 >                   , isTSL, isTLT, isTLTT
 >                   -- * Piecewise classes
 >                   , isSP, isPT
->                   -- * Beyond the Local/Piecewise merge
+>                   -- * Others
+>                   , isFO2, isFO2B, isFO2S
 >                   , isSF
 >                   ) where
 
@@ -30,3 +31,4 @@
 > import LTK.Decide.SP
 > import LTK.Decide.PT
 > import LTK.Decide.SF
+> import LTK.Decide.FO2

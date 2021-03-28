@@ -36,6 +36,7 @@
 >                         , isLTT, isTLTT
 >                         , isSP
 >                         , isPT
+>                         , isFO2, isFO2B, isFO2S
 >                         , isSF
 >                         )
 > import LTK.FSA
@@ -93,6 +94,7 @@
 >                deriving (Eq, Ord, Read, Show)
 
 > data Command = Bindings
+>              | D_JE Expr -- Display J-minimized Form
 >              | D_PSG Expr -- Display Powerset Graph
 >              | D_SM Expr -- Display Syntactic Monoid
 >              | Display Expr
@@ -122,6 +124,9 @@
 >                deriving (Eq, Read, Show)
 
 > data Relation = Equal Expr Expr
+>               | IsFO2 Expr
+>               | IsFO2B Expr
+>               | IsFO2S Expr
 >               | IsLT Expr
 >               | IsLTT Expr
 >               | IsPT Expr
@@ -285,6 +290,21 @@
 >                   , [ArgF]
 >                   , "read file as plebby script"
 >                   )
+>                 , ( ":isFO2"
+>                   , (M . IsFO2) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is FO2[<]-definable"
+>                   )
+>                 , ( ":isFO2B"
+>                   , (M . IsFO2B) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is FO2[<,bet]-definable"
+>                   )
+>                 , ( ":isFO2S"
+>                   , (M . IsFO2S) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is FO2[<,+1]-definable"
+>                   )
 >                 , ( ":isLT"
 >                   , (M . IsLT) <$> pe
 >                   , [ArgE]
@@ -329,6 +349,11 @@
 >                   , (M . IsTSL) <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Strictly Tier-Local"
+>                   )
+>                 , ( ":Jmin"
+>                   , (L . D_JE) <$> pe
+>                   , [ArgE]
+>                   , ":display the J-minimized version of expr"
 >                   )
 >                 , ( ":learnSL"
 >                   , error ":learnSL not defined here"
@@ -455,6 +480,9 @@
 >                 putStrLn (formatSet $ tmap fst subexprs) >>
 >                 return e
 >          Display expr -> disp id expr
+>          D_JE expr -> disp (renameStatesBy (formatSet . tmap f)
+>                             . minimizeOver jEquivalence
+>                             . syntacticMonoid) expr
 >          D_PSG expr -> disp (renameStatesBy formatSet . powersetGraph) expr
 >          D_SM expr -> disp (renameStatesBy f . syntacticMonoid) expr
 >          Dotify expr -> dot id expr
@@ -697,6 +725,9 @@
 > doRelation e r
 >     = case r
 >       of Equal p1 p2    ->  relate e (==) p1 p2
+>          IsFO2 p        ->  check isFO2 p
+>          IsFO2B p       ->  check isFO2B p
+>          IsFO2S p       ->  check isFO2S p
 >          IsLT p         ->  check isLT p
 >          IsLTT p        ->  check isLTT p
 >          IsPT p         ->  check isPT p
