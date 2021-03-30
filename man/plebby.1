@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEBBY 1 "2020-09-16" "Version 0.3" "Language Toolkit"
+.TH PLEBBY 1 "2021-03-30" "Version 0.3" "Language Toolkit"
 .SH NAME
 plebby \- Piecewise / Local Expression Builder Interpreter
 .SH SYNOPSIS
@@ -145,101 +145,107 @@ and some lines may be interpreter commands (including
 .RE
 .
 .SS Determining the Class of an Expression
+The commands in this section determine whether a given
+.I expr
+is in the corresponding class
+with respect to the current
+.BR universe .
+.
+.PP
+.B :isFO2
+.RI < expr >
+.RS
+First-order logic with general precedence,
+restricted to two variables.
+.RE
+.
+.B :isFO2B
+.RI < expr >
+.RS
+First-order logic with general precedence and betweenness,
+restricted to two variables.
+.RE
+.
+.B :isFO2S
+.RI < expr >
+.RS
+First-order logic with general precedence and successor,
+restricted to two variables.
+.RE
+.
 .B :isLT
 .RI < expr >
 .RS
-Determine whether
-.RI < expr >
-represents a Locally Testable stringset
-in the current
-.BR universe .
+Locally testable.
 .RE
 .
 .B :isLTT
 .RI < expr >
 .RS
-Determine whether
-.RI < expr >
-represents a Locally Threshold Testable stringset
-in the current
-.BR universe .
+Locally threshold testable,
+equivalent to first-order logic with successor
+but not general precedence.
 .RE
 .
 .PP
 .B :isPT
 .RI < expr >
 .RS
-Determine whether
-.RI < expr >
-represents a Piecewise Testable stringset
-in the current
-.BR universe .
+Piecewise testable.
 .RE
 .
 .PP
 .B :isSF
 .RI < expr >
 .RS
-Determine whether
-.RI < expr >
-represents a Star-Free stringset
-in the current
-.BR universe .
+Star-free, equivalent to first-order logic with general precedence.
 .RE
 .
 .PP
 .B :isSL
 .RI < expr >
 .RS
-Determine whether
-.RI < expr >
-represents a Strictly Local stringset
-in the current
-.BR universe .
+Strictly local.
 .RE
 .
 .PP
 .B :isSP
 .RI < expr >
 .RS
-Determine whether
-.RI < expr >
-represents a Strictly Piecewise stringset
-in the current
-.BR universe .
-.RE
-.
-.PP
-.B :isTSL
-.RI < expr >
-.RS
-Determine whether
-.RI < expr >
-represents a Tier-Based Strictly Local stringset
-in the current
-.BR universe .
+Strictly piecewise.
 .RE
 .
 .PP
 .B :isTLT
 .RI < expr >
 .RS
-Determine whether
-.RI < expr >
-represents a Tier-Based Locally Testable stringset
-in the current
-.BR universe .
+Tier-based locally testable:
+contains all and only the strings whose projections
+to some fixed subset of the current
+.B universe
+lie in a locally testable stringset.
 .RE
 .
 .PP
 .B :isTLTT
 .RI < expr >
 .RS
-Determine whether
+Tier-based locally threshold testable:
+contains all and only the strings whose projections
+to some fixed subset of the current
+.B universe
+lie in a locally threshold testable stringset.
+.RE
+.
+.PP
+.B :isTSL
 .RI < expr >
-represents a Tier-Based Locally Threshold Testable stringset
-in the current
-.BR universe .
+.RS
+Tier-based strictly local:
+contains all and only the strings whose projections
+to some fixed subset of the current
+.B universe
+lie in a strictly local stringset.
 .RE
 .
 .SS Grammatical Inference
