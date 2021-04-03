@@ -58,9 +58,9 @@ from something star-free.
 > fo2test :: (Ord n, Ord e) => FSA (S n e) e -> Set (State (S n e))-> Bool
 > fo2test monoid xs = trivialUnder hEquivalence monoid -- isSF
 >                     && (all f $ triples xs) -- in DA
->     where f (x, y, z) = let xyzw = omega monoid ((x @ y) @ z)
->                         in (xyzw @ y) @ xyzw == xyzw
->           a @ b = Set.findMin $ follow monoid (snd (nodeLabel b)) a
+>     where f (x, y, z) = let xyzw = omega monoid ((x $*$ y) $*$ z)
+>                         in (xyzw $*$ y) $*$ xyzw == xyzw
+>           a $*$ b = Set.findMin $ follow monoid (snd (nodeLabel b)) a
 
 > -- |@omega monoid s@ is the unique element \(t\) where \(t*t\) = \(t\)
 > -- and \(t\) is in \(\{s, s^2, s^3, \ldots\}\).
