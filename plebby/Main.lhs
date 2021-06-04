@@ -38,6 +38,7 @@
 >                         , isPT
 >                         , isFO2, isFO2B, isFO2S
 >                         , isSF
+>                         , isFinite
 >                         )
 > import LTK.FSA
 > import LTK.Learn.SL  (fSL)
@@ -124,6 +125,7 @@
 >                deriving (Eq, Read, Show)
 
 > data Relation = Equal Expr Expr
+>               | IsFin Expr
 >               | IsFO2 Expr
 >               | IsFO2B Expr
 >               | IsFO2S Expr
@@ -289,6 +291,11 @@
 >                   , error ":import not defined here"
 >                   , [ArgF]
 >                   , "read file as plebby script"
+>                   )
+>                 , ( ":isFinite"
+>                   , (M . IsFin) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is finite"
 >                   )
 >                 , ( ":isFO2"
 >                   , (M . IsFO2) <$> pe
@@ -725,6 +732,7 @@
 > doRelation e r
 >     = case r
 >       of Equal p1 p2    ->  relate e (==) p1 p2
+>          IsFin p        ->  check isFinite p
 >          IsFO2 p        ->  check isFO2 p
 >          IsFO2B p       ->  check isFO2B p
 >          IsFO2S p       ->  check isFO2S p

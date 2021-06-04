@@ -61,6 +61,7 @@ library
                   LTK
                 , LTK.Containers
                 , LTK.Decide
+                , LTK.Decide.Finite
                 , LTK.Decide.FO2
                 , LTK.Decide.LT
                 , LTK.Decide.LTT

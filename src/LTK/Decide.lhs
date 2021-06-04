@@ -11,8 +11,10 @@
 > @since 0.2
 > -}
 > module LTK.Decide (
+>                   -- * Classes involving finiteness
+>                   isFinite, isCofinite
 >                   -- * Basic local classes
->                   isSL, isLT, isLTT
+>                   , isSL, isLT, isLTT
 >                   -- * Tier-based generalizations
 >                   , isTSL, isTLT, isTLTT
 >                   -- * Piecewise classes
@@ -22,6 +24,7 @@
 >                   , isSF
 >                   ) where
 
+> import LTK.Decide.Finite
 > import LTK.Decide.SL
 > import LTK.Decide.LT
 > import LTK.Decide.LTT

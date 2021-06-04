@@ -15,6 +15,7 @@
 > module LTK.Traversals
 >        ( Path(..)
 >        , word
+>        , isAcyclic
 >        , initialsPaths
 >        , initialsNDPath
 >        , rejectingPaths
@@ -246,3 +247,12 @@ rejectingPaths fsa bound
 >                            fsa bound (initialsPaths fsa) empty
 >     where rejecting f p = doesNotContain (endstate p) .
 >                           tmap Just $ finals f
+
+> -- |True iff the given FSA contains no reachable cycles.
+> isAcyclic :: (Ord n, Ord e) => FSA n e -> Bool
+> isAcyclic f = isEmpty
+>               $ traversalQDFS hasCycle f (n + 1) (initialsPaths f) empty
+>     where hasCycle _ = (/=) (singleton 1)
+>                        . multiplicities
+>                        . stateMultiset
+>           n = size $ states f

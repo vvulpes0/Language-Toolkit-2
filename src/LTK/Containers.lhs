@@ -47,6 +47,7 @@
 >        -- *Multisets
 >        , Multiset
 >        , multiplicity
+>        , multiplicities
 >        , multisetFromList
 >        , setFromMultiset
 >        -- *Set of Set with alternate ordering
@@ -420,6 +421,10 @@ lookup-time logarithmic in the number of distinct elements.
 >     where f (y, m)
 >               | y == x     =  m
 >               | otherwise  =  0
+
+> -- |Every multiplicity that occurs in the multiset.
+> multiplicities :: (Ord a) => Multiset a -> Set Integer
+> multiplicities (Multiset xs) = Set.map snd xs
 
 > -- |A specialization of 'fromCollapsible'
 > -- with time complexity \(O(n)\),
