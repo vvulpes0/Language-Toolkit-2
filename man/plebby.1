@@ -516,12 +516,18 @@ given the representation,
 might be slow to compute.
 This holds especially true for the (T)LTT test.
 .
+.P
+The AT&T format cannot handle symbols that contain spaces.
+Further, numeric symbols are treated as indices into the symbols files,
+so symbol mapping files must be written
+when exporting automata that actually use such symbols.
 .SH BUGS
 Lines that cannot be parsed are ignored,
 but generally no warnings are emitted.
 .SH "SEE ALSO"
 .BR display (1),
 .BR dot (1),
+.BR fsm (5),
 .BR pleb (5)
 .PP
 https://github.com/judah/haskeline/wiki/UserPreferences

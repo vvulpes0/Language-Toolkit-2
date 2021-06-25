@@ -22,8 +22,11 @@
 >        , exportATT
 >        ) where
 
+> import Data.Char (isDigit)
 > import Data.List (intercalate)
 > import Data.Set (Set)
+> import Data.Map (Map)
+> import qualified Data.Map.Strict as Map
 > import qualified Data.Set as Set
 
 > import LTK.FSA
@@ -76,7 +79,7 @@ Reading an AT&T format automaton
 > -- it discards weights and returns only the input projection.
 > readATT :: String -> FSA Integer String
 > readATT x = renameStates $
->             FSA { sigma            =  union al as
+>             FSA { sigma            =  union al' as
 >                 , transitions      =  ts
 >                 , initials         =  singleton qi
 >                 , finals           =  fs
@@ -84,38 +87,45 @@ Reading an AT&T format automaton
 >                 }
 >     where (es, i, _)     =  extractSymbolsATT x
 >           (al, eps)      =  makeAlphabet (lines i)
->           (ts,as,qi,fs)  =  makeTransitions (lines es) eps
+>           al'            =  Set.fromList $ Map.elems al
+>           (ts,as,qi,fs)  =  makeTransitions (lines es) al eps
 
-> makeAlphabet :: [String] -> (Set (String), Maybe String)
-> makeAlphabet ss = findEps (Set.empty, Nothing) ps
+> makeAlphabet :: [String] -> (Map String String, Maybe String)
+> makeAlphabet ss = findEps (Map.empty, Nothing) ps
 >     where ps = foldr maybeInsert [] (map words ss)
 >           maybeInsert (a:b:_)  =  (:) (a, b)
 >           maybeInsert _        =  id
 >           findEps (l, x) []    =  (l, x)
 >           findEps (l, x) ((s, t):as)
 >               = flip findEps as $
->                 if t == "0" then (l, Just s) else (Set.insert s l, x)
+>                 if t == "0" then (l, Just s) else (Map.insert t s l, x)
 
-> makeTransitions :: [String] -> Maybe String ->
+> makeTransitions :: [String] -> Map String String -> Maybe String ->
 >                    ( Set (Transition String String)  -- transitions
 >                    , Set String                      -- alphabet
 >                    , State String                    -- initial state
 >                    , Set (State String)              -- final states
 >                    )
-> makeTransitions ss meps = foldr update
->                           (Set.empty, Set.empty, State "", Set.empty) $
->                           map words ss
->     where eps = maybe "" id meps
+> makeTransitions ss tags meps
+>     = foldr update
+>       (Set.empty, Set.empty, State "", Set.empty) $
+>       map words ss
+>     where symbolify x
+>               | x == "0" = Nothing -- 0 is reserved for epsilon
+>               | Just x == meps = Nothing
+>               | otherwise = Just . maybe x id $ Map.lookup x tags
 >           update (a:[]) (ts, as, qi, fs)
 >               = (ts, as, qi, Set.insert (State a) fs)
+>           update (a:_:[]) partial  -- if final state with cost
+>               = update [a] partial -- just ignore the cost
 >           update (s:d:l:_) (ts, as, _, fs)
 >               = ( flip Set.insert ts $
 >                   Transition
 >                   { source      = State s
 >                   , destination = State d
->                   , edgeLabel   = if l == eps then Epsilon else Symbol l
+>                   , edgeLabel   = maybe Epsilon Symbol $ symbolify l
 >                   }
->                 , if l == eps then as else Set.insert l as
+>                 , maybe as (flip Set.insert as) $ symbolify l
 >                 , State s -- the first line updates this last in foldr
 >                 , fs
 >                 )
@@ -128,13 +138,17 @@ Creating an AT&T format automaton
 > -- |Convert an 'FSA' into its AT&T format, with one caveat:
 > -- The LTK internal format allows for symbols that the AT&T format
 > -- does not understand, and no attempt is made to work around this.
+> -- Nonnumeric symbols are exported as-is,
+> -- while numeric symbols are necessarily mapped
+> -- to their tags in the symbols file(s).
 > exportATT :: (Ord n, Ord e, Show e) => FSA n e -> String
-> exportATT f = unlines $
->               dumpInitials (initials f')  ++
->               dumpTransitions ts          ++
->               dumpFinals (finals f')      ++
->               syms ++ syms -- once for input, once for output
->     where syms = separator : dumpAlphabet (alphabet f')
+> exportATT f = unlines
+>               $ dumpInitials tags (initials f')
+>               ++ dumpTransitions tags ts
+>               ++ dumpFinals (finals f')
+>               ++ syms ++ syms -- once for input, once for output
+>     where tags = flip zip [1..] . Set.toAscList $ alphabet f'
+>           syms = separator : dumpAlphabet tags
 >           f'   = if (Set.size (initials f) == 1)
 >                  then renameStatesBy (subtract (1::Integer)) $
 >                       renameStates f
@@ -142,28 +156,37 @@ Creating an AT&T format automaton
 >           ts   = Set.map (\t -> (source t, destination t, edgeLabel t)) $
 >                  transitions f'
 
-> dumpAlphabet :: (Ord e, Show e) => Set e -> [String]
-> dumpAlphabet as = p defaultEpsilon 0 :
->                   (map (uncurry p) . flip zip [1..] $ Set.toAscList as)
->     where p a t = showish a ++ "\t" ++ show (t + (0 :: Integer))
+> dumpAlphabet :: (Ord e, Show e) => [(e, Int)] -> [String]
+> dumpAlphabet tags = p defaultEpsilon 0 : (map (uncurry p) tags)
+>     where p a t = showish a ++ "\t" ++ show (t + (0 :: Int))
 
-> dumpInitials :: (Ord n, Show n, Num n) => Set (State n) -> [String]
-> dumpInitials qis
+> dumpInitials :: (Ord n, Ord e, Show n, Show e, Num n) =>
+>                 [(e, Int)] -> Set (State n) -> [String]
+> dumpInitials tags qis
 >     | Set.size qis < 2 = []
->     | otherwise = map (\q -> dumpTr (State 0, q, eps)) $ Set.toAscList qis
->     where eps = Epsilon :: Symbol String
+>     | otherwise = map (\q -> dumpTr tags (State 0, q, eps))
+>                   $ Set.toAscList qis
+>     where eps = Epsilon
 
 > dumpTransitions :: (Ord n, Ord e, Show n, Show e) =>
->                    Set (State n, State n, Symbol e) -> [String]
-> dumpTransitions ts = map dumpTr $ Set.toAscList ts
+>                    [(e, Int)] -> Set (State n, State n, Symbol e) ->
+>                    [String]
+> dumpTransitions tags ts = map (dumpTr tags) $ Set.toAscList ts
 
 > dumpTr :: (Ord n, Ord e, Show n, Show e) =>
->           (State n, State n, Symbol e) -> String
-> dumpTr (s, d, l) = intercalate "\t" $
->                    [show $ nodeLabel s, show $ nodeLabel d, l', l']
+>           [(e, Int)] -> (State n, State n, Symbol e) -> String
+> dumpTr tags (s, d, l)
+>     = intercalate "\t" $
+>       [show $ nodeLabel s, show $ nodeLabel d, l', l']
 >     where l' = case l
->                of Symbol e -> showish e
+>                of Symbol e -> f e
 >                   _        -> defaultEpsilon
+>           f e
+>               | all isDigit (showish e)
+>                   = head
+>                     . (++ [showish e]) . map (showish . snd)
+>                     $ filter ((== e) . fst) tags
+>               | otherwise = showish e
 
 > dumpFinals :: (Ord n, Show n) => Set (State n) -> [String]
 > dumpFinals = map (show . nodeLabel) . Set.toAscList
