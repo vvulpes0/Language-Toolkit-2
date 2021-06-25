@@ -1,3 +1,9 @@
+> {-# Language CPP #-}
+
+#if !defined(MIN_VERSION_base)
+# define MIN_VERSION_base(a,b,c) 0
+#endif
+
 > module Main (main) where
 
 > import Control.Concurrent ( MVar
@@ -9,7 +15,9 @@
 >                           , takeMVar
 >                           )
 > import Control.DeepSeq (NFData)
+#if !MIN_VERSION_base(4,8,0)
 > import Data.Functor ((<$>))
+#endif
 > import Data.List (sortBy)
 > import Data.Set (Set)
 > import System.Directory (createDirectoryIfMissing, doesFileExist)

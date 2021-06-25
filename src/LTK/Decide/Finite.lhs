@@ -9,9 +9,6 @@
 > -}
 > module LTK.Decide.Finite (isFinite, isCofinite) where
 
-> import Data.Set (Set)
-> import qualified Data.Set as Set
-
 > import LTK.FSA
 > import LTK.Traversals
 

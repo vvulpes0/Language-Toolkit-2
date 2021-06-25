@@ -6,10 +6,12 @@
 
 > module Main (main) where
 
+#if !MIN_VERSION_base(4,8,0)
 > import Control.Applicative (pure, (<*>))
+> import Data.Functor ((<$>))
+#endif
 > import Control.Monad.Trans.Class (lift)
 > import Data.Char (isSpace, toLower)
-> import Data.Functor ((<$>))
 > import Data.List (intercalate)
 > import System.Console.Haskeline ( InputT
 >                                 , defaultSettings

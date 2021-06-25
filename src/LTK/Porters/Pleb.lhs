@@ -1,7 +1,13 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
+> {-# Language CPP #-}
+
+#if !defined(MIN_VERSION_base)
+# define MIN_VERSION_base(a,b,c) 0
+#endif
+
 > {-|
 > Module:    LTK.Porters.Pleb
-> Copyright: (c) 2018-2019 Dakotah Lambert
+> Copyright: (c) 2018-2021 Dakotah Lambert
 > License:   MIT
 
 > The (P)iecewise / (L)ocal (E)xpression (B)uilder.
@@ -36,13 +42,16 @@
 >        , tokenize
 >        ) where
 
-> import Control.Applicative ( Alternative, Applicative
->                            , empty, many, pure, some, (<*>), (<|>))
+#if !MIN_VERSION_base(4,8,0)
+> import Data.Functor ((<$>))
+> import Data.Monoid (mconcat)
+> import Control.Applicative (Applicative, pure, (<*>))
+#endif
+> import Control.Applicative ( Alternative
+>                            , empty, many, some, (<|>))
 > import Data.Char (isLetter, isSpace)
 > import Data.Foldable (asum)
-> import Data.Functor ((<$>))
 > import Data.List (intersperse)
-> import Data.Monoid (mconcat)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 

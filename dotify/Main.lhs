@@ -1,6 +1,14 @@
+> {-# Language CPP #-}
+
+#if !defined(MIN_VERSION_base)
+# define MIN_VERSION_base(a,b,c) 0
+#endif
+
 > module Main (main) where
 
+#if !MIN_VERSION_base(4,8,0)
 > import Data.Functor ((<$>))
+#endif
 > import System.Console.GetOpt ( ArgDescr(NoArg, ReqArg)
 >                              , ArgOrder(RequireOrder)
 >                              , OptDescr(Option)

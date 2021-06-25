@@ -7,7 +7,7 @@
 
 > {-|
 > Module    : Traversals
-> Copyright : (c) 2017-2019 Jim Rogers and Dakotah Lambert
+> Copyright : (c) 2017-2021 Jim Rogers and Dakotah Lambert
 > License   : MIT
 >
 > Find paths through an automaton.
@@ -25,9 +25,13 @@
 >        , nondeterministicAcyclicExtensions
 >        ) where
 
+#if !MIN_VERSION_base(4,8,0)
 > import Data.Monoid (Monoid, mappend, mconcat, mempty)
+#endif
 #if MIN_VERSION_base(4,9,0)
+#if !MIN_VERSION_base(4,11,0)
 > import Data.Semigroup (Semigroup, (<>))
+#endif
 #endif
 > import Data.Set (Set)
 

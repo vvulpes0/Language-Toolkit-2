@@ -1,7 +1,13 @@
 > {-# OPTIONS_HADDOCK hide,show-extensions #-}
+> {-# Language CPP #-}
+
+#if !defined(MIN_VERSION_base)
+# define MIN_VERSION_base(a,b,c) 0
+#endif
+
 > {-|
 > Module : LTK.Porters.Jeff
-> Copyright : (c) 2016-2018 Dakotah Lambert
+> Copyright : (c) 2016-2021 Dakotah Lambert
 > LICENSE : MIT
 > 
 > This module provides methods to convert automata to and from
@@ -18,8 +24,10 @@
 >        , untransliterateString
 >        ) where
 
+#if !MIN_VERSION_base(4,8,0)
 > import Control.Applicative ((<*>))
 > import Data.Functor ((<$>))
+#endif
 > import Data.List (intercalate)
 > import Data.Set (Set)
 > import qualified Data.Set as Set

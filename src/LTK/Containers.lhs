@@ -16,7 +16,7 @@
 
 > {-|
 > Module      : LTK.Containers
-> Copyright   : (c) 2016-2019 Dakotah Lambert
+> Copyright   : (c) 2016-2021 Dakotah Lambert
 > License     : MIT
 > 
 > Containers: a uniform way to work with entities that may
@@ -68,9 +68,13 @@
 >        , tr
 >        ) where
 
+#if !MIN_VERSION_base(4,8,0)
 > import safe Data.Monoid (Monoid, mempty, mappend)
+#endif
 #if MIN_VERSION_base(4,9,0)
+#if !MIN_VERSION_base(4,11,0)
 > import safe Data.Semigroup (Semigroup, (<>))
+#endif
 #endif
 > import safe Data.Set (Set)
 > import safe qualified Data.Set as Set

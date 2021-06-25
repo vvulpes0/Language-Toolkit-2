@@ -13,7 +13,7 @@
 
 > {-|
 > Module    : LTK.FSA
-> Copyright : (c) 2014-2019 Dakotah Lambert
+> Copyright : (c) 2014-2021 Dakotah Lambert
 > License   : MIT
 
 > The purpose of this module is to define an interface to a generic,
@@ -79,12 +79,16 @@
 >        , module LTK.Containers
 >        ) where
 
-> import Control.Applicative (Applicative, pure, (<*>))
 > import Control.DeepSeq (NFData, rnf)
+#if !MIN_VERSION_base(4,8,0)
+> import Control.Applicative (Applicative, pure, (<*>))
 > import Data.Functor ((<$>))
 > import Data.Monoid (Monoid, mappend, mempty)
+#endif
 #if MIN_VERSION_base(4,9,0)
+#if !MIN_VERSION_base(4,11,0)
 > import safe Data.Semigroup (Semigroup, (<>))
+#endif
 #endif
 > import Data.Set (Set)
 > import qualified Data.Set as Set
@@ -296,7 +300,7 @@ State
 >           a >>= f  =  f $ nodeLabel a
 
 #if MIN_VERSION_base(4,9,0)
-Semigroup instance to satisfy base-4.9
+Semigroup instance to satisfy base-4.11
 
 > instance (Semigroup n) => Semigroup (State n)
 >     where (<>) = fmap . nodeLabel . fmap (<>)
