@@ -158,7 +158,7 @@ Creating an AT&T format automaton
 
 > dumpAlphabet :: (Ord e, Show e) => [(e, Int)] -> [String]
 > dumpAlphabet tags = p defaultEpsilon 0 : (map (uncurry p) tags)
->     where p a t = showish a ++ "\t" ++ show (t + (0 :: Int))
+>     where p a t = deescape (showish a) ++ "\t" ++ show (t + (0 :: Int))
 
 > dumpInitials :: (Ord n, Ord e, Show n, Show e, Num n) =>
 >                 [(e, Int)] -> Set (State n) -> [String]
@@ -186,7 +186,7 @@ Creating an AT&T format automaton
 >                   = head
 >                     . (++ [showish e]) . map (showish . snd)
 >                     $ filter ((== e) . fst) tags
->               | otherwise = showish e
+>               | otherwise = deescape (showish e)
 
 > dumpFinals :: (Ord n, Show n) => Set (State n) -> [String]
 > dumpFinals = map (show . nodeLabel) . Set.toAscList
@@ -208,3 +208,12 @@ Helpers
 >           f' ""     = ""
 >           f' "\""   = ""
 >           f' (x:xs) = x : f' xs
+
+> deescape :: String -> String
+> deescape ('\\' : '&' : xs) = deescape xs
+> deescape ('\\' : x : xs)
+>     | isEmpty digits = x : deescape xs
+>     | otherwise      = toEnum (read digits) : deescape others
+>     where (digits, others) = span (isIn "0123456789") (x:xs)
+> deescape (x:xs) = x : deescape xs
+> deescape _      = []
