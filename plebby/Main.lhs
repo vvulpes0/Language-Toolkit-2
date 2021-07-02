@@ -866,8 +866,8 @@ in order to deal with spaces or other special characters.
 > -- Tilde-expansion is performed.
 > writeAndCreateDir :: FilePath -> String -> IO ()
 > writeAndCreateDir fp s = do
->     createDirectoryIfMissing True (takeDirectory fp)
 >     fp' <- expand fp
+>     createDirectoryIfMissing True (takeDirectory fp')
 >     writeFile fp' s
 
 > -- | readFile, with tilde-expansion.
