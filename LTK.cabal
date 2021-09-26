@@ -59,10 +59,12 @@ library
   -- Modules exported by the library.
   exposed-modules:
                   LTK
+                , LTK.Algebra
                 , LTK.Containers
                 , LTK.Decide
                 , LTK.Decide.Finite
                 , LTK.Decide.FO2
+                , LTK.Decide.GLT
                 , LTK.Decide.LT
                 , LTK.Decide.LTT
                 , LTK.Decide.PT

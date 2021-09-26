@@ -970,7 +970,7 @@ elements are considered distinct when looking at each one-sided ideal
 but are actually equivalent in terms of their two-sided ideals.
 
 > -- |Given an automaton whose syntactic monoid is \(M\),
-> -- two strings \(u\) and \(v\) are equivalent if
+> -- two strings \(u\) and \(v\) are equivalent iff
 > -- \(MuM=MvM\)
 > jEquivalence :: (Ord e, Ord n) =>
 >                 FSA ([Maybe n], [Symbol e]) e ->

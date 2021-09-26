@@ -18,6 +18,7 @@
 
 > import LTK.Decide.SF (isSF)
 > import LTK.FSA
+> import LTK.Algebra
 
 > type S n e = (n, [Symbol e])
 > type T n e = State (S n e)
@@ -45,15 +46,6 @@ commutative monoid.
 >     = follow s (g a ++ g f ++ g u ++ g e ++ g b ++ g f) e ==
 >       follow s (g b ++ g f ++ g u ++ g e ++ g a ++ g f) e
 >     where g = snd . nodeLabel
-
-An element x is idempotent iff xx == x.
-Here we use the syntactic monoid and simply exclude the identity
-if it does not appear in the syntactic semigroup.
-
-> idempotents :: (Ord n, Ord e) =>
->                FSA (n, [Symbol e]) e -> Set (State (n, [Symbol e]))
-> idempotents f = keep isIdem . tmap destination $ transitions f
->     where isIdem x = follow f (snd $ nodeLabel x) x == singleton x
 
 > pairs :: Ord a => Set a -> Set (a, a)
 > pairs xs = collapse (union . f) empty xs

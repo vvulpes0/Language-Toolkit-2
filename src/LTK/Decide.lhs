@@ -21,6 +21,7 @@
 >                   , isSP, isPT
 >                   -- * Others
 >                   , isFO2, isFO2B, isFO2S
+>                   , isGLT
 >                   , isSF
 >                   ) where
 
@@ -35,3 +36,4 @@
 > import LTK.Decide.PT
 > import LTK.Decide.SF
 > import LTK.Decide.FO2
+> import LTK.Decide.GLT

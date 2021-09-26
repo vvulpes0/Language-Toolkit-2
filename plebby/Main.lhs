@@ -48,6 +48,7 @@
 >                         , isPT
 >                         , isFO2, isFO2B, isFO2S
 >                         , isSF
+>                         , isGLT
 >                         , isFinite
 >                         )
 > import LTK.FSA
@@ -139,6 +140,7 @@
 >               | IsFO2 Expr
 >               | IsFO2B Expr
 >               | IsFO2S Expr
+>               | IsGLT Expr
 >               | IsLT Expr
 >               | IsLTT Expr
 >               | IsPT Expr
@@ -325,6 +327,11 @@ in order to deal with spaces or other special characters.
 >                   , (M . IsFO2S) <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is FO2[<,+1]-definable"
+>                   )
+>                 , ( ":isGLT"
+>                   , (M . IsGLT) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is Generalized Locally Testable"
 >                   )
 >                 , ( ":isLT"
 >                   , (M . IsLT) <$> pe
@@ -750,6 +757,7 @@ in order to deal with spaces or other special characters.
 >          IsFO2 p        ->  check isFO2 p
 >          IsFO2B p       ->  check isFO2B p
 >          IsFO2S p       ->  check isFO2S p
+>          IsGLT p        ->  check isGLT p
 >          IsLT p         ->  check isLT p
 >          IsLTT p        ->  check isLTT p
 >          IsPT p         ->  check isPT p
