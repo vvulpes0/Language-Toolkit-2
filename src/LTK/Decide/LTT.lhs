@@ -27,9 +27,10 @@
 > isLTT :: (Ord n, Ord e) => FSA n e -> Bool
 > isLTT = both isSF (isSynMonOfLTT . syntacticMonoid)
 
-A semigroup (S) [e.g. the syntactic semigroup] is locally testable iff
-for all idempotent e, the generated subsemigroup eSe is an idempotent
-commutative monoid.
+A semigroup (S) [e.g. the syntactic semigroup] is
+locally threshold testable iff
+for all idempotent e and f, and for all a,b,u it holds that
+eafuebf = ebfueaf.
 
 > isSynMonOfLTT :: (Ord n, Ord e) => FSA (n, [Symbol e]) e -> Bool
 > isSynMonOfLTT s = allS (\(e,f) ->

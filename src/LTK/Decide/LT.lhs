@@ -30,13 +30,5 @@ commutative monoid.
 > isSynMonOfLT :: (Ord n, Ord e) =>
 >                 FSA (n, [Symbol e]) e -> Bool
 > isSynMonOfLT s = all (both (isCommutative s) (isSubsetOf i) .
->                       generatedSubsemigroup s
->                      ) $ Set.toList i
->     where i = idempotents s
-
-> generatedSubsemigroup :: (Ord n, Ord e) =>
->                          FSA (n, [Symbol e]) e -> State (n, [Symbol e]) ->
->                          Set (State (n, [Symbol e]))
-> generatedSubsemigroup f x
->     = collapse (union . follow f (snd $ nodeLabel x)) empty $
->       primitiveIdealR f x
+>                       ese s
+>                      ) . Set.toList $ idempotents s

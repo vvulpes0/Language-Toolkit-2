@@ -11,9 +11,10 @@
 > module LTK.Algebra
 >     ( -- *Tests
 >       isCommutative
->       -- *Generated Submonoids
+>       -- *Generated Submonoids and Subsemigroups
 >     , me
 >     , emee
+>     , ese
 >       -- *Powers
 >     , idempotents
 >     , omega
@@ -52,6 +53,14 @@ then take the resulting labels and follow those from e.
 >     where x = me monoid e
 >           s = snd . nodeLabel
 
+ese is e*S*e: first go wherever you can from e, then take another e.
+
+> ese :: (Ord n, Ord e) => FSA (S n e) e -> T n e -> Set (T n e)
+> ese sg e = collapse (union . follow sg (s e)) empty
+>            $ es
+>     where es = primitiveIdealR sg e
+>           s = snd . nodeLabel
+
 
 Commutativity
 =============
@@ -76,6 +85,7 @@ Here we use the syntactic monoid and simply exclude the identity
 if it does not appear in the syntactic semigroup.
 
 > -- |All elements \(e\) of the given monoid such that \(e*e=e\).
+> -- Except the identity element.  Add that manually if you need it.
 > idempotents :: (Ord n, Ord e) =>
 >                FSA (n, [Symbol e]) e -> Set (T n e)
 > idempotents f = keep isIdem . tmap destination $ transitions f

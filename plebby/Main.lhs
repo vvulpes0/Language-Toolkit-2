@@ -51,6 +51,7 @@
 >                         , isGLT
 >                         , isFinite
 >                         )
+> import LTK.Decide.LPT
 > import LTK.FSA
 > import LTK.Learn.SL  (fSL)
 > import LTK.Learn.SP  (fSP)
@@ -142,6 +143,7 @@
 >               | IsFO2S Expr
 >               | IsGLT Expr
 >               | IsLT Expr
+>               | IsLPT Expr
 >               | IsLTT Expr
 >               | IsPT Expr
 >               | IsSF Expr
@@ -332,6 +334,11 @@ in order to deal with spaces or other special characters.
 >                   , (M . IsGLT) <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Generalized Locally Testable"
+>                   )
+>                 , ( ":isLPT"
+>                   , (M . IsLPT) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is locally Piecewise Testable"
 >                   )
 >                 , ( ":isLT"
 >                   , (M . IsLT) <$> pe
@@ -758,6 +765,7 @@ in order to deal with spaces or other special characters.
 >          IsFO2B p       ->  check isFO2B p
 >          IsFO2S p       ->  check isFO2S p
 >          IsGLT p        ->  check isGLT p
+>          IsLPT p        ->  check isLPT p
 >          IsLT p         ->  check isLT p
 >          IsLTT p        ->  check isLTT p
 >          IsPT p         ->  check isPT p
