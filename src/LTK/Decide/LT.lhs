@@ -31,4 +31,5 @@ commutative monoid.
 >                 FSA (n, [Symbol e]) e -> Bool
 > isSynMonOfLT s = all (both (isCommutative s) (isSubsetOf i) .
 >                       ese s
->                      ) . Set.toList $ idempotents s
+>                      ) . Set.toList $ i
+>     where i = idempotents s

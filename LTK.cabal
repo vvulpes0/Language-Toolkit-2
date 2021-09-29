@@ -73,6 +73,7 @@ library
                 , LTK.Decide.SL
                 , LTK.Decide.SP
                 , LTK.Decide.TLT
+                , LTK.Decide.TLPT
                 , LTK.Decide.TLTT
                 , LTK.Decide.TSL
                 , LTK.Extract

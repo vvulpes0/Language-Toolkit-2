@@ -44,6 +44,7 @@
 > import LTK.Decide       ( isSL, isTSL
 >                         , isLT, isTLT
 >                         , isLTT, isTLTT
+>                         , isLPT, isTLPT
 >                         , isSP
 >                         , isPT
 >                         , isFO2, isFO2B, isFO2S
@@ -51,7 +52,6 @@
 >                         , isGLT
 >                         , isFinite
 >                         )
-> import LTK.Decide.LPT
 > import LTK.FSA
 > import LTK.Learn.SL  (fSL)
 > import LTK.Learn.SP  (fSP)
@@ -150,6 +150,7 @@
 >               | IsSL Expr
 >               | IsSP Expr
 >               | IsTLT Expr
+>               | IsTLPT Expr
 >               | IsTLTT Expr
 >               | IsTSL Expr
 >               | Subset Expr Expr
@@ -369,6 +370,11 @@ in order to deal with spaces or other special characters.
 >                   , (M . IsSP) <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Strictly Piecewise"
+>                   )
+>                 , ( ":isTLPT"
+>                   , (M . IsTLPT) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is tier-locally Piecewise Testable"
 >                   )
 >                 , ( ":isTLT"
 >                   , (M . IsTLT) <$> pe
@@ -773,6 +779,7 @@ in order to deal with spaces or other special characters.
 >          IsSL p         ->  check isSL p
 >          IsSP p         ->  check isSP p
 >          IsTLT p        ->  check isTLT p
+>          IsTLPT p       ->  check isTLPT p
 >          IsTLTT p       ->  check isTLTT p
 >          IsTSL p        ->  check isTSL p
 >          Subset p1 p2   ->  relate e isSupersetOf p1 p2
