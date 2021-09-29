@@ -1,0 +1,24 @@
+digraph subreg {
+SF -> FO2B;
+FO2B -> FO2S;
+FO2S -> FO2;
+FO2 -> PT;
+PT -> SP;
+LTT -> LT;
+LT -> SL;
+SL -> Fin;
+TLTT -> LTT;
+TLTT -> TLT;
+TLT -> LT;
+TLT -> TSL;
+TSL -> SL;
+FO2B -> GLT;
+GLT -> TLT;
+GLT -> FO2;
+FO2S -> LPT;
+LPT -> LTT;
+LPT -> PT;
+FO2B -> TLPT;
+TLPT -> TLTT;
+TLPT -> LPT;
+}
