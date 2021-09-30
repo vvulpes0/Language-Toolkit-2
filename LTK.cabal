@@ -64,6 +64,7 @@ library
                 , LTK.Decide
                 , LTK.Decide.Finite
                 , LTK.Decide.FO2
+                , LTK.Decide.GD
                 , LTK.Decide.GLT
                 , LTK.Decide.LPT
                 , LTK.Decide.LT

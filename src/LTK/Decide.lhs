@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide
-> Copyright : (c) 2019 Dakotah Lambert
+> Copyright : (c) 2019-2021 Dakotah Lambert
 > License   : MIT
 > 
 > Functions used for deciding the complexity class of an automaton.
@@ -13,18 +13,16 @@
 > module LTK.Decide (
 >                   -- * Classes involving finiteness
 >                   isFinite, isCofinite
->                   -- * Basic local classes
->                   , isSL, isLT, isLTT
->                   -- * Tier-based generalizations
->                   , isTSL, isTLT, isTLTT
 >                   -- * Piecewise classes
 >                   , isSP, isPT
->                   -- * Others
+>                   -- * Local classes
+>                   , isGD, isSL, isLT, isLTT
+>                   -- * Both Local and Piecewise
+>                   , isGLT, isLPT, isSF
+>                   -- * Tier-based generalizations
+>                   , isTGD, isTSL, isTLT, isTLTT, isTLPT
+>                   -- * Two-Variable Logics
 >                   , isFO2, isFO2B, isFO2S
->                   , isGLT
->                   , isLPT
->                   , isTLPT
->                   , isSF
 >                   ) where
 
 > import LTK.Decide.Finite
@@ -41,3 +39,4 @@
 > import LTK.Decide.SF
 > import LTK.Decide.FO2
 > import LTK.Decide.GLT
+> import LTK.Decide.GD

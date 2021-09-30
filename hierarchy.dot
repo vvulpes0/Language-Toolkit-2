@@ -21,4 +21,8 @@ LPT -> PT;
 FO2B -> TLPT;
 TLPT -> TLTT;
 TLPT -> LPT;
+TSL -> TGD;
+TGD -> GD;
+FO2 -> GD;
+SL -> GD;
 }

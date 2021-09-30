@@ -51,6 +51,8 @@
 >                         , isSF
 >                         , isGLT
 >                         , isFinite
+>                         , isGD
+>                         , isTGD
 >                         )
 > import LTK.FSA
 > import LTK.Learn.SL  (fSL)
@@ -141,6 +143,7 @@
 >               | IsFO2 Expr
 >               | IsFO2B Expr
 >               | IsFO2S Expr
+>               | IsGD Expr
 >               | IsGLT Expr
 >               | IsLT Expr
 >               | IsLPT Expr
@@ -149,6 +152,7 @@
 >               | IsSF Expr
 >               | IsSL Expr
 >               | IsSP Expr
+>               | IsTGD Expr
 >               | IsTLT Expr
 >               | IsTLPT Expr
 >               | IsTLTT Expr
@@ -331,6 +335,11 @@ in order to deal with spaces or other special characters.
 >                   , [ArgE]
 >                   , "determine if expr is FO2[<,+1]-definable"
 >                   )
+>                 , ( ":isGD"
+>                   , (M . IsGD) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is Generalized Definite"
+>                   )
 >                 , ( ":isGLT"
 >                   , (M . IsGLT) <$> pe
 >                   , [ArgE]
@@ -370,6 +379,11 @@ in order to deal with spaces or other special characters.
 >                   , (M . IsSP) <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Strictly Piecewise"
+>                   )
+>                 , ( ":isTGD"
+>                   , (M . IsTGD) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is Generalized Definite on a tier"
 >                   )
 >                 , ( ":isTLPT"
 >                   , (M . IsTLPT) <$> pe
@@ -770,6 +784,7 @@ in order to deal with spaces or other special characters.
 >          IsFO2 p        ->  check isFO2 p
 >          IsFO2B p       ->  check isFO2B p
 >          IsFO2S p       ->  check isFO2S p
+>          IsGD p         ->  check isGD p
 >          IsGLT p        ->  check isGLT p
 >          IsLPT p        ->  check isLPT p
 >          IsLT p         ->  check isLT p
@@ -778,6 +793,7 @@ in order to deal with spaces or other special characters.
 >          IsSF p         ->  check isSF p
 >          IsSL p         ->  check isSL p
 >          IsSP p         ->  check isSP p
+>          IsTGD p        ->  check isTGD p
 >          IsTLT p        ->  check isTLT p
 >          IsTLPT p       ->  check isTLPT p
 >          IsTLTT p       ->  check isTLTT p
