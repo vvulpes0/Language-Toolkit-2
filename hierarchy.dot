@@ -25,4 +25,6 @@ TGD -> GD;
 FO2 -> GD;
 SL -> GD;
 GD -> Fin;
+PT -> CB;
+LT -> CB;
 }

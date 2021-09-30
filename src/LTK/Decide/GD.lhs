@@ -10,7 +10,6 @@
 > -}
 > module LTK.Decide.GD (isGD, isTGD) where
 
-> import Data.Set (Set)
 > import qualified Data.Set as Set
 
 > import LTK.FSA

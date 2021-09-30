@@ -53,6 +53,7 @@
 >                         , isFinite
 >                         , isGD
 >                         , isTGD
+>                         , isCB
 >                         )
 > import LTK.FSA
 > import LTK.Learn.SL  (fSL)
@@ -139,6 +140,7 @@
 >                deriving (Eq, Read, Show)
 
 > data Relation = Equal Expr Expr
+>               | IsCB Expr
 >               | IsFin Expr
 >               | IsFO2 Expr
 >               | IsFO2B Expr
@@ -314,6 +316,11 @@ in order to deal with spaces or other special characters.
 >                   , error ":import not defined here"
 >                   , [ArgF]
 >                   , "read file as plebby script"
+>                   )
+>                 , ( ":isCB"
+>                   , (M . IsCB) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is a semilattice language"
 >                   )
 >                 , ( ":isFinite"
 >                   , (M . IsFin) <$> pe
@@ -780,6 +787,7 @@ in order to deal with spaces or other special characters.
 > doRelation e r
 >     = case r
 >       of Equal p1 p2    ->  relate e (==) p1 p2
+>          IsCB p         ->  check isCB p
 >          IsFin p        ->  check isFinite p
 >          IsFO2 p        ->  check isFO2 p
 >          IsFO2B p       ->  check isFO2B p

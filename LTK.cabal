@@ -62,6 +62,7 @@ library
                 , LTK.Algebra
                 , LTK.Containers
                 , LTK.Decide
+                , LTK.Decide.CB
                 , LTK.Decide.Finite
                 , LTK.Decide.FO2
                 , LTK.Decide.GD
