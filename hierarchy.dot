@@ -6,7 +6,6 @@ FO2 -> PT;
 PT -> SP;
 LTT -> LT;
 LT -> SL;
-SL -> Fin;
 TLTT -> LTT;
 TLTT -> TLT;
 TLT -> LT;
@@ -25,4 +24,5 @@ TSL -> TGD;
 TGD -> GD;
 FO2 -> GD;
 SL -> GD;
+GD -> Fin;
 }
