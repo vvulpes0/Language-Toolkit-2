@@ -49,7 +49,7 @@
 >                         , isPT
 >                         , isFO2, isFO2B, isFO2S
 >                         , isSF
->                         , isGLT
+>                         , isGLT, isGLPT
 >                         , isFinite
 >                         , isGD
 >                         , isTGD
@@ -146,6 +146,7 @@
 >               | IsFO2B Expr
 >               | IsFO2S Expr
 >               | IsGD Expr
+>               | IsGLPT Expr
 >               | IsGLT Expr
 >               | IsLT Expr
 >               | IsLPT Expr
@@ -346,6 +347,11 @@ in order to deal with spaces or other special characters.
 >                   , (M . IsGD) <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Generalized Definite"
+>                   )
+>                 , ( ":isGLPT"
+>                   , (M . IsGLPT) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is Generalized Locally PT"
 >                   )
 >                 , ( ":isGLT"
 >                   , (M . IsGLT) <$> pe
@@ -793,6 +799,7 @@ in order to deal with spaces or other special characters.
 >          IsFO2B p       ->  check isFO2B p
 >          IsFO2S p       ->  check isFO2S p
 >          IsGD p         ->  check isGD p
+>          IsGLPT p       ->  check isGLPT p
 >          IsGLT p        ->  check isGLT p
 >          IsLPT p        ->  check isLPT p
 >          IsLT p         ->  check isLT p

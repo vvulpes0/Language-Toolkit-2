@@ -13,7 +13,6 @@
 > -}
 > module LTK.Decide.LT (isLT) where
 
-> import Data.Set (Set)
 > import qualified Data.Set as Set
 
 > import LTK.FSA
