@@ -1376,15 +1376,14 @@ type to improve memory usage and processing speed.
 > -- |Equivalent to 'renameStatesBy' \(f\),
 > -- where \(f\) is an arbitrary injective function.
 > renameStates :: (Ord e, Ord n, Ord n1, Enum n1) => FSA n e -> FSA n1 e
-> renameStates fsa = renameStatesByMonotonic
+> renameStates fsa = renameStatesBy
 >                    (flip (Map.findWithDefault (toEnum 0)) m)
 >                    fsa
 >     where m = Map.fromDistinctAscList . flip zip (enumFrom $ toEnum 1) .
->               map nodeLabel . Set.toAscList $ states fsa
-> {-# INLINE[1] renameStates #-}
-> {-# RULES
->   "renameStates/identity" renameStates = id
->   #-}
+>               map nodeLabel $ qs
+>           qs = Set.toList (initials fsa)
+>                ++ (Set.toList
+>                    (Set.difference (states fsa) (initials fsa)))
 
 > -- |Transform the node labels of an automaton using a given function.
 > -- If this function is not injective, the resulting FSA may not be

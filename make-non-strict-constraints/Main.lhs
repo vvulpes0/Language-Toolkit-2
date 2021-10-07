@@ -7,7 +7,8 @@
 > import Control.Parallel.Strategies (parListChunk, rdeepseq, using)
 
 > import LTK.ConstraintCompiler(compile)
-> import LTK.Porters(Jeff(Jeff), to, untransliterate)
+> import LTK.Porters(ATT(ATT), to, untransliterate)
+> import LTK.Porters.ATT(extractSymbolsATT)
 > import LTK.Factors ( Factor(Substring), forbidden, required
 >                    , w0s0, w0s2, w0plus, w1s2
 >                    , wpluss0, wpluss1, wplus, wxs0, wxs1, wxs2, wx)
@@ -57,7 +58,8 @@
 
 > main :: IO ()
 > main = mapM_ (uncurry write) (constraints `using` parListChunk 1 rdeepseq)
->     where prepare (a, b)  =  (a, to Jeff $ untransliterate b)
+>     where prepare (a, b)  =  (a, f . to ATT $ untransliterate b)
+>           f               =  (\(a,_,_) -> a) . extractSymbolsATT
 >           constraints     =  map prepare $
 >                              nonEmptySubsets
 >                              [ ("c89",  c89)

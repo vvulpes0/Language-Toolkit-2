@@ -21,13 +21,15 @@
 >                  , hFlush, hGetContents, hPutStr, stdin, stdout, withFile
 >                  )
 
-> import LTK.FSA (difference, renameSymbolsBy, tr)
-> import LTK.Porters (Dot(Dot), Jeff(Jeff), from, to, untransliterateString)
+> import LTK.FSA (FSA(), difference, renameSymbolsBy, tr)
+> import LTK.Porters (Dot(Dot), ATT(ATT), ATTO(ATTO),
+>                     from, to, transliterateString)
 
 > data Options = Options
 >     { optShowVersion    ::  Bool
 >     , optShowUsage      ::  Bool
 >     , optTransliterate  ::  String -> String
+>     , optType           ::  String -> FSA Integer String
 >     , optOutput         ::  Maybe FilePath
 >     }
 
@@ -39,7 +41,9 @@
 >     | optShowVersion opts        =  printVersion
 >     | optShowUsage opts          =  printUsage
 >     | not . null $ drop 1 files  =  printUsage >> exitFailure
->     | otherwise                  =  printDot (optTransliterate opts)
+>     | otherwise                  =  printDot
+>                                     (optType opts)
+>                                     (optTransliterate opts)
 >                                     file (optOutput opts)
 >     where printUsage = putStr $ usageInfo usageHeader options
 >           file       = case files of
@@ -47,13 +51,14 @@
 >                          ("-":_)  ->  Nothing
 >                          (x:_)    ->  Just x
 
-> printDot :: (String -> String) -> Maybe FilePath -> Maybe FilePath -> IO ()
-> printDot tf infile outfile
+> printDot :: (String -> FSA Integer String) -> (String -> String) ->
+>             Maybe FilePath -> Maybe FilePath -> IO ()
+> printDot convert tf infile outfile
 >     = maybe ($ stdin) (flip withFile ReadMode) infile $ \h ->
 >       output outfile      =<<
 >       to Dot              <$>
 >       renameSymbolsBy tf  <$>
->       from Jeff           <$>
+>       convert             <$>
 >       hGetContents h
 
 > output :: Maybe FilePath -> String -> IO ()
@@ -70,8 +75,9 @@
 > defaultOptions = Options
 >                  { optShowVersion    =  False
 >                  , optShowUsage      =  False
->                  , optTransliterate  =  untransliterateString
+>                  , optTransliterate  =  id
 >                  , optOutput         =  Nothing
+>                  , optType           =  from ATTO
 >                  }
 
 > options :: [OptDescr (Options -> Options)]
@@ -92,14 +98,20 @@
 >         )
 >         "output FILE"
 >       , Option ['t'] []
->         (NoArg (\opts -> opts { optTransliterate = id }))
+>         (NoArg (\opts -> opts { optTransliterate = transliterateString }))
 >         "use transliterated symbols, e.g. L'"
 >       , Option ['v'] []
 >         (NoArg (\opts -> opts { optShowVersion = True }))
 >         "show version number"
 >       , Option ['w'] []
->         (NoArg (\opts -> opts { optTransliterate = untransliterateString }))
+>         (NoArg (\opts -> opts { optTransliterate = id }))
 >         "use wide symbols, e.g. w0.s0"
+>       , Option ['l'] []
+>         (NoArg (\opts -> opts { optType = from ATT }))
+>         "use the input projection"
+>       , Option ['r'] []
+>         (NoArg (\opts -> opts { optType = from ATTO }))
+>         "use the output projection"
 >       ]
 
 > compilerOpts :: [String] -> IO (Options, [String])
@@ -110,4 +122,4 @@
 >                          concat errs ++ usageInfo usageHeader options
 
 > compactString :: String -> String
-> compactString = flip difference "ws" . tr "." "/" . untransliterateString
+> compactString = flip difference "ws" . tr "." "/"
