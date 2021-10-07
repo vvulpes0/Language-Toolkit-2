@@ -152,6 +152,13 @@ with respect to the current
 .BR universe .
 .
 .PP
+.B :isCB
+.RI < expr >
+.RS
+Commutative band, a semilattice.
+.RE
+.
+.PP
 .B :isFinite
 .RI < expr >
 .RS
@@ -166,6 +173,7 @@ First-order logic with general precedence,
 restricted to two variables.
 .RE
 .
+.PP
 .B :isFO2B
 .RI < expr >
 .RS
@@ -173,6 +181,7 @@ First-order logic with general precedence and betweenness,
 restricted to two variables.
 .RE
 .
+.PP
 .B :isFO2S
 .RI < expr >
 .RS
@@ -180,12 +189,42 @@ First-order logic with general precedence and successor,
 restricted to two variables.
 .RE
 .
+.PP
+.B :isGD
+.RI < expr >
+.RS
+Generalized definite.
+.RE
+.
+.PP
+.B :isGLPT
+.RI < expr >
+.RS
+Generalized locally J-trivial. Related to LT and PT.
+.RE
+.
+.PP
+.B :isGLT
+.RI < expr >
+.RS
+Generalized locally testable.
+.RE
+.
+.PP
+.B :isLPT
+.RI < expr >
+.RS
+Locally J-trivial. Related to LT and PT.
+.RE
+.
+.PP
 .B :isLT
 .RI < expr >
 .RS
 Locally testable.
 .RE
 .
+.PP
 .B :isLTT
 .RI < expr >
 .RS
@@ -220,6 +259,28 @@ Strictly local.
 .RI < expr >
 .RS
 Strictly piecewise.
+.RE
+.
+.PP
+.B :isTGD
+.RI < expr >
+.RS
+Tier-based generalized definite:
+contains all and only the strings whose projections
+to some fixed subset of the current
+.B universe
+lie in a generalized definite stringset.
+.RE
+.
+.PP
+.B :isTLPT
+.RI < expr >
+.RS
+Tier-based locally J-trivial:
+contains all and only the strings whose projections
+to some fixed subset of the current
+.B universe
+lie in a locally J-trivial stringset.
 .RE
 .
 .PP
