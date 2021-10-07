@@ -144,7 +144,9 @@ Creating an AT&T format automaton
 > exportATT :: (Ord n, Ord e, Show e) => FSA n e -> String
 > exportATT f = unlines
 >               $ dumpInitials tags (initials f')
->               ++ dumpTransitions tags ts
+>               ++ dumpTransitions tags ts (initials f')
+>               ++ dumpTransitions tags ts (Set.difference (states f')
+>                                           (initials f'))
 >               ++ dumpFinals (finals f')
 >               ++ syms ++ syms -- once for input, once for output
 >     where tags = flip zip [1..] . Set.toAscList $ alphabet f'
@@ -170,8 +172,10 @@ Creating an AT&T format automaton
 
 > dumpTransitions :: (Ord n, Ord e, Show n, Show e) =>
 >                    [(e, Int)] -> Set (State n, State n, Symbol e) ->
+>                    Set (State n) ->
 >                    [String]
-> dumpTransitions tags ts = map (dumpTr tags) $ Set.toAscList ts
+> dumpTransitions tags ts qs = map (dumpTr tags) $ Set.toAscList ts'
+>     where ts' = Set.filter (\(a,_,_) -> isIn qs a) ts
 
 > dumpTr :: (Ord n, Ord e, Show n, Show e) =>
 >           [(e, Int)] -> (State n, State n, Symbol e) -> String
