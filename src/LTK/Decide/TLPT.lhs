@@ -10,8 +10,6 @@
 > -}
 > module LTK.Decide.TLPT (isTLPT) where
 
-> import qualified Data.Set as Set
-
 > import LTK.FSA
 > import LTK.Decide.LPT (isLPT)
 > import LTK.Tiers (project)
