@@ -9,8 +9,10 @@
 > -}
 
 > module LTK.Algebra
->     ( -- *Tests
->       isCommutative
+>     ( -- *Type
+>       SynMon(..)
+>       -- *Tests
+>     , isCommutative
 >       -- *Generated Submonoids and Subsemigroups
 >     , me
 >     , emee
@@ -27,6 +29,8 @@
 
 > type S n e = (n, [Symbol e])
 > type T n e = State (S n e)
+
+> type SynMon n e = FSA ([Maybe n],[Symbol e]) e
 
 
 Generated Submonoids
