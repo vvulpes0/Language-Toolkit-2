@@ -54,6 +54,7 @@
 >        , minimize
 >        , minimizeDeterministic
 >        , normalize
+>        , trimUnreachables
 >        -- *** Equivalence Classes
 >        , minimizeOver
 >        , nerode
@@ -896,6 +897,7 @@ direction.
 An FSA is certainly not minimal if there are states that cannot be
 reached by any path from the initial state.  We can trim those.
 
+> -- |The input automaton with unreachable states removed.
 > trimUnreachables :: (Ord e, Ord n) => FSA n e -> FSA n e
 > trimUnreachables fsa = FSA alpha trans qi fin (isDeterministic fsa)
 >     where alpha  =  alphabet fsa
