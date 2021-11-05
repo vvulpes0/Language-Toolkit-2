@@ -10,7 +10,7 @@
 
 > module LTK.Algebra
 >     ( -- *Type
->       SynMon(..)
+>       SynMon
 >       -- *Tests
 >     , isCommutative
 >       -- *Generated Submonoids and Subsemigroups

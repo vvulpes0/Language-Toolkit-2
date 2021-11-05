@@ -9,7 +9,7 @@
 > the syntactic monoid are idempotent. This is additionally a subclass
 > of LT, because every submonoid of a semilattice remains a semilattice.
 > -}
-> module LTK.Decide.CB (isCB,isCBM) where
+> module LTK.Decide.CB (isCB, isCBM) where
 
 > import qualified Data.Set as Set
 

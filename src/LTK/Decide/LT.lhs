@@ -11,7 +11,7 @@
 >
 > @since 0.2
 > -}
-> module LTK.Decide.LT (isLT) where
+> module LTK.Decide.LT (isLT, isLTM) where
 
 > import qualified Data.Set as Set
 
@@ -20,15 +20,13 @@
 
 > -- |True iff the automaton recognizes an LT stringset.
 > isLT :: (Ord n, Ord e) => FSA n e -> Bool
-> isLT = isSynMonOfLT . syntacticMonoid
+> isLT = isLTM . syntacticMonoid
 
 A semigroup (S) [e.g. the syntactic semigroup] is locally testable iff
 for all idempotent e, the generated subsemigroup eSe is an idempotent
 commutative monoid.
 
-> isSynMonOfLT :: (Ord n, Ord e) =>
->                 FSA (n, [Symbol e]) e -> Bool
-> isSynMonOfLT s = all (both (isCommutative s) (isSubsetOf i) .
->                       ese s
->                      ) . Set.toList $ i
+> isLTM :: (Ord n, Ord e) => SynMon n e -> Bool
+> isLTM s = all (both (isCommutative s) (isSubsetOf i) . ese s)
+>           . Set.toList $ i
 >     where i = idempotents s

@@ -9,7 +9,7 @@
 > Fich (1984):
 > https://doi.org/10.1016/0012-365X(84)90045-1
 > -}
-> module LTK.Decide.GLT (isGLT) where
+> module LTK.Decide.GLT (isGLT, isGLTM) where
 
 > import qualified Data.Set as Set
 
@@ -17,9 +17,9 @@
 > import LTK.Algebra
 
 > isGLT :: (Ord n, Ord e) => FSA n e -> Bool
-> isGLT = gltTest . syntacticMonoid
+> isGLT = isGLTM . syntacticMonoid
 
-> gltTest :: (Ord n, Ord e) => FSA (n, [Symbol e]) e -> Bool
-> gltTest f = all commutativeBand . map (emee f) $ Set.toList i
+> isGLTM :: (Ord n, Ord e) => FSA (n, [Symbol e]) e -> Bool
+> isGLTM f = all commutativeBand . map (emee f) $ Set.toList i
 >     where i = idempotents f
 >           commutativeBand = both (isCommutative f) (isSubsetOf i)

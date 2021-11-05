@@ -9,7 +9,7 @@
 > case iff each of its idempotents \(e\) satisfies the property that
 > \(eSe\) is \(\mathcal{J}\)-trivial.
 > -}
-> module LTK.Decide.LPT (isLPT) where
+> module LTK.Decide.LPT (isLPT, isLPTM) where
 
 > import qualified Data.Set as Set
 
@@ -18,9 +18,12 @@
 
 > -- |True iff the automaton recognizes an LPT stringset.
 > isLPT :: (Ord n, Ord e) => FSA n e -> Bool
-> isLPT f = all (jtriv . ese m) . Set.toList $ idempotents m
->     where m       = syntacticMonoid f
->           jcs     = Set.toList $ jEquivalence m
+> isLPT = isLPTM . syntacticMonoid
+
+> -- |True iff the monoid is locally \(\mathcal{J}\)-trivial.
+> isLPTM :: (Ord n, Ord e) => SynMon n e -> Bool
+> isLPTM m = all (jtriv . ese m) . Set.toList $ idempotents m
+>     where jcs     = Set.toList $ jEquivalence m
 >           jtriv x = null . filter ((>1) . Set.size)
 >                     $ map (Set.intersection x) jcs
 

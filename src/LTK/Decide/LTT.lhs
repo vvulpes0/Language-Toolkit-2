@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.LTT
-> Copyright : (c) 2019 Dakotah Lambert
+> Copyright : (c) 2019-2021 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -11,7 +11,7 @@
 >
 > @since 0.2
 > -}
-> module LTK.Decide.LTT (isLTT) where
+> module LTK.Decide.LTT (isLTT, isLTTM) where
 
 > import Data.Set (Set)
 > import qualified Data.Set as Set
@@ -25,7 +25,11 @@
 
 > -- |True iff the automaton recognizes an LTT stringset.
 > isLTT :: (Ord n, Ord e) => FSA n e -> Bool
-> isLTT = both isSF (isSynMonOfLTT . syntacticMonoid)
+> isLTT = isLTTM . syntacticMonoid
+
+> -- |True iff the monoid recognizes an LTT stringset.
+> isLTTM :: (Ord n, Ord e) => SynMon n e -> Bool
+> isLTTM = both isSF isSynMonOfLTT
 
 A semigroup (S) [e.g. the syntactic semigroup] is
 locally threshold testable iff
