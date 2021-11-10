@@ -39,7 +39,7 @@ homepage:            https://github.com/vvulpes0/Language-Toolkit-2
 license:             MIT
 license-file:        LICENSE
 author:              Dakotah Lambert, James Rogers
-copyright:           (c) 2014-2020 Dakotah Lambert
+copyright:           (c) 2014-2021 Dakotah Lambert
 maintainer:          49007668+vvulpes0@users.noreply.github.com
 tested-with:         GHC ==8.0.2
                    , GHC ==8.6.5
@@ -79,6 +79,7 @@ library
                 , LTK.Decide.TLPT
                 , LTK.Decide.TLTT
                 , LTK.Decide.TSL
+                , LTK.DecideM
                 , LTK.Extract
                 , LTK.Extract.SL
                 , LTK.Extract.SP
@@ -101,7 +102,7 @@ library
                 , LTK.Traversals
   -- Modules included in this library but not exported.
   -- other-modules:
-  build-depends: base >=4.2 && <4.16
+  build-depends: base >=4.2 && <4.17
                , containers >=0.5 && <0.7
                , deepseq >=1.1 && <1.5
                , parallel >=1.0 && <3.3
@@ -112,7 +113,7 @@ library
 executable dotify
   hs-source-dirs: dotify
   main-is: Main.lhs
-  build-depends: base >=4.2 && <4.16
+  build-depends: base >=4.2 && <4.17
                , LTK
   default-language: Haskell2010
   ghc-options: -Wall -O2 -threaded "-with-rtsopts=-N -qg1 -C0.001"
@@ -120,7 +121,7 @@ executable dotify
 executable factorize
   hs-source-dirs: factorize
   main-is: Main.lhs
-  build-depends: base >=4.6 && <4.16
+  build-depends: base >=4.6 && <4.17
                , LTK
                , containers >=0.1 && <0.7
                , deepseq >=1.2 && <1.5
@@ -134,7 +135,7 @@ executable make-non-strict-constraints
   hs-source-dirs: make-non-strict-constraints
   main-is: Main.lhs
   other-modules: LTK.ConstraintCompiler
-  build-depends: base >=4.0 && <4.16
+  build-depends: base >=4.0 && <4.17
                , LTK
                , containers >=0.1 && <0.7
                , deepseq >=1.2 && <1.5
@@ -145,7 +146,7 @@ executable make-non-strict-constraints
 executable plebby
   hs-source-dirs: plebby
   main-is: Main.lhs
-  build-depends: base >=4.2 && <4.16
+  build-depends: base >=4.2 && <4.17
                , LTK
                , haskeline >=0.2 && <0.9
                , process >=1.1 && <1.7
