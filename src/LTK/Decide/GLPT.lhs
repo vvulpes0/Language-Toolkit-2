@@ -47,4 +47,4 @@ a bit.
 
 > isDistinct :: Eq a => [a] -> Bool
 > isDistinct [] = True
-> isDistinct (x:xs) = elem x xs || isDistinct xs
+> isDistinct (x:xs) = not (elem x xs) && isDistinct xs
