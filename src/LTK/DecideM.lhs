@@ -28,16 +28,12 @@
 >                   , isFO2M, isFO2BM, isFO2SM
 >                   ) where
 
-> import LTK.Decide.Finite
-> import LTK.Decide.SL
 > import LTK.Decide.LT
 > import LTK.Decide.LPT
 > import LTK.Decide.LTT
-> import LTK.Decide.TSL
 > import LTK.Decide.TLT
 > import LTK.Decide.TLTT
 > import LTK.Decide.TLPT
-> import LTK.Decide.SP
 > import LTK.Decide.PT
 > import LTK.Decide.SF
 > import LTK.Decide.FO2

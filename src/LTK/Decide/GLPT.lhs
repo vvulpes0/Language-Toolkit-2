@@ -12,7 +12,6 @@
 > -}
 > module LTK.Decide.GLPT (isGLPT, isGLPTM) where
 
-> import Data.Set (Set)
 > import qualified Data.Set as Set
 
 > import LTK.FSA
@@ -25,40 +24,27 @@
 > isGLPT :: (Ord n, Ord e) => FSA n e -> Bool
 > isGLPT = isGLPTM . syntacticMonoid
 
-J-trivial means M_e*e*M_e = e.
+J-trivial means MaM = MbM in all and only those cases where a=b
 We're asking if X=e*M_e*e is J-trivial
-That is, if X_e*e*X_e = e for idempotents within X_e.
+That is, if for all a,b in X, XaX=XbX iff a=b.
 
 It does not appear that a shortcut like that used to test for
 local J-triviality is viable.  If it turns out to be, then this
 file will shrink dramatically and this test will speed up quite
 a bit.
 
+> -- |True iff the given monoid is in \(\mathbf{M_e J}\).
 > isGLPTM :: (Ord n, Ord e) => FSA (n, [Symbol e]) e -> Bool
 > isGLPTM m = all f $ Set.toList i
 >     where i = idempotents m
->           f e = all (g e) . Set.toList . Set.intersection i $ emee m e
->           g e h = let x = Set.toList $ xe m (emee m e) h
->                   in (== Set.singleton h) . Set.unions
->                      . map (flip (follow m) qi)
->                      $ [label a ++ label h ++ label b | a <- x, b <- x]
+>           x = Set.toList . emee m
+>           f e = isDistinct . map (g e) $ x e
+>           g e h = Set.unions $ map (flip (follow m) qi)
+>                   [label a ++ label h ++ label b
+>                    | a <- x e, b <- x e]
 >           qi = Set.findMin $ initials m
 >           label = snd . nodeLabel
 
-m  is the monoid as a whole,
-x  is the set of states we are restricted to, and
-e  is the idempotent we care about
-xe is the set of things in x that can rewrite via x to e
-   i.e. g\in x s.t. \exists u,v\in x s.t. ugv=e
-
-> xe :: (Ord n, Ord e) =>
->       FSA (n, [Symbol e]) e ->
->       Set (State (n, [Symbol e])) ->
->       State (n, [Symbol e]) -> Set (State (n, [Symbol e]))
-> xe m x e = Set.filter (contains e . xgx) x
->     where xgx g = Set.unions
->                   [follow m (label a) q
->                   | q <- Set.toList (xg g), a <- Set.toList x]
->           xg g  = Set.unions . map (follow m (label g))
->                   $ Set.toList x
->           label = snd . nodeLabel
+> isDistinct :: Eq a => [a] -> Bool
+> isDistinct [] = True
+> isDistinct (x:xs) = elem x xs || isDistinct xs
