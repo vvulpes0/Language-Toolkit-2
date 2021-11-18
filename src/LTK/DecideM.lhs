@@ -16,16 +16,18 @@
 > the automaton from which it was derived.
 > -}
 > module LTK.DecideM (
->                   -- * Piecewise classes
->                     isPTM
->                   -- * Local classes
->                   , isGDM, isLTM, isLTTM
->                   -- * Both Local and Piecewise
->                   , isCBM, isGLTM, isLPTM, isGLPTM, isSFM
->                   -- * Tier-based generalizations
->                   , isTGDM, isTLTM, isTLTTM, isTLPTM
->                   -- * Two-Variable Logics
->                   , isFO2M, isFO2BM, isFO2SM
+>                    -- * Piecewise classes
+>                      isPTM
+>                    -- * Local classes
+>                    , isDefM, isRDefM, isGDM
+>                    , isLTM, isLTTM
+>                    -- * Both Local and Piecewise
+>                    , isCBM, isGLTM, isLPTM, isGLPTM, isSFM
+>                    -- * Tier-based generalizations
+>                    , isTDefM, isTRDefM, isTGDM
+>                    , isTLTM, isTLTTM, isTLPTM
+>                    -- * Two-Variable Logics
+>                    , isFO2M, isFO2BM, isFO2SM
 >                   ) where
 
 > import LTK.Decide.LT
@@ -41,3 +43,4 @@
 > import LTK.Decide.GLPT
 > import LTK.Decide.GD
 > import LTK.Decide.CB
+> import LTK.Decide.Definite

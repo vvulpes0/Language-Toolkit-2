@@ -25,9 +25,20 @@ TLT -> TGD;
 FO2 -> TGD;
 LT -> GD;
 TGD -> GD;
-SL -> Fin;
-GD -> Fin;
 PT -> CB;
 PT -> Fin;
 LT -> CB;
+
+TGD -> TDef;
+TGD -> TRDef;
+GD -> Def;
+GD -> RDef;
+SL -> Def;
+SL -> RDef;
+Def -> Fin;
+RDef -> Fin;
+TSL -> TDef;
+TSL -> TRDef;
+TDef -> Def;
+TRDef -> RDef;
 }

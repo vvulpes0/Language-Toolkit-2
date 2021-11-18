@@ -16,11 +16,13 @@
 >                   -- * Piecewise classes
 >                   , isSP, isPT
 >                   -- * Local classes
->                   , isGD, isSL, isLT, isLTT
+>                   , isDef, isRDef, isGD
+>                   , isSL, isLT, isLTT
 >                   -- * Both Local and Piecewise
 >                   , isCB, isGLT, isLPT, isGLPT, isSF
 >                   -- * Tier-based generalizations
->                   , isTGD, isTSL, isTLT, isTLTT, isTLPT
+>                   , isTDef, isTRDef, isTGD
+>                   , isTSL, isTLT, isTLTT, isTLPT
 >                   -- * Two-Variable Logics
 >                   , isFO2, isFO2B, isFO2S
 >                   ) where
@@ -42,3 +44,4 @@
 > import LTK.Decide.GLPT
 > import LTK.Decide.GD
 > import LTK.Decide.CB
+> import LTK.Decide.Definite

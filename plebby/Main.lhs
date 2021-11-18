@@ -54,6 +54,10 @@
 >                         , isGD
 >                         , isTGD
 >                         , isCB
+>                         , isDef
+>                         , isRDef
+>                         , isTDef
+>                         , isTRDef
 >                         )
 > import LTK.FSA
 > import LTK.Learn.SL  (fSL)
@@ -141,6 +145,7 @@
 
 > data Relation = Equal Expr Expr
 >               | IsCB Expr
+>               | IsDef Expr
 >               | IsFin Expr
 >               | IsFO2 Expr
 >               | IsFO2B Expr
@@ -152,13 +157,16 @@
 >               | IsLPT Expr
 >               | IsLTT Expr
 >               | IsPT Expr
+>               | IsRDef Expr
 >               | IsSF Expr
 >               | IsSL Expr
 >               | IsSP Expr
+>               | IsTDef Expr
 >               | IsTGD Expr
 >               | IsTLT Expr
 >               | IsTLPT Expr
 >               | IsTLTT Expr
+>               | IsTRDef Expr
 >               | IsTSL Expr
 >               | Subset Expr Expr
 >               | SSubset Expr Expr -- Strict Subset
@@ -323,6 +331,11 @@ in order to deal with spaces or other special characters.
 >                   , [ArgE]
 >                   , "determine if expr is a semilattice language"
 >                   )
+>                 , ( ":isDef"
+>                   , (M . IsDef) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is a definite language"
+>                   )
 >                 , ( ":isFinite"
 >                   , (M . IsFin) <$> pe
 >                   , [ArgE]
@@ -378,6 +391,11 @@ in order to deal with spaces or other special characters.
 >                   , [ArgE]
 >                   , "determine if expr is Piecewise Testable"
 >                   )
+>                 , ( ":isRDef"
+>                   , (M . IsRDef) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is a reverse definite language"
+>                   )
 >                 , ( ":isSF"
 >                   , (M . IsSF) <$> pe
 >                   , [ArgE]
@@ -392,6 +410,11 @@ in order to deal with spaces or other special characters.
 >                   , (M . IsSP) <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Strictly Piecewise"
+>                   )
+>                 , ( ":isTDef"
+>                   , (M . IsTDef) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is definite on a tier"
 >                   )
 >                 , ( ":isTGD"
 >                   , (M . IsTGD) <$> pe
@@ -412,6 +435,11 @@ in order to deal with spaces or other special characters.
 >                   , (M . IsTLTT) <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Tier-LTT"
+>                   )
+>                 , ( ":isTRDef"
+>                   , (M . IsTRDef) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is reverse definite on a tier"
 >                   )
 >                 , ( ":isTSL"
 >                   , (M . IsTSL) <$> pe
@@ -794,6 +822,7 @@ in order to deal with spaces or other special characters.
 >     = case r
 >       of Equal p1 p2    ->  relate e (==) p1 p2
 >          IsCB p         ->  check isCB p
+>          IsDef p        ->  check isDef p
 >          IsFin p        ->  check isFinite p
 >          IsFO2 p        ->  check isFO2 p
 >          IsFO2B p       ->  check isFO2B p
@@ -805,13 +834,16 @@ in order to deal with spaces or other special characters.
 >          IsLT p         ->  check isLT p
 >          IsLTT p        ->  check isLTT p
 >          IsPT p         ->  check isPT p
+>          IsRDef p       ->  check isRDef p
 >          IsSF p         ->  check isSF p
 >          IsSL p         ->  check isSL p
 >          IsSP p         ->  check isSP p
+>          IsTDef p       ->  check isTDef p
 >          IsTGD p        ->  check isTGD p
 >          IsTLT p        ->  check isTLT p
 >          IsTLPT p       ->  check isTLPT p
 >          IsTLTT p       ->  check isTLTT p
+>          IsTRDef p      ->  check isTRDef p
 >          IsTSL p        ->  check isTSL p
 >          Subset p1 p2   ->  relate e isSupersetOf p1 p2
 >          SSubset p1 p2  ->  relate e isProperSupersetOf p1 p2
