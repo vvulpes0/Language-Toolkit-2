@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEBBY 1 "2021-03-30" "Version 0.3" "Language Toolkit"
+.TH PLEBBY 1 "2021-11-20" "Version 0.3" "Language Toolkit"
 .SH NAME
 plebby \- Piecewise / Local Expression Builder Interpreter
 .SH SYNOPSIS
@@ -159,6 +159,13 @@ Commutative band, a semilattice.
 .RE
 .
 .PP
+.B :isDef
+.RI < expr >
+.RS
+Definite, defined by a set of permitted suffixes.
+.RE
+.
+.PP
 .B :isFinite
 .RI < expr >
 .RS
@@ -241,6 +248,13 @@ Piecewise testable.
 .RE
 .
 .PP
+.B :isRDef
+.RI < expr >
+.RS
+Reverse definite, defined by a set of permitted prefixes.
+.RE
+.
+.PP
 .B :isSF
 .RI < expr >
 .RS
@@ -259,6 +273,13 @@ Strictly local.
 .RI < expr >
 .RS
 Strictly piecewise.
+.RE
+.
+.PP
+.B :isTDef
+.RI < expr >
+.RS
+Tier-based definite, defined by a set of permitted tier-suffixes.
 .RE
 .
 .PP
@@ -303,6 +324,14 @@ contains all and only the strings whose projections
 to some fixed subset of the current
 .B universe
 lie in a locally threshold testable stringset.
+.RE
+.
+.PP
+.B :isTRDef
+.RI < expr >
+.RS
+Tier-based reverse definite,
+defined by a set of permitted tier-prefixes.
 .RE
 .
 .PP
