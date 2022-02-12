@@ -276,13 +276,13 @@ prevents having to descend through the tree to find this information.
 > parseStatements :: Env -> Parse Env
 > parseStatements (dict, subexprs, prev)
 >     = asum $
->       [ start >> putFst <$>
+>       [ start >>
+>         (f False <$> getName <*> (Just <$> parseExpr dict subexprs)) >>=
+>         parseStatements
+>       , start >> putFst <$>
 >         (mkSyms <$> getName <*> parseSymExpr dict <*>
 >          pure dict
 >         ) >>=
->         parseStatements
->       , start >>
->         (f False <$> getName <*> (Just <$> parseExpr dict subexprs)) >>=
 >         parseStatements
 >       , f True "it" <$> Just <$> parseExpr dict subexprs
 >       , Parse $ \ts ->
