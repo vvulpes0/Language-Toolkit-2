@@ -150,10 +150,18 @@
 >               automatonFromExpr
 >           universe = either (const Set.empty) id (definition "universe" dict)
 
+=====
+Note:
+=====
+
+@restrictUniverse@ previously deleted symbolsets bound to the empty set.
+However, it is now possible to manually define the empty set: [/a,/b].
+Therefore, this cleanup step has been removed.
+
 > -- |Remove any symbols not present in @(universe)@ from the environment.
 > restrictUniverse :: Env -> Env
 > restrictUniverse (dict, subexprs, v)
->     = ( keep (not . isEmpty . snd) $ tmap (mapsnd restrictUniverseS) dict
+>     = ( tmap (mapsnd restrictUniverseS) dict
 >       , tmap (mapsnd restrictUniverseE) subexprs
 >       , restrictUniverseE <$> v
 >       )
@@ -269,11 +277,7 @@ prevents having to descend through the tree to find this information.
 > parseStatements (dict, subexprs, prev)
 >     = asum $
 >       [ start >> putFst <$>
->         (mkSyms <$> getName <*>
->          (unionAll <$>
->           parseDelimited ['(', '{']
->           (parseSeparated "," $ parseSymSet dict)
->          ) <*>
+>         (mkSyms <$> getName <*> parseSymExpr dict <*>
 >          pure dict
 >         ) >>=
 >         parseStatements
@@ -348,7 +352,8 @@ prevents having to descend through the tree to find this information.
 >        , (["¬", "~", "!"],  Negation)
 >        ] <*> parseExpr dict subexprs
 >       ) <|> (Tierify <$> pt <*> parseExpr dict subexprs)
->     where pt = parseDelimited ['['] (parseSeparated "," (parseSymSet dict))
+>     where pt = parseDelimited ['[']
+>                (parseSeparated "," (parseSymExpr dict))
 
 > parsePLFactor :: Dictionary SymSet -> Dictionary Expr -> Parse PLFactor
 > parsePLFactor dict subexprs
@@ -377,8 +382,20 @@ prevents having to descend through the tree to find this information.
 >       , ([""], PLFactor False False)
 >       ] <*>
 >       (parseDelimited ['<', '⟨']
->        (parseSeparated "," (some (parseSymSet dict)) <|>
+>        (parseSeparated "," (some (parseSymExpr dict)) <|>
 >         Parse (\ts -> Right ([], ts))))
+
+> parseSymExpr :: Dictionary SymSet -> Parse SymSet
+> parseSymExpr dict
+>     = ((fmap Set.unions
+>        . parseDelimited ['{', '(']
+>        $ parseSeparated "," (parseSymExpr dict))
+>       <|>
+>        (fmap (foldr1 Set.intersection)
+>        . parseDelimited ['[']
+>        $ parseSeparated "," (parseSymExpr dict))
+>       <|>
+>        parseSymSet dict)
 
 > parseSymSet :: Dictionary SymSet -> Parse SymSet
 > parseSymSet dict
