@@ -61,21 +61,7 @@ an assignment of either a symbol set or an expression.
 ::=
 .B =
 .RI < name >
-.B {
 .RI < symbols >
-.RB [ ,
-.RI < symbols "> ...\&]"
-.B }
-.RS
-.RE
-.BR "             " "  |"
-.B =
-.RI < name >
-.B (
-.RI < symbols >
-.RB [ ,
-.RI < symbols "> ...\&]"
-.B )
 .PP
 .RI < exp-assign >
 ::=
@@ -209,17 +195,56 @@ or a comma to represent the (long-distance) precedence relation.
 .B ,
 .RE
 .PP
-Symbol sets are either singleton (represent by a
-.B /
-prefix)
-or the name of some already-defined symbol set.
+Symbol sets are define by the following syntax:
 .PP
 .RS
 .RI < symbols >
 ::=
-.B /
-.RI < name "> | <" name >
+.B {
+.RI < symbols
+[
+.B ,
+.RI < symbols "> ...\&]"
+.B }
+.RS
 .RE
+.R "            |"
+.B (
+.RI < symbols
+[
+.B ,
+.RI < symbols "> ...\&]"
+.B )
+.RS
+.RE
+.R "            |"
+.B [
+.RI < symbols
+[
+.B ,
+.RI < symbols "> ...\&]"
+.B ]
+.RS
+.RE
+.R "            |"
+.B /
+.RI < name >
+.RS
+.RE
+.R "            |"
+.RI < name >
+.RE
+.PP
+The first and second of these, using curly braces or parentheses,
+denote the union of the contained symbol-expressions.
+The third, using square brackets, indicates an intersection.
+The fourth, denoted by
+.B /
+is a singleton set where the
+.RI < name >
+is the symbol itself.
+And finally the fifth option is a variable name
+that must refer to an already-bound symbol set.
 .PP
 A name is a letter as defined by Unicode
 followed by any sequence of characters
