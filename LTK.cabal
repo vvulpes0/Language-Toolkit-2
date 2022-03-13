@@ -39,12 +39,12 @@ homepage:            https://github.com/vvulpes0/Language-Toolkit-2
 license:             MIT
 license-file:        LICENSE
 author:              Dakotah Lambert, James Rogers
-copyright:           (c) 2014-2021 Dakotah Lambert
+copyright:           (c) 2014-2022 Dakotah Lambert
 maintainer:          49007668+vvulpes0@users.noreply.github.com
 tested-with:         GHC ==8.0.2
                    , GHC ==8.6.5
                    , GHC ==8.10.1
-                   , GHC ==9.0.1
+                   , GHC ==9.0.2
 build-type:          Simple
 extra-source-files:  man/dotify.1
                    , man/plebby.1
@@ -62,6 +62,7 @@ library
                 , LTK.Algebra
                 , LTK.Containers
                 , LTK.Decide
+                , LTK.Decide.B
                 , LTK.Decide.CB
                 , LTK.Decide.Definite
                 , LTK.Decide.Finite
@@ -79,6 +80,7 @@ library
                 , LTK.Decide.TLT
                 , LTK.Decide.TLPT
                 , LTK.Decide.TLTT
+                , LTK.Decide.Trivial
                 , LTK.Decide.TSL
                 , LTK.DecideM
                 , LTK.Extract

@@ -54,10 +54,12 @@
 >                         , isGD
 >                         , isTGD
 >                         , isCB
+>                         , isB, isLB, isTLB
 >                         , isDef
 >                         , isRDef
 >                         , isTDef
 >                         , isTRDef
+>                         , isTrivial
 >                         )
 > import LTK.FSA
 > import LTK.Learn.SL  (fSL)
@@ -144,6 +146,7 @@
 >                deriving (Eq, Read, Show)
 
 > data Relation = Equal Expr Expr
+>               | IsB Expr
 >               | IsCB Expr
 >               | IsDef Expr
 >               | IsFin Expr
@@ -153,6 +156,7 @@
 >               | IsGD Expr
 >               | IsGLPT Expr
 >               | IsGLT Expr
+>               | IsLB Expr
 >               | IsLT Expr
 >               | IsLPT Expr
 >               | IsLTT Expr
@@ -163,10 +167,12 @@
 >               | IsSP Expr
 >               | IsTDef Expr
 >               | IsTGD Expr
+>               | IsTLB Expr
 >               | IsTLT Expr
 >               | IsTLPT Expr
 >               | IsTLTT Expr
 >               | IsTRDef Expr
+>               | IsTrivial Expr
 >               | IsTSL Expr
 >               | Subset Expr Expr
 >               | SSubset Expr Expr -- Strict Subset
@@ -326,6 +332,11 @@ in order to deal with spaces or other special characters.
 >                   , [ArgF]
 >                   , "read file as plebby script"
 >                   )
+>                 , ( ":isB"
+>                   , (M . IsB) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is a band"
+>                   )
 >                 , ( ":isCB"
 >                   , (M . IsCB) <$> pe
 >                   , [ArgE]
@@ -370,6 +381,11 @@ in order to deal with spaces or other special characters.
 >                   , (M . IsGLT) <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Generalized Locally Testable"
+>                   )
+>                 , ( ":isLB"
+>                   , (M . IsLB) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is locally a band"
 >                   )
 >                 , ( ":isLPT"
 >                   , (M . IsLPT) <$> pe
@@ -421,6 +437,11 @@ in order to deal with spaces or other special characters.
 >                   , [ArgE]
 >                   , "determine if expr is Generalized Definite on a tier"
 >                   )
+>                 , ( ":isTLB"
+>                   , (M . IsTLB) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is tier-locally a band"
+>                   )
 >                 , ( ":isTLPT"
 >                   , (M . IsTLPT) <$> pe
 >                   , [ArgE]
@@ -440,6 +461,11 @@ in order to deal with spaces or other special characters.
 >                   , (M . IsTRDef) <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is reverse definite on a tier"
+>                   )
+>                 , ( ":isTrivial"
+>                   , (M . IsTrivial) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr has only a single state"
 >                   )
 >                 , ( ":isTSL"
 >                   , (M . IsTSL) <$> pe
@@ -821,6 +847,7 @@ in order to deal with spaces or other special characters.
 > doRelation e r
 >     = case r
 >       of Equal p1 p2    ->  relate e (==) p1 p2
+>          IsB p          ->  check isB p
 >          IsCB p         ->  check isCB p
 >          IsDef p        ->  check isDef p
 >          IsFin p        ->  check isFinite p
@@ -830,6 +857,7 @@ in order to deal with spaces or other special characters.
 >          IsGD p         ->  check isGD p
 >          IsGLPT p       ->  check isGLPT p
 >          IsGLT p        ->  check isGLT p
+>          IsLB p         ->  check isLB p
 >          IsLPT p        ->  check isLPT p
 >          IsLT p         ->  check isLT p
 >          IsLTT p        ->  check isLTT p
@@ -840,10 +868,12 @@ in order to deal with spaces or other special characters.
 >          IsSP p         ->  check isSP p
 >          IsTDef p       ->  check isTDef p
 >          IsTGD p        ->  check isTGD p
+>          IsTLB p        ->  check isTLB p
 >          IsTLT p        ->  check isTLT p
 >          IsTLPT p       ->  check isTLPT p
 >          IsTLTT p       ->  check isTLTT p
 >          IsTRDef p      ->  check isTRDef p
+>          IsTrivial p    ->  check isTrivial p
 >          IsTSL p        ->  check isTSL p
 >          Subset p1 p2   ->  relate e isSupersetOf p1 p2
 >          SSubset p1 p2  ->  relate e isProperSupersetOf p1 p2
