@@ -152,6 +152,13 @@ with respect to the current
 .BR universe .
 .
 .PP
+.B :isB
+.RI < expr >
+.RS
+Band, everything is idempotent.
+.RE
+.
+.PP
 .B :isCB
 .RI < expr >
 .RS
@@ -215,6 +222,13 @@ Generalized locally J-trivial. Related to LT and PT.
 .RI < expr >
 .RS
 Generalized locally testable.
+.RE
+.
+.PP
+.B :isLB
+.RI < expr >
+.RS
+Locally a band, all local subsemigroups are idempotent.
 .RE
 .
 .PP
@@ -294,6 +308,14 @@ lie in a generalized definite stringset.
 .RE
 .
 .PP
+.B :isTLB
+.RI < expr >
+.RS
+Tier-based locally a band, all local subsemigroups are idempotent
+after restriction to some tier.
+.RE
+.
+.PP
 .B :isTLPT
 .RI < expr >
 .RS
@@ -332,6 +354,13 @@ lie in a locally threshold testable stringset.
 .RS
 Tier-based reverse definite,
 defined by a set of permitted tier-prefixes.
+.RE
+.
+.PP
+.B :isTrivial
+.RI < expr >
+.RS
+One-state.
 .RE
 .
 .PP

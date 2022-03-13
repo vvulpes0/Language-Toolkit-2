@@ -26,6 +26,8 @@
 >                    -- * Tier-based generalizations
 >                    , isTDefM, isTRDefM, isTGDM
 >                    , isTLTM, isTLTTM, isTLPTM
+>                   -- * Others between CB and G
+>                   , isBM, isLBM, isTLBM
 >                    -- * Two-Variable Logics
 >                    , isFO2M, isFO2BM, isFO2SM
 >                   ) where
@@ -43,4 +45,5 @@
 > import LTK.Decide.GLPT
 > import LTK.Decide.GD
 > import LTK.Decide.CB
+> import LTK.Decide.B
 > import LTK.Decide.Definite
