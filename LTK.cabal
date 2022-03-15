@@ -44,7 +44,7 @@ license:             MIT
 license-file:        LICENSE
 author:              Dakotah Lambert, James Rogers
 copyright:           (c) 2014-2022 Dakotah Lambert
-maintainer:          49007668+vvulpes0@users.noreply.github.com
+maintainer:          Dakotah Lambert <dakotahlambert@acm.org>
 tested-with:         GHC ==8.0.2
                    , GHC ==8.6.5
                    , GHC ==8.10.1
