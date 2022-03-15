@@ -20,7 +20,7 @@
 > isGD :: (Ord n, Ord e) => FSA n e -> Bool
 > isGD = isGDM . syntacticMonoid
 
-> -- |True iff the monoid satisfies eSe=e
+> -- |True iff the monoid satisfies \(eSe=e\) for all idempotents \(e\).
 > isGDM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isGDM m = all ((== 1) . Set.size . ese m) . Set.toList $ idempotents m
 

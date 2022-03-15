@@ -16,9 +16,13 @@
 > import LTK.FSA
 > import LTK.Algebra
 
+> -- |True iff the automaton recognizes a generalized locally-testable
+> -- stringset.
 > isGLT :: (Ord n, Ord e) => FSA n e -> Bool
 > isGLT = isGLTM . syntacticMonoid
 
+> -- |True iff the monoid satisfies the generalized local testabiltiy
+> -- condition.
 > isGLTM :: (Ord n, Ord e) => FSA (n, [Symbol e]) e -> Bool
 > isGLTM f = all commutativeBand . map (emee f) $ Set.toList i
 >     where i = idempotents f

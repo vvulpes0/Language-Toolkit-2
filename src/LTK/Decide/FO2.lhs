@@ -87,6 +87,7 @@ is in MeDA.
 >              in all (fo2test s . emee s)
 >                 $ Set.toList (idempotents s)
 
+> -- |True iff the monoid represents a stringset that satisfies @isFO2B@.
 > isFO2BM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isFO2BM s = all (fo2test s . emee s) $ Set.toList (idempotents s)
 

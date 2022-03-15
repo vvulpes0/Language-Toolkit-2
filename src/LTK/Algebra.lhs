@@ -30,6 +30,7 @@
 > type S n e = (n, [Symbol e])
 > type T n e = State (S n e)
 
+> -- | A simpler way to denote syntactic monoids in type signatures.
 > type SynMon n e = FSA ([Maybe n],[Symbol e]) e
 
 
