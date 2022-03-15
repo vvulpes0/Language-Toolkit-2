@@ -51,7 +51,7 @@
 >                            , empty, many, some, (<|>))
 > import Data.Char (isLetter, isSpace)
 > import Data.Foldable (asum)
-> import Data.List (intersperse)
+> import Data.List (intersperse,foldl1')
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
@@ -93,6 +93,8 @@
 >     | Conjunction   [Expr]
 >     | Disjunction   [Expr]
 >     | Domination    [Expr]
+>     | QuotientL     [Expr]
+>     | QuotientR     [Expr]
 >       deriving (Eq, Ord, Read, Show)
 
 > -- |A subexpression that consists of a unary operator and its operand.
@@ -181,6 +183,8 @@ Therefore, this cleanup step has been removed.
 >                    NAry (Conjunction es)    ->  f Conjunction es
 >                    NAry (Disjunction es)    ->  f Disjunction es
 >                    NAry (Domination es)     ->  f Domination es
+>                    NAry (QuotientL es)      ->  f QuotientL es
+>                    NAry (QuotientR es)      ->  f QuotientR es
 >                    Unary (DownClose ex)     ->  g DownClose ex
 >                    Unary (Iteration ex)     ->  g Iteration ex
 >                    Unary (Negation ex)      ->  g Negation ex
@@ -221,6 +225,8 @@ prevents having to descend through the tree to find this information.
 >              -> f (mconcat .
 >                    intersperse (totalWithAlphabet (singleton Nothing))
 >                   ) es
+>          NAry (QuotientL es)     -> f ql es
+>          NAry (QuotientR es)     -> f qr es
 >          Unary (DownClose ex)
 >              -> renameStates . minimize . subsequenceClosure $
 >                 automatonFromExpr ex
@@ -237,6 +243,12 @@ prevents having to descend through the tree to find this information.
 >                  in map (semanticallyExtendAlphabetTo $ bigAlpha as) as
 >           bigAlpha = collapse (maybe id insert) Set.empty .
 >                      collapse (union . alphabet) Set.empty
+>           ql xs = if null xs
+>                   then emptyWithAlphabet (Set.singleton Nothing)
+>                   else foldl1' (\a b -> renameStates $ quotLeft a b) xs
+>           qr xs = if null xs
+>                   then emptyWithAlphabet (Set.singleton Nothing)
+>                   else foldr1 (\a b -> renameStates $ quotRight a b) xs
 
 > automatonFromPLFactor :: PLFactor -> FSA Integer (Maybe String)
 > automatonFromPLFactor (PLFactor h t pieces)
@@ -267,6 +279,8 @@ prevents having to descend through the tree to find this information.
 >           usedSymbolsN (Conjunction es)    =  us es
 >           usedSymbolsN (Disjunction es)    =  us es
 >           usedSymbolsN (Domination es)     =  us es
+>           usedSymbolsN (QuotientL es)      =  us es
+>           usedSymbolsN (QuotientR es)      =  us es
 >           usedSymbolsU (DownClose ex)      =  usedSymbols ex
 >           usedSymbolsU (Iteration ex)      =  usedSymbols ex
 >           usedSymbolsU (Negation ex)       =  usedSymbols ex
@@ -338,6 +352,8 @@ prevents having to descend through the tree to find this information.
 >     = makeLifter
 >       [ (["⋀", "⋂", "∧", "∩", "/\\"],  Conjunction)
 >       , (["⋁", "⋃", "∨", "∪", "\\/"],  Disjunction)
+>       , (["\\\\"], QuotientL)
+>       , (["//"], QuotientR)
 >       , (["∙∙", "@@"],       Domination)
 >       , (["∙" , "@" ],       Concatenation)
 >       ] <*>

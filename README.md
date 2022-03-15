@@ -49,7 +49,8 @@ you will have to use this single command instead:
     cabal install
 
 In the end, you will have installed the LTK library
-as well as four executables:
+as well as five executables:
+* classify
 * dotify
 * factorize
 * make-non-strict-constraints

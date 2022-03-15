@@ -13,7 +13,7 @@ synopsis:            A set of tools for analyzing languages via logic and automa
 category:            Formal Languages
 description:         This provides the Language Toolkit (LTK) library
                      and associated executables.
-                     There are three main components:
+                     There are four main components:
                      .
                      * @factorize@,
                        which takes as input a set of finite-state automata
@@ -25,6 +25,10 @@ description:         This provides the Language Toolkit (LTK) library
                        define languages via logical constraints
                        or import finite-state automata
                        and get information about the languages so defined.
+                     .
+                     * @classify@,
+                       a command-line classification program useful
+                       for batch jobs.
                      .
                      * And the @LTK@ library,
                        which includes the functions used by

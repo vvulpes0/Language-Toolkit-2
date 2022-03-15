@@ -279,6 +279,17 @@ so this concatenation may not be what one expects.
 It is better to use the
 .BR .\&< ...\& >
 form in that case.
+.TP
+.B \e\e
+Left-quotients of the operands, associating to the left.
+The left-quotient A\eB is the set of strings that can be
+appended to strings in A to get a string in B,
+a generalization of the Brzozowski derivative.
+.TP
+.B //
+Right-quotients of the operands, associating to the right.
+The right-quotient B/A is the set of strings that can be
+prepended to strings in A to get a string in B.
 .SS Unary Operators
 This section describes the unary relations just as
 the previous section described the n-ary ones.

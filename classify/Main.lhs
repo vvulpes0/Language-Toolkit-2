@@ -1,3 +1,9 @@
+> {-# Language CPP #-}
+
+#if !defined(MIN_VERSION_base)
+# define MIN_VERSION_base(a,b,c) 0
+#endif
+
 > module Main (main) where
 
 > import System.Console.GetOpt ( ArgDescr(NoArg, ReqArg)
@@ -12,8 +18,10 @@
 >                  , hGetContents, hPutStrLn, stderr, withFile
 >                  )
 
+#if !MIN_VERSION_base(4,8,0)
 > import Control.Applicative ((<*>), pure)
 > import Data.Traversable (sequenceA)
+#endif
 
 > import Data.List (intercalate, nub)
 > import Data.Map.Strict (Map)
