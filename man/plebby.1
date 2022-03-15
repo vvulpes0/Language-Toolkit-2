@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEBBY 1 "2020-09-16" "Version 0.3" "Language Toolkit"
+.TH PLEBBY 1 "2022-03-15" "Version 1.0" "Language Toolkit"
 .SH NAME
 plebby \- Piecewise / Local Expression Builder Interpreter
 .SH SYNOPSIS
@@ -145,101 +145,233 @@ and some lines may be interpreter commands (including
 .RE
 .
 .SS Determining the Class of an Expression
+The commands in this section determine whether a given
+.I expr
+is in the corresponding class
+with respect to the current
+.BR universe .
+.
+.PP
+.B :isB
+.RI < expr >
+.RS
+Band, everything is idempotent.
+.RE
+.
+.PP
+.B :isCB
+.RI < expr >
+.RS
+Commutative band, a semilattice.
+.RE
+.
+.PP
+.B :isDef
+.RI < expr >
+.RS
+Definite, defined by a set of permitted suffixes.
+.RE
+.
+.PP
+.B :isFinite
+.RI < expr >
+.RS
+Finite, having an acyclic graph representation.
+.RE
+.
+.PP
+.B :isFO2
+.RI < expr >
+.RS
+First-order logic with general precedence,
+restricted to two variables.
+.RE
+.
+.PP
+.B :isFO2B
+.RI < expr >
+.RS
+First-order logic with general precedence and betweenness,
+restricted to two variables.
+.RE
+.
+.PP
+.B :isFO2S
+.RI < expr >
+.RS
+First-order logic with general precedence and successor,
+restricted to two variables.
+.RE
+.
+.PP
+.B :isGD
+.RI < expr >
+.RS
+Generalized definite.
+.RE
+.
+.PP
+.B :isGLPT
+.RI < expr >
+.RS
+Generalized locally J-trivial. Related to LT and PT.
+.RE
+.
+.PP
+.B :isGLT
+.RI < expr >
+.RS
+Generalized locally testable.
+.RE
+.
+.PP
+.B :isLB
+.RI < expr >
+.RS
+Locally a band, all local subsemigroups are idempotent.
+.RE
+.
+.PP
+.B :isLPT
+.RI < expr >
+.RS
+Locally J-trivial. Related to LT and PT.
+.RE
+.
+.PP
 .B :isLT
 .RI < expr >
 .RS
-Determine whether
-.RI < expr >
-represents a Locally Testable stringset
-in the current
-.BR universe .
+Locally testable.
 .RE
 .
+.PP
 .B :isLTT
 .RI < expr >
 .RS
-Determine whether
-.RI < expr >
-represents a Locally Threshold Testable stringset
-in the current
-.BR universe .
+Locally threshold testable,
+equivalent to first-order logic with successor
+but not general precedence.
 .RE
 .
 .PP
 .B :isPT
 .RI < expr >
 .RS
-Determine whether
+Piecewise testable.
+.RE
+.
+.PP
+.B :isRDef
 .RI < expr >
-represents a Piecewise Testable stringset
-in the current
-.BR universe .
+.RS
+Reverse definite, defined by a set of permitted prefixes.
 .RE
 .
 .PP
 .B :isSF
 .RI < expr >
 .RS
-Determine whether
-.RI < expr >
-represents a Star-Free stringset
-in the current
-.BR universe .
+Star-free, equivalent to first-order logic with general precedence.
 .RE
 .
 .PP
 .B :isSL
 .RI < expr >
 .RS
-Determine whether
-.RI < expr >
-represents a Strictly Local stringset
-in the current
-.BR universe .
+Strictly local.
 .RE
 .
 .PP
 .B :isSP
 .RI < expr >
 .RS
-Determine whether
-.RI < expr >
-represents a Strictly Piecewise stringset
-in the current
-.BR universe .
+Strictly piecewise.
 .RE
 .
 .PP
-.B :isTSL
+.B :isTDef
 .RI < expr >
 .RS
-Determine whether
+Tier-based definite, defined by a set of permitted tier-suffixes.
+.RE
+.
+.PP
+.B :isTGD
 .RI < expr >
-represents a Tier-Based Strictly Local stringset
-in the current
-.BR universe .
+.RS
+Tier-based generalized definite:
+contains all and only the strings whose projections
+to some fixed subset of the current
+.B universe
+lie in a generalized definite stringset.
+.RE
+.
+.PP
+.B :isTLB
+.RI < expr >
+.RS
+Tier-based locally a band, all local subsemigroups are idempotent
+after restriction to some tier.
+.RE
+.
+.PP
+.B :isTLPT
+.RI < expr >
+.RS
+Tier-based locally J-trivial:
+contains all and only the strings whose projections
+to some fixed subset of the current
+.B universe
+lie in a locally J-trivial stringset.
 .RE
 .
 .PP
 .B :isTLT
 .RI < expr >
 .RS
-Determine whether
-.RI < expr >
-represents a Tier-Based Locally Testable stringset
-in the current
-.BR universe .
+Tier-based locally testable:
+contains all and only the strings whose projections
+to some fixed subset of the current
+.B universe
+lie in a locally testable stringset.
 .RE
 .
 .PP
 .B :isTLTT
 .RI < expr >
 .RS
-Determine whether
+Tier-based locally threshold testable:
+contains all and only the strings whose projections
+to some fixed subset of the current
+.B universe
+lie in a locally threshold testable stringset.
+.RE
+.
+.PP
+.B :isTRDef
 .RI < expr >
-represents a Tier-Based Locally Threshold Testable stringset
-in the current
-.BR universe .
+.RS
+Tier-based reverse definite,
+defined by a set of permitted tier-prefixes.
+.RE
+.
+.PP
+.B :isTrivial
+.RI < expr >
+.RS
+One-state.
+.RE
+.
+.PP
+.B :isTSL
+.RI < expr >
+.RS
+Tier-based strictly local:
+contains all and only the strings whose projections
+to some fixed subset of the current
+.B universe
+lie in a strictly local stringset.
 .RE
 .
 .SS Grammatical Inference
@@ -503,12 +635,18 @@ given the representation,
 might be slow to compute.
 This holds especially true for the (T)LTT test.
 .
+.P
+The AT&T format cannot handle symbols that contain spaces.
+Further, numeric symbols are treated as indices into the symbols files,
+so symbol mapping files must be written
+when exporting automata that actually use such symbols.
 .SH BUGS
 Lines that cannot be parsed are ignored,
 but generally no warnings are emitted.
 .SH "SEE ALSO"
 .BR display (1),
 .BR dot (1),
+.BR fsm (5),
 .BR pleb (5)
 .PP
 https://github.com/judah/haskeline/wiki/UserPreferences

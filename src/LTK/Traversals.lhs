@@ -7,7 +7,7 @@
 
 > {-|
 > Module    : Traversals
-> Copyright : (c) 2017-2019 Jim Rogers and Dakotah Lambert
+> Copyright : (c) 2017-2021 Jim Rogers and Dakotah Lambert
 > License   : MIT
 >
 > Find paths through an automaton.
@@ -15,6 +15,7 @@
 > module LTK.Traversals
 >        ( Path(..)
 >        , word
+>        , isAcyclic
 >        , initialsPaths
 >        , initialsNDPath
 >        , rejectingPaths
@@ -24,9 +25,13 @@
 >        , nondeterministicAcyclicExtensions
 >        ) where
 
+#if !MIN_VERSION_base(4,8,0)
 > import Data.Monoid (Monoid, mappend, mconcat, mempty)
+#endif
 #if MIN_VERSION_base(4,9,0)
+#if !MIN_VERSION_base(4,11,0)
 > import Data.Semigroup (Semigroup, (<>))
+#endif
 #endif
 > import Data.Set (Set)
 
@@ -246,3 +251,14 @@ rejectingPaths fsa bound
 >                            fsa bound (initialsPaths fsa) empty
 >     where rejecting f p = doesNotContain (endstate p) .
 >                           tmap Just $ finals f
+
+> -- |True iff the given FSA contains no reachable cycles.
+> --
+> -- @since 1.0
+> isAcyclic :: (Ord n, Ord e) => FSA n e -> Bool
+> isAcyclic f = isEmpty
+>               $ traversalQDFS hasCycle f (n + 1) (initialsPaths f) empty
+>     where hasCycle _ = (/=) (singleton 1)
+>                        . multiplicities
+>                        . stateMultiset
+>           n = size $ states f

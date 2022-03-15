@@ -11,10 +11,17 @@
 >
 > @since 0.2
 > -}
-> module LTK.Decide.SF (isSF) where
+> module LTK.Decide.SF (isSF, isSFM) where
 
 > import LTK.FSA
+> import LTK.Algebra
 
 > -- |True iff the automaton recognizes a Star-Free stringset.
 > isSF :: (Ord n, Ord e) => FSA n e -> Bool
-> isSF = trivialUnder hEquivalence . syntacticMonoid
+> isSF = isSFM . syntacticMonoid
+
+> -- |True iff the monoid is aperiodic.
+> --
+> -- @since 1.0
+> isSFM :: (Ord n, Ord e) => SynMon n e -> Bool
+> isSFM = trivialUnder hEquivalence

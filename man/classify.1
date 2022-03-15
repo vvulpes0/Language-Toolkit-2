@@ -1,0 +1,86 @@
+.TH CLASSIFY 1 "2022-03-13" "Version 1.0" "Language Toolkit"
+.SH NAME
+classify \- determine subregular class membership
+.SH SYNOPSIS
+.B classify
+.RB [ -a | -A | -j | -p ]
+.RB [ -e | -u ]
+.RB [ -n | -N ]
+.RB [ -hqv?\& ]
+.RB [ -s
+.IR symbols ]
+.I class ...\&
+.SH DESCRIPTION
+The
+.B classify
+utility reads a finite-state automaton and determines
+whether it belongs to a provided set of complexity classes.
+The automaton is read from the standard input,
+and its format is determined by command-line options.
+For the AT&T tabular format, an optional symbol table may be provided
+with the
+.RB -s
+option.
+.PP
+The return value indicates whether any
+.RB ( -e ", default)"
+or all
+.RB ( -u )
+of the specified classes contain the pattern.
+.PP
+Specifying more than one of any set of mutually-exclusive options
+shall not be considered an error.
+The last option specified shall determine the behavior of the utility.
+.SH OPTIONS
+.SS FORMATS
+.TP
+.B -a
+AT&T tabular format, input projection.
+This is the default.
+.TP
+.B -A
+AT&T tabular format, output projection.
+.TP
+.B -j
+Jeff format.
+.TP
+.B -p
+PLEB format
+.SS REDUCTION
+.TP
+.B -e
+Exit successfully iff any specified class contains the pattern.
+This is the default.
+.TP
+.B -u
+Exit successfully iff all specified classes contain the pattern.
+.SS NORMALIZATION
+.TP
+.B -n
+Normalize the pattern before processing.
+This is the default.
+.TP
+.B -N
+Do not normalize the pattern before processing.
+This is useful when dealing with an already-minimal
+finite-state transducer rather than an acceptor.
+.SS OTHER OPTIONS
+.TP
+.BR -h ", " -?\&
+Show a brief help message and exit.
+.TP
+.B -q
+Do not a output textual description of the membership queries.
+.TP
+.B -v
+Instead of doing any processing, print the version number and exit.
+.SH "EXIT STATUS"
+.TP
+.B 0
+The pattern was contained as desired.
+.TP
+.B ">0"
+An error occurred, or the pattern was not contained as desired.
+.SH "SEE ALSO"
+.BR fsm (5),
+.BR pleb (5)

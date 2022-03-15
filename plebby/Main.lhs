@@ -6,10 +6,12 @@
 
 > module Main (main) where
 
+#if !MIN_VERSION_base(4,8,0)
 > import Control.Applicative (pure, (<*>))
+> import Data.Functor ((<$>))
+#endif
 > import Control.Monad.Trans.Class (lift)
 > import Data.Char (isSpace, toLower)
-> import Data.Functor ((<$>))
 > import Data.List (intercalate)
 > import System.Console.Haskeline ( InputT
 >                                 , defaultSettings
@@ -17,6 +19,14 @@
 >                                 , runInputT
 >                                 )
 > import System.Environment (getEnvironment)
+> import System.Directory ( createDirectoryIfMissing
+>                         , getHomeDirectory
+>                         )
+> import System.FilePath ( isPathSeparator
+>                        , joinPath
+>                        , splitDirectories
+>                        , takeDirectory
+>                        )
 > import System.IO ( hClose
 >                  , hGetContents
 >                  , hPutStr
@@ -34,9 +44,22 @@
 > import LTK.Decide       ( isSL, isTSL
 >                         , isLT, isTLT
 >                         , isLTT, isTLTT
+>                         , isLPT, isTLPT
 >                         , isSP
 >                         , isPT
+>                         , isFO2, isFO2B, isFO2S
 >                         , isSF
+>                         , isGLT, isGLPT
+>                         , isFinite
+>                         , isGD
+>                         , isTGD
+>                         , isCB
+>                         , isB, isLB, isTLB
+>                         , isDef
+>                         , isRDef
+>                         , isTDef
+>                         , isTRDef
+>                         , isTrivial
 >                         )
 > import LTK.FSA
 > import LTK.Learn.SL  (fSL)
@@ -93,6 +116,7 @@
 >                deriving (Eq, Ord, Read, Show)
 
 > data Command = Bindings
+>              | D_JE Expr -- Display J-minimized Form
 >              | D_PSG Expr -- Display Powerset Graph
 >              | D_SM Expr -- Display Syntactic Monoid
 >              | Display Expr
@@ -122,14 +146,33 @@
 >                deriving (Eq, Read, Show)
 
 > data Relation = Equal Expr Expr
+>               | IsB Expr
+>               | IsCB Expr
+>               | IsDef Expr
+>               | IsFin Expr
+>               | IsFO2 Expr
+>               | IsFO2B Expr
+>               | IsFO2S Expr
+>               | IsGD Expr
+>               | IsGLPT Expr
+>               | IsGLT Expr
+>               | IsLB Expr
 >               | IsLT Expr
+>               | IsLPT Expr
 >               | IsLTT Expr
 >               | IsPT Expr
+>               | IsRDef Expr
 >               | IsSF Expr
 >               | IsSL Expr
 >               | IsSP Expr
+>               | IsTDef Expr
+>               | IsTGD Expr
+>               | IsTLB Expr
 >               | IsTLT Expr
+>               | IsTLPT Expr
 >               | IsTLTT Expr
+>               | IsTRDef Expr
+>               | IsTrivial Expr
 >               | IsTSL Expr
 >               | Subset Expr Expr
 >               | SSubset Expr Expr -- Strict Subset
@@ -144,58 +187,62 @@
 >                    Just line     ->  lift (act e (processLine e line)) >>=
 >                                      processLines
 
+Always use "modwords" when FilePath objects are at issue,
+so that file names can be quoted or escaped
+in order to deal with spaces or other special characters.
+
 > processLine :: Env -> String -> Trither Command Relation Env
 > processLine d@(dict, subexprs, _) str
 >     | null str = R d
 >     | not (isPrefixOf str ":") = R $ doStatements d str
 >     | isStartOf str ":import"
->         = case words str
+>         = case modwords str
 >           of (_:a:[])  ->  L (Import a)
 >              _         ->  R d
 >     | isStartOf str ":learnsl"
->         = case words str
+>         = case modwords str
 >           of (_:a:b:[])  ->  if all (isIn "0123456789") a
 >                              then L (LearnSL (read a) b)
 >                              else R d
 >              _           ->  R d
 >     | isStartOf str ":learnsp"
->         = case words str
+>         = case modwords str
 >           of (_:a:b:[])  ->  if all (isIn "0123456789") a
 >                              then L (LearnSP (read a) b)
 >                              else R d
 >              _           ->  R d
 >     | isStartOf str ":learntsl"
->         = case words str
+>         = case modwords str
 >           of (_:a:b:[])  ->  if all (isIn "0123456789") a
 >                              then L (LearnTSL (read a) b)
 >                              else R d
 >              _           ->  R d
 >     | isStartOf str ":loadstate"
->         = case words str
+>         = case modwords str
 >           of (_:a:[])  ->  L (Loadstate a)
 >              _         ->  R d
 >     | isStartOf str ":readatto"
->         = case words str
+>         = case modwords str
 >           of (_:a:b:c:[])  ->  L (ReadATTO a b c)
 >              _             ->  R d
 >     | isStartOf str ":readatt"
->         = case words str
+>         = case modwords str
 >           of (_:a:b:c:[])  ->  L (ReadATT a b c)
 >              _             ->  R d
 >     | isStartOf str ":readbin"
->         = case words str
+>         = case modwords str
 >           of (_:a:[])  ->  L (ReadBin a)
 >              _         ->  R d
 >     | isStartOf str ":readjeff"
->         = case words str
+>         = case modwords str
 >           of (_:a:[])  ->  L (ReadJeff a)
 >              _         ->  R d
 >     | isStartOf str ":read"
->         = case words str
+>         = case modwords str
 >           of (_:a:[])  ->  L (Read a)
 >              _         ->  R d
 >     | isStartOf str ":savestate"
->         = case words str
+>         = case modwords str
 >           of (_:a:[])  ->  L (Savestate a)
 >              _         ->  R d
 >     | isStartOf str ":show"
@@ -207,11 +254,11 @@
 >             (_:a:[]) -> L (Unset a)
 >             _        -> R d
 >     | isStartOf str ":writeatt"
->         =  case words str
+>         =  case modwords str
 >            of (_:a:b:c:as) -> g ((L . WriteATT a b c) <$> pe) (unwords as)
 >               _            -> R d
 >     | isStartOf str ":write"
->         = case words str
+>         = case modwords str
 >           of (_:a:as) -> g ((L . Write a) <$> pe) (unwords as)
 >              _        -> R d
 >     | otherwise =  doOne . filter (isStartOf str . fst) $ p12 commands
@@ -285,6 +332,66 @@
 >                   , [ArgF]
 >                   , "read file as plebby script"
 >                   )
+>                 , ( ":isB"
+>                   , (M . IsB) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is a band"
+>                   )
+>                 , ( ":isCB"
+>                   , (M . IsCB) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is a semilattice language"
+>                   )
+>                 , ( ":isDef"
+>                   , (M . IsDef) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is a definite language"
+>                   )
+>                 , ( ":isFinite"
+>                   , (M . IsFin) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is finite"
+>                   )
+>                 , ( ":isFO2"
+>                   , (M . IsFO2) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is FO2[<]-definable"
+>                   )
+>                 , ( ":isFO2B"
+>                   , (M . IsFO2B) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is FO2[<,bet]-definable"
+>                   )
+>                 , ( ":isFO2S"
+>                   , (M . IsFO2S) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is FO2[<,+1]-definable"
+>                   )
+>                 , ( ":isGD"
+>                   , (M . IsGD) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is Generalized Definite"
+>                   )
+>                 , ( ":isGLPT"
+>                   , (M . IsGLPT) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is Generalized Locally PT"
+>                   )
+>                 , ( ":isGLT"
+>                   , (M . IsGLT) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is Generalized Locally Testable"
+>                   )
+>                 , ( ":isLB"
+>                   , (M . IsLB) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is locally a band"
+>                   )
+>                 , ( ":isLPT"
+>                   , (M . IsLPT) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is locally Piecewise Testable"
+>                   )
 >                 , ( ":isLT"
 >                   , (M . IsLT) <$> pe
 >                   , [ArgE]
@@ -299,6 +406,11 @@
 >                   , (M . IsPT) <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Piecewise Testable"
+>                   )
+>                 , ( ":isRDef"
+>                   , (M . IsRDef) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is a reverse definite language"
 >                   )
 >                 , ( ":isSF"
 >                   , (M . IsSF) <$> pe
@@ -315,6 +427,26 @@
 >                   , [ArgE]
 >                   , "determine if expr is Strictly Piecewise"
 >                   )
+>                 , ( ":isTDef"
+>                   , (M . IsTDef) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is definite on a tier"
+>                   )
+>                 , ( ":isTGD"
+>                   , (M . IsTGD) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is Generalized Definite on a tier"
+>                   )
+>                 , ( ":isTLB"
+>                   , (M . IsTLB) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is tier-locally a band"
+>                   )
+>                 , ( ":isTLPT"
+>                   , (M . IsTLPT) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is tier-locally Piecewise Testable"
+>                   )
 >                 , ( ":isTLT"
 >                   , (M . IsTLT) <$> pe
 >                   , [ArgE]
@@ -325,10 +457,25 @@
 >                   , [ArgE]
 >                   , "determine if expr is Tier-LTT"
 >                   )
+>                 , ( ":isTRDef"
+>                   , (M . IsTRDef) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is reverse definite on a tier"
+>                   )
+>                 , ( ":isTrivial"
+>                   , (M . IsTrivial) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr has only a single state"
+>                   )
 >                 , ( ":isTSL"
 >                   , (M . IsTSL) <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Strictly Tier-Local"
+>                   )
+>                 , ( ":Jmin"
+>                   , (L . D_JE) <$> pe
+>                   , [ArgE]
+>                   , ":display the J-minimized version of expr"
 >                   )
 >                 , ( ":learnSL"
 >                   , error ":learnSL not defined here"
@@ -455,6 +602,9 @@
 >                 putStrLn (formatSet $ tmap fst subexprs) >>
 >                 return e
 >          Display expr -> disp id expr
+>          D_JE expr -> disp (renameStatesBy (formatSet . tmap f)
+>                             . minimizeOver jEquivalence
+>                             . syntacticMonoid) expr
 >          D_PSG expr -> disp (renameStatesBy formatSet . powersetGraph) expr
 >          D_SM expr -> disp (renameStatesBy f . syntacticMonoid) expr
 >          Dotify expr -> dot id expr
@@ -464,7 +614,7 @@
 >          Help xs -> lessHelp xs >> return e
 >          Import file
 >              -> catchIOError
->                 (importScript e =<< lines <$> readFile file)
+>                 (importScript e =<< lines <$> readFileWithExpansion file)
 >                 (const $
 >                  hPutStrLn stderr
 >                  ("failed to read \"" ++ file ++ "\"") >>
@@ -474,14 +624,14 @@
 >          LearnSP k file -> selearn (fSP k) file
 >          LearnTSL k file -> selearn (fTSL k) file
 >          Loadstate file
->              -> catchIOError (read <$> readFile file)
+>              -> catchIOError (read <$> readFileWithExpansion file)
 >                 (const $
 >                  hPutStrLn stderr
 >                  ("failed to read \"" ++ file ++ "\"") >>
 >                  return e
 >                 )
 >          Read file
->              -> catchIOError (doStatements e <$> readFile file)
+>              -> catchIOError (doStatements e <$> readFileWithExpansion file)
 >                 (const $
 >                  hPutStrLn stderr
 >                  ("failed to read \"" ++ file ++ "\"") >>
@@ -497,7 +647,7 @@
 >                   return e
 >                  )
 >                  (return . insertExpr e . fromSemanticAutomaton) =<<
->                  readMaybe <$> readFile file
+>                  readMaybe <$> readFileWithExpansion file
 >                 )
 >                 (const $
 >                  hPutStrLn stderr
@@ -513,7 +663,7 @@
 >                   return e
 >                  )
 >                  (return . insertExpr e . fromAutomaton) =<<
->                  fromE Jeff <$> readFile file
+>                  fromE Jeff <$> readFileWithExpansion file
 >                 )
 >                 (const $
 >                  hPutStrLn stderr
@@ -541,7 +691,7 @@
 >                    (tmap (\(a, _) -> "= " ++ a ++ " " ++ a) subexprs)
 >          RestrictUniverse -> return (restrictUniverse e)
 >          Savestate file
->              -> catchIOError (writeFile file . unlines $ [show e])
+>              -> catchIOError (writeAndCreateDir file . unlines $ [show e])
 >                 (const $
 >                  hPutStrLn stderr
 >                  ("failed to write \"" ++ file ++ "\"")
@@ -603,11 +753,11 @@
 >           f' Epsilon = "ε"
 >           f' (Symbol x) = x
 >           werr ofile s
->               = catchIOError (writeFile ofile s)
+>               = catchIOError (writeAndCreateDir ofile s)
 >                 (const $
 >                  hPutStrLn stderr
 >                  ("failed to write \"" ++ ofile ++
->                   if (isIn ofile '/')
+>                   if (any isPathSeparator ofile)
 >                   then "\nDoes the directory exist?"
 >                   else ""
 >                  )
@@ -618,7 +768,7 @@
 >                 (insertExpr e <$> fromAutomaton <$> genFSA
 >                  <$> learn method
 >                  <$> map (Just . words) <$> lines
->                  <$> readFile file
+>                  <$> readFileWithExpansion file
 >                 )
 >                 (const $
 >                  hPutStrLn stderr
@@ -637,14 +787,14 @@
 >                  (return . insertExpr e . fromAutomaton) =<<
 >                  fromE typ <$>
 >                  (embedSymbolsATT <$>
->                   readFile f1 <*>
+>                   readFileWithExpansion f1 <*>
 >                   (if f2 == "_"
 >                    then mempty
->                    else Just <$> readFile f2
+>                    else Just <$> readFileWithExpansion f2
 >                   ) <*>
 >                   (if f3 == "_"
 >                    then mempty
->                    else Just <$> readFile f3
+>                    else Just <$> readFileWithExpansion f3
 >                   )
 >                  )
 >                 )
@@ -697,14 +847,33 @@
 > doRelation e r
 >     = case r
 >       of Equal p1 p2    ->  relate e (==) p1 p2
+>          IsB p          ->  check isB p
+>          IsCB p         ->  check isCB p
+>          IsDef p        ->  check isDef p
+>          IsFin p        ->  check isFinite p
+>          IsFO2 p        ->  check isFO2 p
+>          IsFO2B p       ->  check isFO2B p
+>          IsFO2S p       ->  check isFO2S p
+>          IsGD p         ->  check isGD p
+>          IsGLPT p       ->  check isGLPT p
+>          IsGLT p        ->  check isGLT p
+>          IsLB p         ->  check isLB p
+>          IsLPT p        ->  check isLPT p
 >          IsLT p         ->  check isLT p
 >          IsLTT p        ->  check isLTT p
 >          IsPT p         ->  check isPT p
+>          IsRDef p       ->  check isRDef p
 >          IsSF p         ->  check isSF p
 >          IsSL p         ->  check isSL p
 >          IsSP p         ->  check isSP p
+>          IsTDef p       ->  check isTDef p
+>          IsTGD p        ->  check isTGD p
+>          IsTLB p        ->  check isTLB p
 >          IsTLT p        ->  check isTLT p
+>          IsTLPT p       ->  check isTLPT p
 >          IsTLTT p       ->  check isTLTT p
+>          IsTRDef p      ->  check isTRDef p
+>          IsTrivial p    ->  check isTrivial p
 >          IsTSL p        ->  check isTSL p
 >          Subset p1 p2   ->  relate e isSupersetOf p1 p2
 >          SSubset p1 p2  ->  relate e isProperSupersetOf p1 p2
@@ -784,3 +953,51 @@
 > readMaybe s = case reads s
 >               of [(x, as)] -> if all isSpace as then Just x else Nothing
 >                  _ -> Nothing
+
+> -- |Separate a string into words, accounting for quoting and escapes.
+> modwords :: String -> [String]
+> modwords s = modwords' s ""
+
+> modwords' :: String -> String -> [String]
+> modwords' [] partial = if null partial then [] else [partial]
+> modwords' (a:xs) partial
+>     | isSpace a = g $ modwords (dropWhile isSpace xs)
+>     | a == '\\' = modwords' (drop 1 xs) (partial ++ take 1 xs)
+>     | a == '\'' || a == '"' = f a
+>     | otherwise = modwords' xs (partial ++ [a])
+>     where f c = uncurry (:) . fmap modwords $ obtainWord (== c) xs partial
+>           g = if null partial then id else (partial :)
+
+> -- |The longest prefix of the input string
+> -- which does not contain an unescaped character
+> -- that satisfies the given predicate, and the remainder of the string.
+> obtainWord :: (Char -> Bool) -> String -> String -> (String, String)
+> obtainWord _ [] partial = (partial, "")
+> obtainWord p (a:xs) partial
+>     | a == '\\' = obtainWord p (drop 1 xs) (partial ++ take 1 xs)
+>     | p a = (partial, xs)
+>     | otherwise = obtainWord p xs (partial ++ [a])
+
+> -- | writeFile, attempting to guarantee existence of its parents.
+> -- Tilde-expansion is performed.
+> writeAndCreateDir :: FilePath -> String -> IO ()
+> writeAndCreateDir fp s = do
+>     fp' <- expand fp
+>     createDirectoryIfMissing True (takeDirectory fp')
+>     writeFile fp' s
+
+> -- | readFile, with tilde-expansion.
+> readFileWithExpansion :: FilePath -> IO String
+> readFileWithExpansion fp = do
+>     fp' <- expand fp
+>     readFile fp'
+
+> -- | tilde-expand a filepath.
+> -- Note that "~user" is unsupported, only plain "~".
+> expand :: FilePath -> IO FilePath
+> expand fp
+>     = case parts of
+>         ("~":xs) -> joinPath <$> (:xs)
+>                     <$> catchIOError getHomeDirectory (const (pure "~"))
+>         _ -> pure fp
+>     where parts = splitDirectories fp

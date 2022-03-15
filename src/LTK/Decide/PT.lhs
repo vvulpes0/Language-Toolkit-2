@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.PT
-> Copyright : (c) 2019 Dakotah Lambert
+> Copyright : (c) 2019-2021 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -10,10 +10,17 @@
 >
 > @since 0.2
 > -}
-> module LTK.Decide.PT (isPT) where
+> module LTK.Decide.PT (isPT, isPTM) where
 
 > import LTK.FSA
+> import LTK.Algebra
 
 > -- |True iff the automaton recognizes a PT stringset.
 > isPT :: (Ord n, Ord e) => FSA n e -> Bool
-> isPT = trivialUnder jEquivalence . syntacticMonoid
+> isPT = isPTM . syntacticMonoid
+
+> -- |True iff the monoid is \(\mathcal{J}\)-trivial
+> --
+> -- @since 1.0
+> isPTM :: (Ord n, Ord e) => SynMon n e -> Bool
+> isPTM = trivialUnder jEquivalence

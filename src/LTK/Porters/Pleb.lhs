@@ -1,7 +1,13 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
+> {-# Language CPP #-}
+
+#if !defined(MIN_VERSION_base)
+# define MIN_VERSION_base(a,b,c) 0
+#endif
+
 > {-|
 > Module:    LTK.Porters.Pleb
-> Copyright: (c) 2018-2019 Dakotah Lambert
+> Copyright: (c) 2018-2021 Dakotah Lambert
 > License:   MIT
 
 > The (P)iecewise / (L)ocal (E)xpression (B)uilder.
@@ -36,18 +42,22 @@
 >        , tokenize
 >        ) where
 
-> import Control.Applicative ( Alternative, Applicative
->                            , empty, many, pure, some, (<*>), (<|>))
+#if !MIN_VERSION_base(4,8,0)
+> import Data.Functor ((<$>))
+> import Data.Monoid (mconcat)
+> import Control.Applicative (Applicative, pure, (<*>))
+#endif
+> import Control.Applicative ( Alternative
+>                            , empty, many, some, (<|>))
 > import Data.Char (isLetter, isSpace)
 > import Data.Foldable (asum)
-> import Data.Functor ((<$>))
-> import Data.List (intersperse)
-> import Data.Monoid (mconcat)
+> import Data.List (intersperse,foldl1')
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
 > import LTK.FSA
 > import LTK.Factors (Factor(..), buildLiteral, required)
+> import LTK.Extract.SP (subsequenceClosure)
 
 > -- |A syntactic unit.
 > data Token = TSymbol Char
@@ -83,11 +93,14 @@
 >     | Conjunction   [Expr]
 >     | Disjunction   [Expr]
 >     | Domination    [Expr]
+>     | QuotientL     [Expr] -- ^@since 1.0
+>     | QuotientR     [Expr] -- ^@since 1.0
 >       deriving (Eq, Ord, Read, Show)
 
 > -- |A subexpression that consists of a unary operator and its operand.
 > data UnaryExpr
->     = Iteration Expr
+>     = DownClose Expr -- ^@since 1.0
+>     | Iteration Expr
 >     | Negation Expr
 >     | Tierify [SymSet] Expr
 >       deriving (Eq, Ord, Read, Show)
@@ -139,10 +152,18 @@
 >               automatonFromExpr
 >           universe = either (const Set.empty) id (definition "universe" dict)
 
+=====
+Note:
+=====
+
+@restrictUniverse@ previously deleted symbolsets bound to the empty set.
+However, it is now possible to manually define the empty set: [/a,/b].
+Therefore, this cleanup step has been removed.
+
 > -- |Remove any symbols not present in @(universe)@ from the environment.
 > restrictUniverse :: Env -> Env
 > restrictUniverse (dict, subexprs, v)
->     = ( keep (not . isEmpty . snd) $ tmap (mapsnd restrictUniverseS) dict
+>     = ( tmap (mapsnd restrictUniverseS) dict
 >       , tmap (mapsnd restrictUniverseE) subexprs
 >       , restrictUniverseE <$> v
 >       )
@@ -162,6 +183,9 @@
 >                    NAry (Conjunction es)    ->  f Conjunction es
 >                    NAry (Disjunction es)    ->  f Disjunction es
 >                    NAry (Domination es)     ->  f Domination es
+>                    NAry (QuotientL es)      ->  f QuotientL es
+>                    NAry (QuotientR es)      ->  f QuotientR es
+>                    Unary (DownClose ex)     ->  g DownClose ex
 >                    Unary (Iteration ex)     ->  g Iteration ex
 >                    Unary (Negation ex)      ->  g Negation ex
 >                    Unary (Tierify ts ex)
@@ -201,6 +225,11 @@ prevents having to descend through the tree to find this information.
 >              -> f (mconcat .
 >                    intersperse (totalWithAlphabet (singleton Nothing))
 >                   ) es
+>          NAry (QuotientL es)     -> f ql es
+>          NAry (QuotientR es)     -> f qr es
+>          Unary (DownClose ex)
+>              -> renameStates . minimize . subsequenceClosure $
+>                 automatonFromExpr ex
 >          Unary (Iteration ex)
 >              -> renameStates . minimize . kleeneClosure $
 >                 automatonFromExpr ex
@@ -214,6 +243,12 @@ prevents having to descend through the tree to find this information.
 >                  in map (semanticallyExtendAlphabetTo $ bigAlpha as) as
 >           bigAlpha = collapse (maybe id insert) Set.empty .
 >                      collapse (union . alphabet) Set.empty
+>           ql xs = if null xs
+>                   then emptyWithAlphabet (Set.singleton Nothing)
+>                   else foldl1' (\a b -> renameStates $ quotLeft a b) xs
+>           qr xs = if null xs
+>                   then emptyWithAlphabet (Set.singleton Nothing)
+>                   else foldr1 (\a b -> renameStates $ quotRight a b) xs
 
 > automatonFromPLFactor :: PLFactor -> FSA Integer (Maybe String)
 > automatonFromPLFactor (PLFactor h t pieces)
@@ -244,6 +279,9 @@ prevents having to descend through the tree to find this information.
 >           usedSymbolsN (Conjunction es)    =  us es
 >           usedSymbolsN (Disjunction es)    =  us es
 >           usedSymbolsN (Domination es)     =  us es
+>           usedSymbolsN (QuotientL es)      =  us es
+>           usedSymbolsN (QuotientR es)      =  us es
+>           usedSymbolsU (DownClose ex)      =  usedSymbols ex
 >           usedSymbolsU (Iteration ex)      =  usedSymbols ex
 >           usedSymbolsU (Negation ex)       =  usedSymbols ex
 >           usedSymbolsU (Tierify ts _)      =  unionAll ts
@@ -252,17 +290,13 @@ prevents having to descend through the tree to find this information.
 > parseStatements :: Env -> Parse Env
 > parseStatements (dict, subexprs, prev)
 >     = asum $
->       [ start >> putFst <$>
->         (mkSyms <$> getName <*>
->          (unionAll <$>
->           parseDelimited ['(', '{']
->           (parseSeparated "," $ parseSymSet dict)
->          ) <*>
+>       [ start >>
+>         (f False <$> getName <*> (Just <$> parseExpr dict subexprs)) >>=
+>         parseStatements
+>       , start >> putFst <$>
+>         (mkSyms <$> getName <*> parseSymExpr dict <*>
 >          pure dict
 >         ) >>=
->         parseStatements
->       , start >>
->         (f False <$> getName <*> (Just <$> parseExpr dict subexprs)) >>=
 >         parseStatements
 >       , f True "it" <$> Just <$> parseExpr dict subexprs
 >       , Parse $ \ts ->
@@ -318,6 +352,8 @@ prevents having to descend through the tree to find this information.
 >     = makeLifter
 >       [ (["⋀", "⋂", "∧", "∩", "/\\"],  Conjunction)
 >       , (["⋁", "⋃", "∨", "∪", "\\/"],  Disjunction)
+>       , (["\\\\"], QuotientL)
+>       , (["//"], QuotientR)
 >       , (["∙∙", "@@"],       Domination)
 >       , (["∙" , "@" ],       Concatenation)
 >       ] <*>
@@ -327,11 +363,13 @@ prevents having to descend through the tree to find this information.
 > parseUnaryExpr :: Dictionary SymSet -> Dictionary Expr -> Parse UnaryExpr
 > parseUnaryExpr dict subexprs
 >     = (makeLifter
->        [ (["*", "∗"],       Iteration)
+>        [ (["↓", "$"],       DownClose)
+>        , (["*", "∗"],       Iteration)
 >        , (["¬", "~", "!"],  Negation)
 >        ] <*> parseExpr dict subexprs
 >       ) <|> (Tierify <$> pt <*> parseExpr dict subexprs)
->     where pt = parseDelimited ['['] (parseSeparated "," (parseSymSet dict))
+>     where pt = parseDelimited ['[']
+>                (parseSeparated "," (parseSymExpr dict))
 
 > parsePLFactor :: Dictionary SymSet -> Dictionary Expr -> Parse PLFactor
 > parsePLFactor dict subexprs
@@ -360,8 +398,20 @@ prevents having to descend through the tree to find this information.
 >       , ([""], PLFactor False False)
 >       ] <*>
 >       (parseDelimited ['<', '⟨']
->        (parseSeparated "," (some (parseSymSet dict)) <|>
+>        (parseSeparated "," (some (parseSymExpr dict)) <|>
 >         Parse (\ts -> Right ([], ts))))
+
+> parseSymExpr :: Dictionary SymSet -> Parse SymSet
+> parseSymExpr dict
+>     = ((fmap Set.unions
+>        . parseDelimited ['{', '(']
+>        $ parseSeparated "," (parseSymExpr dict))
+>       <|>
+>        (fmap (foldr1 Set.intersection)
+>        . parseDelimited ['[']
+>        $ parseSeparated "," (parseSymExpr dict))
+>       <|>
+>        parseSymSet dict)
 
 > parseSymSet :: Dictionary SymSet -> Parse SymSet
 > parseSymSet dict

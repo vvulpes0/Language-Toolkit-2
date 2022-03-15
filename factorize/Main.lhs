@@ -1,3 +1,9 @@
+> {-# Language CPP #-}
+
+#if !defined(MIN_VERSION_base)
+# define MIN_VERSION_base(a,b,c) 0
+#endif
+
 > module Main (main) where
 
 > import Control.Concurrent ( MVar
@@ -9,7 +15,9 @@
 >                           , takeMVar
 >                           )
 > import Control.DeepSeq (NFData)
+#if !MIN_VERSION_base(4,8,0)
 > import Data.Functor ((<$>))
+#endif
 > import Data.List (sortBy)
 > import Data.Set (Set)
 > import System.Directory (createDirectoryIfMissing, doesFileExist)
@@ -18,6 +26,7 @@
 > import System.FilePath ((</>), takeBaseName)
 > import System.IO ( IOMode(WriteMode)
 >                  , hPutStrLn
+>                  , stderr
 >                  , withFile
 >                  )
 > import qualified Data.Set as Set
@@ -72,21 +81,25 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >                  IO [Either String (FilePath, FSA Integer String)]
 > getHypotheses fp = (fmap f $ doesFileExist fp) >>= id
 >     where f True  =  sequence . map getHypothesis =<< (lines <$> readFile fp)
->           f _     =  pure . (:[]) . Left $ "Could not find '" ++ fp ++ "'."
+>           f _     =  hPutStrLn stderr
+>                      (fp ++ " not found, continuing without"
+>                       ++ " nonstrict constraints")
+>                      >> return []
 
 > getHypothesis :: FilePath ->
 >                  IO (Either String (FilePath, FSA Integer String))
 > getHypothesis fp = (fmap f $ doesFileExist fp) >>= id
->     where f True  =  Right <$> (,) fp <$> from Jeff <$> readFile fp
+>     where f True  =  Right <$> (,) fp <$> from ATTO <$> readFile fp
 >           f _     =  pure . Left $ "Could not find '" ++ fp ++ "'."
 
 > processFile :: [(FilePath, FSA Integer String)] -> FilePath -> IO ()
-> processFile hypotheses fp = f =<< normalize <$> from Jeff <$> readFile fp
+> processFile hypotheses fp = f =<< normalize <$> from ATTO <$> readFile fp
 >     where bn = takeBaseName fp
->           f x = withFile (outputDirectory </> lect) WriteMode $ \out ->
+>           f x = withFile (outputDirectory </> res) WriteMode $ \out ->
 >                 hPutStrLn out . output name x $ factorization hypotheses x
 >           lect = takeWhile (isIn "0123456789") bn
 >           name = tr "_" " " $ dropWhile (isIn "0123456789_") bn
+>           res  = if null lect then bn else lect
 
 
 Return type of factorization is

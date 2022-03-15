@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEB 5 "2020-09-16" "Version 0.3" "Language Toolkit"
+.TH PLEB 5 "2022-03-15" "Version 1.0" "Language Toolkit"
 .SH NAME
 pleb \- Piecewise / Local Expression Builder
 .SH DESCRIPTION
@@ -61,21 +61,7 @@ an assignment of either a symbol set or an expression.
 ::=
 .B =
 .RI < name >
-.B {
 .RI < symbols >
-.RB [ ,
-.RI < symbols "> ...\&]"
-.B }
-.RS
-.RE
-.BR "             " "  |"
-.B =
-.RI < name >
-.B (
-.RI < symbols >
-.RB [ ,
-.RI < symbols "> ...\&]"
-.B )
 .PP
 .RI < exp-assign >
 ::=
@@ -209,17 +195,56 @@ or a comma to represent the (long-distance) precedence relation.
 .B ,
 .RE
 .PP
-Symbol sets are either singleton (represent by a
-.B /
-prefix)
-or the name of some already-defined symbol set.
+Symbol sets are define by the following syntax:
 .PP
 .RS
 .RI < symbols >
 ::=
-.B /
-.RI < name "> | <" name >
+.B {
+.RI < symbols
+[
+.B ,
+.RI < symbols "> ...\&]"
+.B }
+.RS
 .RE
+.R "            |"
+.B (
+.RI < symbols
+[
+.B ,
+.RI < symbols "> ...\&]"
+.B )
+.RS
+.RE
+.R "            |"
+.B [
+.RI < symbols
+[
+.B ,
+.RI < symbols "> ...\&]"
+.B ]
+.RS
+.RE
+.R "            |"
+.B /
+.RI < name >
+.RS
+.RE
+.R "            |"
+.RI < name >
+.RE
+.PP
+The first and second of these, using curly braces or parentheses,
+denote the union of the contained symbol-expressions.
+The third, using square brackets, indicates an intersection.
+The fourth, denoted by
+.B /
+is a singleton set where the
+.RI < name >
+is the symbol itself.
+And finally the fifth option is a variable name
+that must refer to an already-bound symbol set.
 .PP
 A name is a letter as defined by Unicode
 followed by any sequence of characters
@@ -254,6 +279,17 @@ so this concatenation may not be what one expects.
 It is better to use the
 .BR .\&< ...\& >
 form in that case.
+.TP
+.B \e\e
+Left-quotients of the operands, associating to the left.
+The left-quotient A\eB is the set of strings that can be
+appended to strings in A to get a string in B,
+a generalization of the Brzozowski derivative.
+.TP
+.B //
+Right-quotients of the operands, associating to the right.
+The right-quotient B/A is the set of strings that can be
+prepended to strings in A to get a string in B.
 .SS Unary Operators
 This section describes the unary relations just as
 the previous section described the n-ary ones.
@@ -268,6 +304,11 @@ Allow it to occur zero or more times.
 This has the same caveat as the concatenation operator:
 factor-expressions that are not fully anchored
 may have arbitrary strings at the non-anchored ends.
+.TP
+.B $
+The downward closure of the operand.
+Accept all and only those strings that can be formed
+by deleting zero or more symbols from a string accepted by the operand.
 .PP
 .B [
 .RI < symbols "> ["
@@ -315,6 +356,9 @@ there is a unicode syntax that provides the following synonyms:
 .TP
 .B *
 <U+2217> [asterisk operator]
+.TP
+.B $
+<U+2193> [downwards arrow]
 .PP
 No special setup is needed to use these synonyms,
 except possibly configuring your environment
