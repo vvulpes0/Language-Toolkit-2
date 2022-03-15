@@ -7,6 +7,8 @@
 > This module implements an algorithm to decide whether a given FSA
 > is Generalized Definite (GD) based on the semigroup characterization,
 > or if it is Tier-Based Generalized Definite (TGD).
+>
+> @since 1.0
 > -}
 > module LTK.Decide.GD (isGD, isGDM, isTGD, isTGDM) where
 

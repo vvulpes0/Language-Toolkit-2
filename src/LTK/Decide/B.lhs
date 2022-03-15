@@ -9,6 +9,8 @@
 > but the operation is not necessarily commutative.  Thus, this is
 > a superclass of CB.  The local and tier-local extensions are also
 > provided.
+>
+> @since 1.0
 > -}
 > module LTK.Decide.B (isB, isBM, isLB, isLBM, isTLB, isTLBM) where
 

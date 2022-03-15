@@ -6,6 +6,8 @@
 
 > This module centralizes definitions of some commonly used
 > algebraic properties.
+>
+> @since 1.0
 > -}
 
 > module LTK.Algebra

@@ -28,6 +28,8 @@
 > isLTT = isLTTM . syntacticMonoid
 
 > -- |True iff the monoid recognizes an LTT stringset.
+> --
+> -- @since 1.0
 > isLTTM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isLTTM = both isSF isSynMonOfLTT
 

@@ -3,7 +3,7 @@
 > Module    : LTK.DecideM
 > Copyright : (c) 2021 Dakotah Lambert
 > License   : MIT
-> 
+>
 > Functions used for deciding the complexity class of a monoid.
 > Each complexity class for which these operations are implemented
 > has a separate Decide.classM module as well.  Many of the functions
@@ -14,6 +14,8 @@
 > The classes not closed under complementation are not classified
 > by their syntactic monoids or semigroups, but by properties of
 > the automaton from which it was derived.
+>
+> @since 1.0
 > -}
 > module LTK.DecideM (
 >                    -- * Piecewise classes

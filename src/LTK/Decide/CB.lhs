@@ -8,6 +8,8 @@
 > is in CB, the subclass of PT where additionally all elements of
 > the syntactic monoid are idempotent. This is additionally a subclass
 > of LT, because every submonoid of a semilattice remains a semilattice.
+>
+> @since 1.0
 > -}
 > module LTK.Decide.CB (isCB, isCBM) where
 

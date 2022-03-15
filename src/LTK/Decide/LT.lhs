@@ -27,6 +27,8 @@ for all idempotent e, the generated subsemigroup eSe is an idempotent
 commutative monoid.
 
 > -- |True iff the given monoid is locally a semilattice.
+> --
+> -- @since 1.0
 > isLTM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isLTM s = all (both (isCommutative s) (isSubsetOf i) . ese s)
 >           . Set.toList $ i

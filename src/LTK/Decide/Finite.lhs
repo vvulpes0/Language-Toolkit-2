@@ -6,6 +6,8 @@
 
 > This module implements an algorithm to decide whether a given FSA
 > is finite.  Also included for convenience is a test for cofiniteness.
+>
+> @since 1.0
 > -}
 > module LTK.Decide.Finite (isFinite, isCofinite) where
 
