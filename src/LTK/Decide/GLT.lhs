@@ -8,6 +8,8 @@
 > is generalized locally testable in the sense of Brzozowski and
 > Fich (1984):
 > https://doi.org/10.1016/0012-365X(84)90045-1
+>
+> @since 1.0
 > -}
 > module LTK.Decide.GLT (isGLT, isGLTM) where
 

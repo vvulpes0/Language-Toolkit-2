@@ -8,6 +8,8 @@
 > is Definite (Def) or Reverse Definite (RDef) based on the classic
 > semigroup characterizations summarized by Brzozowski and Fich in
 > their 1984 work "On Generalized Locally Testable Languages".
+>
+> @since 1.0
 > -}
 > module LTK.Decide.Definite
 >     ( -- *Plain

@@ -427,6 +427,8 @@ lookup-time logarithmic in the number of distinct elements.
 >               | otherwise  =  0
 
 > -- |Every multiplicity that occurs in the multiset.
+> --
+> -- @since 1.0
 > multiplicities :: (Ord a) => Multiset a -> Set Integer
 > multiplicities (Multiset xs) = Set.map snd xs
 

@@ -20,5 +20,7 @@
 > isPT = isPTM . syntacticMonoid
 
 > -- |True iff the monoid is \(\mathcal{J}\)-trivial
+> --
+> -- @since 1.0
 > isPTM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isPTM = trivialUnder jEquivalence

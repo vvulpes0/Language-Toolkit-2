@@ -253,6 +253,8 @@ rejectingPaths fsa bound
 >                           tmap Just $ finals f
 
 > -- |True iff the given FSA contains no reachable cycles.
+> --
+> -- @since 1.0
 > isAcyclic :: (Ord n, Ord e) => FSA n e -> Bool
 > isAcyclic f = isEmpty
 >               $ traversalQDFS hasCycle f (n + 1) (initialsPaths f) empty

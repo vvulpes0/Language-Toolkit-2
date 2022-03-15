@@ -6,6 +6,8 @@
 
 > This module implements a test for whether a given FSA has only
 > a single state.
+>
+> @since 1.0
 > -}
 > module LTK.Decide.Trivial (isTrivial) where
 

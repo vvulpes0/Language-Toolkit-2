@@ -8,6 +8,8 @@
 > semigroup \(S\) is locally Piecewise Testable (LPT).  This is the
 > case iff each of its idempotents \(e\) satisfies the property that
 > \(eSe\) is \(\mathcal{J}\)-trivial.
+>
+> @since 1.0
 > -}
 > module LTK.Decide.LPT (isLPT, isLPTM) where
 

@@ -16,6 +16,8 @@
 
 > The section regarding betweenness is built on Krebs et al. (2020):
 > https://doi.org/10.23638/LMCS-16(3:16)2020
+>
+> @since 1.0
 > -}
 > module LTK.Decide.FO2 (isFO2, isFO2B, isFO2S,
 >                        isFO2M, isFO2BM, isFO2SM) where

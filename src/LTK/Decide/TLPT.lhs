@@ -7,6 +7,8 @@
 > This module implements an algorithm to decide whether a syntactic
 > semigroup \(S\) is tier-based locally Piecewise Testable (TLPT).
 > This is the case iff its tier-projection is LPT.
+>
+> @since 1.0
 > -}
 > module LTK.Decide.TLPT (isTLPT, isTLPTM) where
 

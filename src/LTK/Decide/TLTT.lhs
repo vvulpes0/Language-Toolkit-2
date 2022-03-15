@@ -21,5 +21,7 @@
 > isTLTT = isLTT . project
 
 > -- |True iff the monoid recognizes a TLTT stringset.
+> --
+> -- @since 1.0
 > isTLTTM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isTLTTM = isLTTM . project

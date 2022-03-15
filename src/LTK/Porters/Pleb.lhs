@@ -93,13 +93,13 @@
 >     | Conjunction   [Expr]
 >     | Disjunction   [Expr]
 >     | Domination    [Expr]
->     | QuotientL     [Expr]
->     | QuotientR     [Expr]
+>     | QuotientL     [Expr] -- ^@since 1.0
+>     | QuotientR     [Expr] -- ^@since 1.0
 >       deriving (Eq, Ord, Read, Show)
 
 > -- |A subexpression that consists of a unary operator and its operand.
 > data UnaryExpr
->     = DownClose Expr
+>     = DownClose Expr -- ^@since 1.0
 >     | Iteration Expr
 >     | Negation Expr
 >     | Tierify [SymSet] Expr

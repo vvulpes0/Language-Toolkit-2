@@ -21,5 +21,7 @@
 > isSF = isSFM . syntacticMonoid
 
 > -- |True iff the monoid is aperiodic.
+> --
+> -- @since 1.0
 > isSFM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isSFM = trivialUnder hEquivalence
