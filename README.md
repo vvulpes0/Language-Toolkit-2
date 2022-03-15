@@ -45,8 +45,8 @@ but older versions might work.
 For relatively new versions of cabal-install,
 you can install everything with at most two commands:
 
-    cabal v2-install all
-    cabal v2-install --lib LTK # if you want the library installed globally
+    cabal v2-install
+    cabal v2-install --lib # if you want the library installed globally
 
 If you are using a 1.x version of cabal-install,
 you will have to use this single command instead:
