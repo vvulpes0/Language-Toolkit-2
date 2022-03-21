@@ -66,7 +66,9 @@
 > import LTK.Learn.SP  (fSP)
 > import LTK.Learn.TSL (fTSL)
 > import LTK.Learn.StringExt (Grammar(..), learn)
-> import LTK.Porters      ( ATT(ATT), ATTO(ATTO), Dot(Dot), Jeff(Jeff)
+> import LTK.Porters      ( ATT(ATT), ATTO(ATTO), Dot(Dot)
+>                         , EggBox(EggBox)
+>                         , Jeff(Jeff)
 >                         , formatSet, fromE, to
 >                         )
 > import LTK.Porters.ATT  (embedSymbolsATT, extractSymbolsATT)
@@ -123,6 +125,7 @@
 >              | Dotify Expr
 >              | DT_PSG Expr -- Dotify Powerset Graph
 >              | DT_SM Expr -- Dotify Syntactic Monoid
+>              | D_EB Expr
 >              | ErrorMsg String
 >              | Help [(String, [ArgType], String)]
 >              | Import FilePath
@@ -306,6 +309,11 @@ in order to deal with spaces or other special characters.
 >                   , (L . Dotify) <$> pe
 >                   , [ArgE]
 >                   , "print a Dot file of expr"
+>                   )
+>                 , ( ":eggbox"
+>                   , (L . D_EB) <$> pe
+>                   , [ArgE]
+>                   , "show egg-box of expr via external display program"
 >                   )
 >                 , ( ":equal"
 >                   , (M . uncurry Equal) <$> p2e
@@ -602,6 +610,7 @@ in order to deal with spaces or other special characters.
 >                 putStrLn (formatSet $ tmap fst subexprs) >>
 >                 return e
 >          Display expr -> disp id expr
+>          D_EB expr -> disp' display' (to EggBox) expr
 >          D_JE expr -> disp (renameStatesBy (formatSet . tmap f)
 >                             . minimizeOver jEquivalence
 >                             . syntacticMonoid) expr
@@ -914,7 +923,10 @@ in order to deal with spaces or other special characters.
 > deescape _       =  []
 
 > display :: (Ord n, Ord e, Show n, Show e) => FSA n e -> IO ()
-> display fsa = do
+> display = display' . to Dot
+
+> display' :: String -> IO ()
+> display' s = do
 >   let dotP = (proc "dot" ["-Tpng"])
 >              { std_in = CreatePipe
 >              , std_out = CreatePipe
@@ -931,7 +943,7 @@ in order to deal with spaces or other special characters.
 >   (_, Just d_stdout, Just d_stderr, _)  <- createProcess displayP
 >   _ <- hGetContents d_stdout
 >   _ <- hGetContents d_stderr
->   hPutStr p_stdin (to Dot fsa)
+>   hPutStr p_stdin s
 >   hClose p_stdin
 >   _ <- waitForProcess dot_ph
 >   return ()

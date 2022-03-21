@@ -21,6 +21,7 @@
 >        -- various formats.
 >        , Type
 >        , Dot(Dot)
+>        , EggBox(EggBox)
 >        , Jeff(Jeff)
 >        , Pleb(Pleb)
 >        , ATT(ATT)
@@ -36,13 +37,16 @@
 >        , Exportable(..)
 >        ) where
 
-> import LTK.FSA          (FSA, renameStates, renameSymbolsBy)
+> import LTK.FSA          (FSA, renameStates, renameSymbolsBy
+>                         , syntacticMonoid
+>                         )
 > import LTK.Porters.ATT  ( exportATT
 >                         , invertATT
 >                         , readATT
 >                         )
 > import LTK.Porters.Corpus (readCorpus)
 > import LTK.Porters.Dot  (exportDot, formatSet)
+> import LTK.Porters.EggBox (exportEggBox)
 > import LTK.Porters.Jeff ( exportJeff
 >                         , readJeff
 >                         , transliterate
@@ -97,6 +101,14 @@
 
 > instance Exportable Dot
 >     where fromFSA _ = exportDot
+
+=== instances for EggBox (in Dot format)
+
+> -- |The egg-box in GraphViz Dot format.
+> newtype EggBox = EggBox EggBox
+
+> instance Exportable EggBox
+>     where fromFSA _ = exportEggBox . syntacticMonoid
 
 === instances for Pleb format
 

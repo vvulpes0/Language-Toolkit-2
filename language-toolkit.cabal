@@ -104,6 +104,7 @@ library
                 , LTK.Porters.ATT
                 , LTK.Porters.Corpus
                 , LTK.Porters.Dot
+                , LTK.Porters.EggBox
                 , LTK.Porters.Jeff
                 , LTK.Porters.Pleb
                 , LTK.Tiers
