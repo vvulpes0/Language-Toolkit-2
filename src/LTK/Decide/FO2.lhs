@@ -64,12 +64,32 @@ from something star-free.
 
 > -- |True iff the submonoid of @monoid@ given by @xs@ is in DA.
 > -- Results are unspecified if @xs@ is not actually a submonoid.
-> fo2test :: (Ord n, Ord e) => FSA (S n e) e -> Set (State (S n e))-> Bool
-> fo2test monoid xs = trivialUnder hEquivalence monoid -- isSF
->                     && (all f $ triples xs) -- in DA
+> fo2testFull :: (Ord n, Ord e) =>
+>               FSA (S n e) e -> Set (State (S n e)) -> Bool
+> fo2testFull monoid xs = trivialUnder hEquivalence monoid -- isSF
+>                         && (all f $ triples xs) -- in DA
 >     where f (x, y, z) = let xyzw = omega monoid ((x $*$ y) $*$ z)
 >                         in (xyzw $*$ y) $*$ xyzw == xyzw
 >           a $*$ b = Set.findMin $ follow monoid (snd (nodeLabel b)) a
+
+There is a simpler version of this test:
+a pattern is in this class iff
+every regular element (an element sharing a J-class with an idempotent)
+is idempotent.
+As discussed in implementing the test for local J-triviality,
+moving to a local subsemigroup does not affect the J-classes
+(it merely removes elements not under consideration).
+So the same simplification works for FO2[<] and FO2[<,+1],
+although as discussed in implementing the @GLPT@ test,
+the Me-classes may misbehave; so FO2[<,bet] still uses the full test.
+
+> fo2test :: (Ord n, Ord e) =>
+>           SynMon n e -> Set (State (S [Maybe n] e)) -> Bool
+> fo2test monoid xs = flip Set.isSubsetOf i . Set.unions
+>                     . filter (not . Set.disjoint i)
+>                     . map (Set.intersection xs)
+>                     . Set.toList $ jEquivalence monoid
+>     where i = idempotents monoid `Set.union` initials monoid
 
 
 For betweenness:
@@ -85,13 +105,11 @@ is in MeDA.
 > -- \(\sigma(x,y)\) meaning a \(\sigma\) appears strictly between
 > -- the positions \(x\) and \(y\).
 > isFO2B :: (Ord n, Ord e) => FSA n e -> Bool
-> isFO2B fsa = let s = syntacticMonoid fsa
->              in all (fo2test s . emee s)
->                 $ Set.toList (idempotents s)
+> isFO2B = isFO2BM . syntacticMonoid
 
 > -- |True iff the monoid represents a stringset that satisfies @isFO2B@.
 > isFO2BM :: (Ord n, Ord e) => SynMon n e -> Bool
-> isFO2BM s = all (fo2test s . emee s) $ Set.toList (idempotents s)
+> isFO2BM s = all (fo2testFull s . emee s) $ Set.toList (idempotents s)
 
 
 Misc
