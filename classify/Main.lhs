@@ -120,10 +120,9 @@ The main meat:
 >           ("unknown classes: " ++ intercalate ", " unknowns)
 >           >> exitFailure
 >     | otherwise
->         = ((if (optQuiet opts) then void else f) =<< classified)
->           >> ((\x -> if (optReduce opts x)
->                      then exitSuccess
->                      else exitFailure) =<< classified)
+>         = do c <- classified
+>              (if (optQuiet opts) then void else f) c
+>              if (optReduce opts c) then exitSuccess else exitFailure
 >     where printUsage = putStr $ usageInfo usageHeader options
 >           unknowns = filter (`notElem` toCheck) classes
 >           aut = readAut opts input
@@ -186,7 +185,7 @@ so that results may be listed in topographic order.
 >            , ("GLPT", (Right isGLPTM, ["FO2B"]))
 >            , ("GLT", (Right isGLTM, ["GLPT"]))
 >            , ("LB", (Right isLBM, ["FO2S"]))
->            , ("LPT", (Right isPTM, ["GLPT"]))
+>            , ("LPT", (Right isPTM, ["TLPT","FO2S"]))
 >            , ("LT", (Right isLTM, ["LB", "LTT", "TLT"]))
 >            , ("LTT", (Right isLTTM, ["LPT", "TLTT"]))
 >            , ("PT", (Right isPTM, ["FO2"]))
