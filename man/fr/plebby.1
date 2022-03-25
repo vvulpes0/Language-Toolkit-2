@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEBBY 1 "2022-03-15" "Version 1.0" "Language Toolkit"
+.TH PLEBBY 1 "2022-03-25" "Version 1.0" "Language Toolkit"
 .SH NOM
 plebby \- Piecewise / Local Expression Builder interpreteur
 .SH SYNOPSIS
@@ -21,23 +21,23 @@ Afficher un message d'aide.
 .
 .SS Saving and Loading
 .B :savestate
-.RI < file >
+.RI < fichier >
 .RS
 Écrire l'état actuel dans
-.RI < file >.
+.RI < fichier >.
 .RE
 .
 .PP
 .B :writeATT
-.RI < file >
-.RI < file >
-.RI < file >
+.RI < fichier >
+.RI < fichier >
+.RI < fichier >
 .RI < expr >
 .RS
 Écrire une représentation au format AT&T de
 .RI < expr >
 dans les trois opérandes
-.RI < file >,
+.RI < fichier >,
 qui sont respectivement les transitions, les entrées et les sorties.
 Si un tableau de caractères est
 .BR _ ,
@@ -48,31 +48,31 @@ donc il n'y en a pas de raison à les deux écrire.
 .
 .PP
 .B :write
-.RI < file >
+.RI < fichier >
 .RI < expr >
 .RS
-Écrire  une forme binaire de
+Écrire une forme binaire de
 .RI < expr >
 dans
-.RI < file >.
+.RI < fichier >.
 .RE
 .
 .PP
 .B :loadstate
-.RI < file >
+.RI < fichier >
 .RS
 Lire et restaurer un état écrit par
 .B :savestate
 de
-.RI < file >.
+.RI < fichier >.
 .RE
 .
 .PP
 .B :readATT
-.RI < file "> <" file "> <" file >
+.RI < fichier "> <" fichier "> <" fichier >
 .RS
 Lire un transducteur de format AT&T des trois opérandes
-.RI < file >
+.RI < fichier >
 (respectivement les transitions, les entrées, et les sorties)
 et affecter le projection vers les entrées à la variable éspecial
 .BR it .
@@ -83,7 +83,7 @@ cet tableau n'est pas lu.
 .
 .PP
 .B :readATTO
-.RI < file "> <" file "> <" file >
+.RI < fichier "> <" fichier "> <" fichier >
 .RS
 Égale à
 .B :readATT
@@ -92,20 +92,20 @@ mais le projection se fait vers les sorties.
 .
 .PP
 .B :readBin
-.RI < file >
+.RI < fichier >
 .RS
 Lire une expression au format binaire de
-.RI < file >
+.RI < fichier >
 et affecter le résultat à la variable éspecial
 .BR it .
 .RE
 .
 .PP
 .B :readJeff
-.RI < file >
+.RI < fichier >
 .RS
 Lire une automate au format Jeff de
-.RI < file >
+.RI < fichier >
 et affecter le résultat à la variable éspecial
 .BR it .
 Cet automate est toujours sous forme fondamentale,
@@ -115,10 +115,10 @@ Les symboles pas vu ne sera jamais acceptable.
 .
 .PP
 .B :read
-.RI < file >
+.RI < fichier >
 .RS
 Lire
-.RI < file >
+.RI < fichier >
 comme un programme
 .BR pleb (5),
 accumulant tous affectations.
@@ -129,10 +129,10 @@ le dernier est affecté à la variable éspecial
 .
 .PP
 .B :import
-.RI < file >
+.RI < fichier >
 .RS
 Lire
-.RI < file >
+.RI < fichier >
 ligne par ligne comme s'il était entré à l'interpreteur.
 Chaque expression doit être écrite sur sa propre ligne,
 et quelques lignes peuvent être des commandes de l'interpreteur,
@@ -440,11 +440,12 @@ actuelle.
 .RI < expr >
 .RI < expr >
 .RS
-Determine whether the first
+Vérifier si la première
 .RI < expr >
-is a (not necessarily proper) subset of the second
-in the current
-.BR universe .
+est un sous-ensemble (propre ou non) de la seconde
+à rapport par la variable
+.BR universe
+actuelle.
 .RE
 .
 .PP
@@ -452,12 +453,13 @@ in the current
 .RI < expr >
 .RI < expr >
 .RS
-Determine whether the first
+Vérifier si la première
 .RI < expr >
-is equal to the second
-in the current
-.BR universe ,
-i.e. each is a subset of the other.
+est égale à la seconde
+à rapport par la variable
+.BR universe
+actuelle,
+si chaque est sous-ensemble de l'autre.
 .RE
 .
 .PP
@@ -465,189 +467,181 @@ i.e. each is a subset of the other.
 .RI < expr >
 .RI < expr >
 .RS
-Determine whether the first
-.RI < expr >
-logically implies the second
-in the current
-.BR universe .
-This is equivalent to
+Équivalent à
 .BR :subset .
 .RE
 .
-.SS Graphical Output
-All commands that display graphical output
-require the
+.SS La sortie visuelle
+Toutes les commandes qui affichent la sortie visuelle
+réquient les commandes
 .B dot
-and
-.B display
-programs accessible on
-.RI ${ PATH },
-where
+et
+.BR display .
+Quelque élément de la variable d'environnement
+.RI ${ PATH }
+doit conduire à ces programmes.
+Le
 .B dot
-is GraphViz-compatible and
+doit être compatible avec GraphViz, et le
 .B display
-can accept a PNG file over the standard input and display it appropriately.
-ImageMagick, for example, contains such a
+doit accepter par l'entrée standard une image PNG.
+ImageMagick, par exemple, contient un
 .B display
-program.
+acceptable.
 .
 .PP
 .B :display
 .RI < expr >
 .RS
-Show a normal-form automaton representation of
-.RI < expr >
-graphically.
+Afficher une forme normale de
+.RI < expr >.
 .RE
 .
 .PP
 .B :psg
 .RI < expr >
 .RS
-Show the powerset graph of a normal-form automaton representation of
+Construire un graphe de l'ensemble puissance des états de
 .RI < expr >
-graphically.
+et l'afficher.
 .RE
 .
 .PP
 .B :synmon
 .RI < expr >
 .RS
-Show the syntactic monoid associated with a
-normal-form automaton representation of
-.RI < expr >
-graphically.
+Afficher le graphe de Cayley du monoïde de
+.RI < expr >.
 .RE
 .
-.SS Generating Dot Files Without Displaying Them
+.SS Générant des fichiers Dot sans les affichant
 .B :dot
 .RI < expr >
 .RS
-Print a Dot file for a normal-form automaton representation of
-.RI < expr >.
+Afficher sur la sortie standard
+la forme normale de
+.RI < expr >
+au format Dot.
 .RE
 .
 .PP
 .B :dot-psg
 .RI < expr >
 .RS
-Print a Dot file for the powerset graph of
-a normal-form automaton representation of
-.RI < expr >.
+Construire un graphe de l'ensemble puissance des états de
+.RI < expr >
+et l'afficher sur la sortie standard au format Dot.
 .RE
 .
 .PP
 .B :dot-synmon
 .RI < expr >
 .RS
-Print a Dot file for the syntactic monoid associated with
-a normal-form automaton representation of
-.RI < expr >.
+Afficher sur la sortie standard le graphe de Cayley du monoïde de
+.RI < expr >
+au format Dot.
 .RE
 .
-.SS Operations on the Environment
+.SS Les opérations sur l'environnement
 .TP
 .B :bindings
-Print a list of currently-bound variables and their bindings.
-Because expression variables have large representations,
-these representations are omitted from this listing
-but can be displayed individually with
+Afficher sur la sortie standard une liste
+qui contient tous les affectations actuels.
+Parce que les expressions sont grandes,
+leurs expansions sont élidées,
+mais elles peuvent être affiché individuellement par
 .BR :show .
 .
 .PP
 .B :show
 .RI < var >
 .RS
-Print the current binding of
+Afficher la valeur actuel de
 .RI < var >,
-if any, or a message indicating that it is not bound.
+si elle existe,
+ou un message indiquant qu'il n'y a rien.
 .RE
 .
 .PP
 .B :unset
 .RI < var >
 .RS
-Remove any binding for
-.RI < var >
-from the current environment.
+Éffacer de l'environnement l'affectation de
+.RI < var >.
 .RE
 .
 .TP
 .B :reset
-Remove all bindings from the current environment.
+Éradiquer l'environnement.
 .
 .TP
 .B :restore-universe
-Set the special variable
+Régénérer la variable éspeciale
 .B universe
-to the symbol set that contains all and only
-those symbols used in other bindings
-in the current environment.
+à partir de toutes les autres affectations.
 .
 .TP
 .B :compile
-Convert all saved expressions into automata,
-retaining the metadata that allows the expression
-to be alphabet-agnostic.
+Construire des automates à partir des expressions dans l'environnement,
+en conservant leur sémantique.
 .
 .TP
 .B :ground
-Convert all saved expressions into automata,
-discarding the metadata that allows the expression
-to be alphabet-agnostic.
+Construire des automates à partir des expressions dans l'environnement.
+Les symboles qui n'apparaissent pas dan la variable
+.B universe
+ne sera plus acceptable.
 .
 .TP
 .B :restrict
-Remove all symbols that are not in the current
-.B universe
-from all current bindings.
-This may result in an empty symbol set,
-which cannot be assigned directly.
-Non-satisfiable factors are uniformly replaced by
-.B !<>
-for simplicity.
-.
+Éffacer de tous les affectations actuels les symboles
+qui n'apparaissent dans la variable
+.BR universe .
+Par commodité,
+si un facteur devenait insatisfaisant,
+il deviendrait
+.BR !<> .
 .SH OPTIONS
-None.
-.SH "EXIT STATUS"
+Rien.
+.SH "CODE DE SORTIE"
 .TP
 .B 0
-Successful program execution
+Le programme a exécuté réussi.
 .TP
 .B ">0"
-An error occurred.
+Il y avait une erreur.
 .
-.SH ENVIRONMENT
+.SH ENVIRONNEMENT
 .TP
 .B PAGER
-If
+Si
 .B PAGER
-is set, its value is used as the program to use to display the help text.
-If not, then
+est défini, sa valeur est le programme utilisé pour
+afficher le message d'aide.
+Autrement, ce programme est
 .B less
-is used with no arguments.
+sans option.
 .
-.SH FILES
+.SH FICHIERS
 .TP
 ~/.haskeline
-Configuration file for the line editor.
+Configuration pour l'éditeur de ligne.
 .
-.SH NOTES
-Most of the complexity class decision algorithms are based on
-properties of the syntactic monoid that,
-given the representation,
-might be slow to compute.
-This holds especially true for the (T)LTT test.
+.SH REMARQUES
+Le classificateur utilise les propriétés du monoïde syntaxique,
+une structure peut-être beaucoup plus grande que l'automate canonique.
+Surtout pour (T)LTT, les résultats peuvent arriver lentement.
 .
 .P
-The AT&T format cannot handle symbols that contain spaces.
-Further, numeric symbols are treated as indices into the symbols files,
-so symbol mapping files must be written
-when exporting automata that actually use such symbols.
-.SH BUGS
-Lines that cannot be parsed are ignored,
-but generally no warnings are emitted.
-.SH "SEE ALSO"
+Le format AT&T ne peut pas représenter des symboles contenant des espaces.
+De plus, les symboles numériques servent d'indices
+à un tableau de symboles.
+Les tableaux doivent donc être écrits
+lorsque de tels symboles sont sortis.
+.SH BOGUES
+Les lignes qui ne sont pas comprises sont ignorées,
+souvent sans avertissement.
+.SH "VOIR AUSSI"
 .BR display (1),
 .BR dot (1),
 .BR fsm (5),
