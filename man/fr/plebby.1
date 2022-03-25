@@ -147,7 +147,7 @@ Les commandes de cette section vérifient si une
 représente quelquechose qui est élément d'une classe selectionné
 par rapport à la variable
 .B universe
-actuel.
+actuelle.
 .
 .PP
 .B :isB
@@ -374,61 +374,65 @@ Le monoïde n'a qu'un seul état.
 après ignorant les symboles non-saillant.
 .RE
 .
-.SS Grammatical Inference
+.SS L'inférence des grammaires
 .B :learnSL
 .RI < int >
-.RI < file >
+.RI < fichier >
 .RS
-Read
-.RI < file >
-as a sequence of newline-terminated words
-composed of space-separated symbols,
-and construct an
+Lire
+.RI fichier
+comme une chaîne de lignes,
+chaque laquelle contient un seul mot
+composé de symboles séparés par des éspaces.
+Construire ensuite un automate
 .RI < int >-SL
-automaton compatible with this data.
-Symbols not in the data are always rejected.
+compatible avec ces mots.
+Les symboles pas vu ne sera jamais acceptable.
 .RE
 .
 .PP
 .B :learnSP
 .RI < int >
-.RI < file >
+.RI < fichier >
 .RS
-Read
-.RI < file >
-as a sequence of newline-terminated words
-composed of space-separated symbols,
-and construct an
+Lire
+.RI fichier
+comme une chaîne de lignes,
+chaque laquelle contient un seul mot
+composé de symboles séparés par des éspaces.
+Construire ensuite un automate
 .RI < int >-SP
-automaton compatible with this data.
-Symbols not in the data are always rejected.
+compatible avec ces mots.
+Les symboles pas vu ne sera jamais acceptable.
 .RE
 .
 .PP
 .B :learnTSL
 .RI < int >
-.RI < file >
+.RI < fichier >
 .RS
-Read
-.RI < file >
-as a sequence of newline-terminated words
-composed of space-separated symbols,
-and construct an
+Lire
+.RI fichier
+comme une chaîne de lignes,
+chaque laquelle contient un seul mot
+composé de symboles séparés par des éspaces.
+Construire ensuite un automate
 .RI < int >-TSL
-automaton compatible with this data.
-Symbols not in the data are always rejected.
+compatible avec ces mots.
+Les symboles pas vu ne sera jamais acceptable.
 .RE
 .
-.SS Comparing Expressions
+.SS Comparaisons des expressions
 .B :strict-subset
 .RI < expr >
 .RI < expr >
 .RS
-Determine whether the first
+Vérifier si la première
 .RI < expr >
-is a proper subset of the second
-in the current
-.BR universe .
+est un sous-ensemble propre de la seconde
+à rapport par la variable
+.BR universe
+actuelle.
 .RE
 .
 .PP
