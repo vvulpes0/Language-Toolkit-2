@@ -1,0 +1,89 @@
+.TH DOTIFY 1 "2022-03-25" "Version 1.1" "Language Toolkit"
+.SH NOM
+dotify \- convertir les automates au format GraphViz
+.SH SYNOPSIS
+.B dotify
+.RB [ -c | -t | -w ]
+.RB [ -hv?\& ]
+.RB [ -o
+.IR fichier ]
+.RI [ fichier ]
+.SH DESCRIPTION
+Si le
+.I fichier
+opérande est manquant ou egal à
+.RB \*(lq \- \*(rq,
+l'automate est donné par l'entrée standard.
+Dans tous autres cas, l'opérande
+.I fichier
+est ce duquelle l'automate est lu.
+Si l'automate est valide,
+une graphe à format GraphViz est sortie sur la sortie standard.
+.P
+Si dans l'ensemble des options mutuellement exclusives
+.BR -c ,
+.BR -t ,
+et
+.B -w
+plus d'un est donné,
+ce n'est pas une erreur.
+Seulement le dernier est utilisé.
+.SH OPTIONS
+.TP
+.B -c
+Utiliser les symboles compacts,
+où, par exemple, une syllabe légère avec un accent primaire
+est notée par
+.BR 0/2 .
+.TP
+.BR -h ", " -?\&
+Afficher un message d'aide ete retourner.
+.TP
+.BI "-o " fichier
+Sortir sur le
+.IR fichier ,
+pas la sortie standard.
+.TP
+.B -t
+Utiliser les symboles translittérés,
+où, par exemple, une syllabe légère avec un accent primaire
+est notée par
+.BR L\(aq .
+.TP
+.B -v
+Afficher le numéro de version sur la sortie standard
+et immédiatement sortir.
+.TP
+.B -w
+Utiliser les symboles larges,
+où, par exemple, une syllabe légère avec un accent primaire
+est notée par
+.BR w0.s2 .
+C'est l'agit par défaut.
+.SH "CODE DE RETOUR"
+.TP
+.B 0
+Le programme a exécuté réussi.
+.TP
+.B ">0"
+Il y avait une erreur.
+.SH EXEMPLES
+.BI "dotify " automate.fsa " | dot -Tpng > " image.png
+.RS
+Créer une image PNG de
+.I automate.fsa
+et sortir sur
+.IR image.png .
+.RE
+.B dotify -co
+.I out.dot automate.fsa
+.RS
+En utilisant les symboles compacts,
+sortir une graphe de
+.I automate.fsa
+au format GraphViz sur
+.IR out.dot .
+.RE
+.SH "VOIR AUSSI"
+.BR dot (1),
+.BR graphviz (7)

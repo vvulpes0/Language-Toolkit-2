@@ -12,7 +12,7 @@
 * LTK.Algebra module and new decision procedures `LTK.Decide.*`
   + B
   + CB
-  + Definite, (T)(R‌)Def restrictions on suffixes or prefixes (on tiers)
+  + Definite, (T)(R)Def restrictions on suffixes or prefixes (on tiers)
   + Finite
   + FO2, FO2S, FO2B: definable in two-variable FO with <, (<,+1), (<,bet)
   + GD: generalized definite, prefixes AND suffixes

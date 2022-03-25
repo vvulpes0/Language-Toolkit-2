@@ -1,0 +1,652 @@
+.\" The version string should track the overall package version
+.TH PLEBBY 1 "2022-03-15" "Version 1.0" "Language Toolkit"
+.SH NOM
+plebby \- Piecewise / Local Expression Builder interpreteur
+.SH SYNOPSIS
+.B plebby
+.SH DESCRIPTION
+Cet démonstrateur interactif de théorèmes
+lis et interprète seul-ligne instructions
+.BR pleb (5).
+En plus il donne plusieurs de commandes
+qu'on peut utiliser pour explorer les langages formels.
+.SS Interactions de base
+.TP
+.B :quit
+Sortir.
+.
+.TP
+.B :help
+Afficher un message d'aide.
+.
+.SS Saving and Loading
+.B :savestate
+.RI < file >
+.RS
+Écrire l'état actuel dans
+.RI < file >.
+.RE
+.
+.PP
+.B :writeATT
+.RI < file >
+.RI < file >
+.RI < file >
+.RI < expr >
+.RS
+Écrire une représentation au format AT&T de
+.RI < expr >
+dans les trois opérandes
+.RI < file >,
+qui sont respectivement les transitions, les entrées et les sorties.
+Si un tableau de caractères est
+.BR _ ,
+cet tableau n'est pas écrit.
+Les entrées et les sorties sont égales,
+donc il n'y en a pas de raison à les deux écrire.
+.RE
+.
+.PP
+.B :write
+.RI < file >
+.RI < expr >
+.RS
+Écrire  une forme binaire de
+.RI < expr >
+dans
+.RI < file >.
+.RE
+.
+.PP
+.B :loadstate
+.RI < file >
+.RS
+Lire et restaurer un état écrit par
+.B :savestate
+de
+.RI < file >.
+.RE
+.
+.PP
+.B :readATT
+.RI < file "> <" file "> <" file >
+.RS
+Lire un transducteur de format AT&T des trois opérandes
+.RI < file >
+(respectivement les transitions, les entrées, et les sorties)
+et affecter le projection vers les entrées à la variable éspecial
+.BR it .
+Si un tableau de caractères est
+.BR _ ,
+cet tableau n'est pas lu.
+.RE
+.
+.PP
+.B :readATTO
+.RI < file "> <" file "> <" file >
+.RS
+Égale à
+.B :readATT
+mais le projection se fait vers les sorties.
+.RE
+.
+.PP
+.B :readBin
+.RI < file >
+.RS
+Lire une expression au format binaire de
+.RI < file >
+et affecter le résultat à la variable éspecial
+.BR it .
+.RE
+.
+.PP
+.B :readJeff
+.RI < file >
+.RS
+Lire une automate au format Jeff de
+.RI < file >
+et affecter le résultat à la variable éspecial
+.BR it .
+Cet automate est toujours sous forme fondamentale,
+pas la forme alphabet-agnostique.
+Les symboles pas vu ne sera jamais acceptable.
+.RE
+.
+.PP
+.B :read
+.RI < file >
+.RS
+Lire
+.RI < file >
+comme un programme
+.BR pleb (5),
+accumulant tous affectations.
+S'il y en a des expressions nus,
+le dernier est affecté à la variable éspecial
+.BR it .
+.RE
+.
+.PP
+.B :import
+.RI < file >
+.RS
+Lire
+.RI < file >
+ligne par ligne comme s'il était entré à l'interpreteur.
+Chaque expression doit être écrite sur sa propre ligne,
+et quelques lignes peuvent être des commandes de l'interpreteur,
+y compris
+.B :import
+lui-même.
+.RE
+.
+.SS Classifiant des expressions
+Les commandes de cette section vérifient si une
+.I expr
+représente quelquechose qui est élément d'une classe selectionné
+par rapport à la variable
+.B universe
+actuel.
+.
+.PP
+.B :isB
+.RI < expr >
+.RS
+«Band»: tous les éléments sont idempotents.
+.RE
+.
+.PP
+.B :isCB
+.RI < expr >
+.RS
+«Band commutatif»: un demi-treillis, à la fois commutatif et idempotent.
+.RE
+.
+.PP
+.B :isDef
+.RI < expr >
+.RS
+«Definite», défini par un ensemble de suffixes permises.
+.RE
+.
+.PP
+.B :isFinite
+.RI < expr >
+.RS
+«Finite», le graphe est sans cycle.
+.RE
+.
+.PP
+.B :isFO2
+.RI < expr >
+.RS
+Définissable avec la logique du premier ordre
+n'en utilisant que deux variables et que la relation ordre.
+.RE
+.
+.PP
+.B :isFO2B
+.RI < expr >
+.RS
+Définissable avec la logique du premier ordre
+n'en utilisant que deux variables et que les relations ordre et entrevers.
+.RE
+.
+.PP
+.B :isFO2S
+.RI < expr >
+.RS
+Définissable avec la logique du premier ordre
+n'en utilisant que deux variables
+et que les relations ordre et successeur.
+.RE
+.
+.PP
+.B :isGD
+.RI < expr >
+.RS
+«Generalized definite»: combinaisons booléennes de suffixes et préfixes.
+.RE
+.
+.PP
+.B :isGLPT
+.RI < expr >
+.RS
+«Generalized Locally PT»: liés à LT et PT.
+.RE
+.
+.PP
+.B :isGLT
+.RI < expr >
+.RS
+«Generalized locally testable».
+.RE
+.
+.PP
+.B :isLB
+.RI < expr >
+.RS
+«Locally band»: tous les sous-demi-groupes locals sont idempotents.
+.RE
+.
+.PP
+.B :isLPT
+.RI < expr >
+.RS
+«Locally PT»: liés à LT et PT.
+.RE
+.
+.PP
+.B :isLT
+.RI < expr >
+.RS
+«Locally testable»:
+combinaisons booléennes des ensembles de sous-chaînes.
+.RE
+.
+.PP
+.B :isLTT
+.RI < expr >
+.RS
+«Locally threshold testable»:
+combinaisons booléennes des multiensembles de sous-chaînes.
+Égale à la logique du premier ordre avec ne que successeur.
+.RE
+.
+.PP
+.B :isPT
+.RI < expr >
+.RS
+«Piecewise testable»:
+combinaisons booléennes des ensembles de sous-séquences..
+.RE
+.
+.PP
+.B :isRDef
+.RI < expr >
+.RS
+«Reverse definite»:
+défini par un ensemble de préfixes permises.
+.RE
+.
+.PP
+.B :isSF
+.RI < expr >
+.RS
+«Star-free»:
+égale à la logique du premier ordre,
+ou les expressions rationnels généralises sans étoile.
+.RE
+.
+.PP
+.B :isSL
+.RI < expr >
+.RS
+«Strictly local»:
+défini par un ensemble de sous-chaînes permises.
+.RE
+.
+.PP
+.B :isSP
+.RI < expr >
+.RS
+«Strictly piecewise»:
+défini par un ensemble de sous-séquences permises.
+.RE
+.
+.PP
+.B :isTDef
+.RI < expr >
+.RS
+«Tier-based definite»:
+.B :isDef
+après ignorant les symboles non-saillant.
+.RE
+.
+.PP
+.B :isTGD
+.RI < expr >
+.RS
+«Tier-based generalized definite»:
+.B :isGD
+après ignorant les symboles non-saillant.
+.RE
+.
+.PP
+.B :isTLB
+.RI < expr >
+.RS
+«Tier-based locally band»:
+.B :isLB
+après ignorant les symboles non-saillant.
+.RE
+.
+.PP
+.B :isTLPT
+.RI < expr >
+.RS
+«Tier-based locally J-trivial»:
+.B :isLPT
+après ignorant les symboles non-saillant.
+.RE
+.
+.PP
+.B :isTLT
+.RI < expr >
+.RS
+«Tier-based locally testable»:
+.B :isLT
+après ignorant les symboles non-saillant.
+.RE
+.
+.PP
+.B :isTLTT
+.RI < expr >
+.RS
+«Tier-based locally threshold testable»:
+.B :isLTT
+après ignorant les symboles non-saillant.
+.RE
+.
+.PP
+.B :isTRDef
+.RI < expr >
+.RS
+«Tier-based reverse definite»:
+.B :isRDef
+après ignorant les symboles non-saillant.
+.RE
+.
+.PP
+.B :isTrivial
+.RI < expr >
+.RS
+Le monoïde n'a qu'un seul état.
+.RE
+.
+.PP
+.B :isTSL
+.RI < expr >
+.RS
+«Tier-based strictly local»:
+.B :isSL
+après ignorant les symboles non-saillant.
+.RE
+.
+.SS Grammatical Inference
+.B :learnSL
+.RI < int >
+.RI < file >
+.RS
+Read
+.RI < file >
+as a sequence of newline-terminated words
+composed of space-separated symbols,
+and construct an
+.RI < int >-SL
+automaton compatible with this data.
+Symbols not in the data are always rejected.
+.RE
+.
+.PP
+.B :learnSP
+.RI < int >
+.RI < file >
+.RS
+Read
+.RI < file >
+as a sequence of newline-terminated words
+composed of space-separated symbols,
+and construct an
+.RI < int >-SP
+automaton compatible with this data.
+Symbols not in the data are always rejected.
+.RE
+.
+.PP
+.B :learnTSL
+.RI < int >
+.RI < file >
+.RS
+Read
+.RI < file >
+as a sequence of newline-terminated words
+composed of space-separated symbols,
+and construct an
+.RI < int >-TSL
+automaton compatible with this data.
+Symbols not in the data are always rejected.
+.RE
+.
+.SS Comparing Expressions
+.B :strict-subset
+.RI < expr >
+.RI < expr >
+.RS
+Determine whether the first
+.RI < expr >
+is a proper subset of the second
+in the current
+.BR universe .
+.RE
+.
+.PP
+.B :subset
+.RI < expr >
+.RI < expr >
+.RS
+Determine whether the first
+.RI < expr >
+is a (not necessarily proper) subset of the second
+in the current
+.BR universe .
+.RE
+.
+.PP
+.B :equal
+.RI < expr >
+.RI < expr >
+.RS
+Determine whether the first
+.RI < expr >
+is equal to the second
+in the current
+.BR universe ,
+i.e. each is a subset of the other.
+.RE
+.
+.PP
+.B :implies
+.RI < expr >
+.RI < expr >
+.RS
+Determine whether the first
+.RI < expr >
+logically implies the second
+in the current
+.BR universe .
+This is equivalent to
+.BR :subset .
+.RE
+.
+.SS Graphical Output
+All commands that display graphical output
+require the
+.B dot
+and
+.B display
+programs accessible on
+.RI ${ PATH },
+where
+.B dot
+is GraphViz-compatible and
+.B display
+can accept a PNG file over the standard input and display it appropriately.
+ImageMagick, for example, contains such a
+.B display
+program.
+.
+.PP
+.B :display
+.RI < expr >
+.RS
+Show a normal-form automaton representation of
+.RI < expr >
+graphically.
+.RE
+.
+.PP
+.B :psg
+.RI < expr >
+.RS
+Show the powerset graph of a normal-form automaton representation of
+.RI < expr >
+graphically.
+.RE
+.
+.PP
+.B :synmon
+.RI < expr >
+.RS
+Show the syntactic monoid associated with a
+normal-form automaton representation of
+.RI < expr >
+graphically.
+.RE
+.
+.SS Generating Dot Files Without Displaying Them
+.B :dot
+.RI < expr >
+.RS
+Print a Dot file for a normal-form automaton representation of
+.RI < expr >.
+.RE
+.
+.PP
+.B :dot-psg
+.RI < expr >
+.RS
+Print a Dot file for the powerset graph of
+a normal-form automaton representation of
+.RI < expr >.
+.RE
+.
+.PP
+.B :dot-synmon
+.RI < expr >
+.RS
+Print a Dot file for the syntactic monoid associated with
+a normal-form automaton representation of
+.RI < expr >.
+.RE
+.
+.SS Operations on the Environment
+.TP
+.B :bindings
+Print a list of currently-bound variables and their bindings.
+Because expression variables have large representations,
+these representations are omitted from this listing
+but can be displayed individually with
+.BR :show .
+.
+.PP
+.B :show
+.RI < var >
+.RS
+Print the current binding of
+.RI < var >,
+if any, or a message indicating that it is not bound.
+.RE
+.
+.PP
+.B :unset
+.RI < var >
+.RS
+Remove any binding for
+.RI < var >
+from the current environment.
+.RE
+.
+.TP
+.B :reset
+Remove all bindings from the current environment.
+.
+.TP
+.B :restore-universe
+Set the special variable
+.B universe
+to the symbol set that contains all and only
+those symbols used in other bindings
+in the current environment.
+.
+.TP
+.B :compile
+Convert all saved expressions into automata,
+retaining the metadata that allows the expression
+to be alphabet-agnostic.
+.
+.TP
+.B :ground
+Convert all saved expressions into automata,
+discarding the metadata that allows the expression
+to be alphabet-agnostic.
+.
+.TP
+.B :restrict
+Remove all symbols that are not in the current
+.B universe
+from all current bindings.
+This may result in an empty symbol set,
+which cannot be assigned directly.
+Non-satisfiable factors are uniformly replaced by
+.B !<>
+for simplicity.
+.
+.SH OPTIONS
+None.
+.SH "EXIT STATUS"
+.TP
+.B 0
+Successful program execution
+.TP
+.B ">0"
+An error occurred.
+.
+.SH ENVIRONMENT
+.TP
+.B PAGER
+If
+.B PAGER
+is set, its value is used as the program to use to display the help text.
+If not, then
+.B less
+is used with no arguments.
+.
+.SH FILES
+.TP
+~/.haskeline
+Configuration file for the line editor.
+.
+.SH NOTES
+Most of the complexity class decision algorithms are based on
+properties of the syntactic monoid that,
+given the representation,
+might be slow to compute.
+This holds especially true for the (T)LTT test.
+.
+.P
+The AT&T format cannot handle symbols that contain spaces.
+Further, numeric symbols are treated as indices into the symbols files,
+so symbol mapping files must be written
+when exporting automata that actually use such symbols.
+.SH BUGS
+Lines that cannot be parsed are ignored,
+but generally no warnings are emitted.
+.SH "SEE ALSO"
+.BR display (1),
+.BR dot (1),
+.BR fsm (5),
+.BR pleb (5)
+.PP
+https://github.com/judah/haskeline/wiki/UserPreferences
