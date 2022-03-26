@@ -4,6 +4,7 @@
 ### Added
 * egg-box display (a Porter, and `:eggbox` in Plebby)
 * French translation of manual pages
+* basic Emacs mode for syntax highlighting
 ### Changed
 * performance enhancements: faster FO2(S) test
 
