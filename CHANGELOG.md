@@ -3,6 +3,7 @@
 ## Version NEXT
 ### Added
 * egg-box display (a Porter, and `:eggbox` in Plebby)
+* French translation of manual pages
 ### Changed
 * performance enhancements: faster FO2(S) test
 
