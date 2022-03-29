@@ -7,7 +7,7 @@ name:                language-toolkit
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             1.0.0.0
+version:             1.0.1.0
 
 synopsis:            A set of tools for analyzing languages via logic and automata
 category:            Formal Languages
