@@ -87,8 +87,8 @@ Otherwise, we use □ symbol.
 > constructCell m h = "<TD>" ++ intercalate "<BR/>" h' ++ "</TD>"
 >     where h' = map (display . snd . nodeLabel) $ Set.toList h
 >           display x
->               | not (null x) = ((concat :: [[a]] -> [a])
->                                 . unsymbols $ map (fmap showish) x)
+>               | not (null x) = (intercalate "\x2009" . catMaybes)
+>                                 (map (toMaybe . fmap showish) x)
 >                                ++ if x `Set.member` i then "*" else ""
 >               | otherwise = (case t of
 >                                ((Symbol n):_) -> showish n
@@ -99,6 +99,8 @@ Otherwise, we use □ symbol.
 >                                   . destination)
 >                         . filter ((`Set.member` initials m) . source)
 >                         . Set.toList $ transitions m
+>                     toMaybe (Symbol a) = Just a
+>                     toMaybe _ = Nothing
 >           showish x = deescape . filter (/= '"') $ show x
 >           i = Set.map (snd . nodeLabel)
 >               (initials m `Set.union` idempotents m)
