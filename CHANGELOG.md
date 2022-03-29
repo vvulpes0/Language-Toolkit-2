@@ -8,6 +8,10 @@
 ### Changed
 * performance enhancements: faster FO2(S) test
 
+## Version 1.0.1 — 2022-03-28
+### Changed
+* fixed a mistest in `classify`, as well as a severe performance issue
+
 ## Version 1.0 (initial hackage release) — 2022-03-15
 ### Added
 * `classify` command
