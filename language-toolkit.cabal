@@ -67,6 +67,7 @@ library
                 , LTK.Algebra
                 , LTK.Containers
                 , LTK.Decide
+                , LTK.Decide.Acom
                 , LTK.Decide.B
                 , LTK.Decide.CB
                 , LTK.Decide.Definite

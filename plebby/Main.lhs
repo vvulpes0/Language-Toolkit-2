@@ -54,6 +54,7 @@
 >                         , isGD
 >                         , isTGD
 >                         , isCB
+>                         , isAcom
 >                         , isB, isLB, isTLB
 >                         , isDef
 >                         , isRDef
@@ -149,6 +150,7 @@
 >                deriving (Eq, Read, Show)
 
 > data Relation = Equal Expr Expr
+>               | IsAcom Expr
 >               | IsB Expr
 >               | IsCB Expr
 >               | IsDef Expr
@@ -339,6 +341,11 @@ in order to deal with spaces or other special characters.
 >                   , error ":import not defined here"
 >                   , [ArgF]
 >                   , "read file as plebby script"
+>                   )
+>                 , ( ":isAcom"
+>                   , (M . IsAcom) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is k,1-LTT"
 >                   )
 >                 , ( ":isB"
 >                   , (M . IsB) <$> pe
@@ -856,6 +863,7 @@ in order to deal with spaces or other special characters.
 > doRelation e r
 >     = case r
 >       of Equal p1 p2    ->  relate e (==) p1 p2
+>          IsAcom p       ->  check isAcom p
 >          IsB p          ->  check isB p
 >          IsCB p         ->  check isCB p
 >          IsDef p        ->  check isDef p

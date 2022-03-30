@@ -20,6 +20,7 @@
 >                   , isDef, isRDef, isGD
 >                   , isSL, isLT, isLTT
 >                   -- * Both Local and Piecewise
+>                   , isAcom
 >                   , isCB, isGLT, isLPT, isGLPT, isSF
 >                   -- * Tier-based generalizations
 >                   , isTDef, isTRDef, isTGD
@@ -48,5 +49,6 @@
 > import LTK.Decide.GD
 > import LTK.Decide.CB
 > import LTK.Decide.B
+> import LTK.Decide.Acom
 > import LTK.Decide.Definite
 > import LTK.Decide.Trivial

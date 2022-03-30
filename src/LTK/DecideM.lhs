@@ -24,6 +24,7 @@
 >                    , isDefM, isRDefM, isGDM
 >                    , isLTM, isLTTM
 >                    -- * Both Local and Piecewise
+>                    , isAcomM
 >                    , isCBM, isGLTM, isLPTM, isGLPTM, isSFM
 >                    -- * Tier-based generalizations
 >                    , isTDefM, isTRDefM, isTGDM
@@ -48,4 +49,5 @@
 > import LTK.Decide.GD
 > import LTK.Decide.CB
 > import LTK.Decide.B
+> import LTK.Decide.Acom
 > import LTK.Decide.Definite

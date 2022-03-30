@@ -5,8 +5,10 @@
 * egg-box display (a Porter, and `:eggbox` in Plebby)
 * French translation of manual pages
 * basic Emacs mode for syntax highlighting
+* decision problem for Acom (aperiodic and commutative)
 ### Changed
-* performance enhancements: faster FO2(S) test
+* performance enhancement: faster FO2(S) test
+* performance enhancement: faster (T)LTT test
 
 ## Version 1.0.1 — 2022-03-28
 ### Changed

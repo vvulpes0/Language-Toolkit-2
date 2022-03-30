@@ -174,8 +174,9 @@ so that results may be listed in topographic order.
 >             , [String])
 > classmap = Map.fromList
 >            [ ("1", (Left isTrivial, ["Fin","CB","SP"]))
+>            , ("Acom", (Right isAcomM, ["LTT","PT"]))
 >            , ("B", (Right isBM, ["FO2"]))
->            , ("CB", (Right isCBM, ["B","LT","PT"]))
+>            , ("CB", (Right isCBM, ["B","LT","Acom"]))
 >            , ("Def", (Right isDefM, ["GD", "SL", "TDef"]))
 >            , ("FO2", (Right isFO2M, ["FO2S", "GLT"]))
 >            , ("FO2B", (Right isFO2BM, ["SF"]))
