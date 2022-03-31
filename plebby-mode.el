@@ -11,11 +11,11 @@
    '("^#.*$" . font-lock-comment-face)
    '("[[:space:]]#.*$" . font-lock-comment-face)
    '("^:\\w*" . font-lock-preprocessor-face)
-   '("/[[:alpha:]][^][:space:][(){}<>⟨⟩,]*" . font-lock-string-face)
+   '("/[[:alpha:]][^][:space:]\n[(){}<>⟨⟩,]*" . font-lock-string-face)
    '("[=!~*$]\\|[\\/][\\/]\\|%||%\\|%|\\||%\\|@\\(@\\|\\)"
      . font-lock-keyword-face)
    '("[≝⟨⟩⋊⋉⋀∧⋂∩⋁∨⋃∪∙¬∗↓]" . font-lock-keyword-face)
-   '("\\<[[:alpha:]][^][:space:][(){}<>⟨⟩,]*"
+   '("\\<[[:alpha:]][^][:space:]\n[(){}<>⟨⟩,]*"
      . font-lock-variable-name-face)
    '("#.*$" . font-lock-comment-face)
    )
