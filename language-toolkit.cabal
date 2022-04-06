@@ -79,6 +79,7 @@ library
                 , LTK.Decide.LPT
                 , LTK.Decide.LT
                 , LTK.Decide.LTT
+                , LTK.Decide.MTD
                 , LTK.Decide.PT
                 , LTK.Decide.SF
                 , LTK.Decide.SL
