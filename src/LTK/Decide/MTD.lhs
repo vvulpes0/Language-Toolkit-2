@@ -23,11 +23,11 @@
 > isMTDef = isMTDefM . syntacticMonoid
 
 > isMTDefM :: (Ord n, Ord e) => SynMon n e -> Bool
-> isMTDefM s = and [f u v y e
->                  | u <- q, v <- q, y <- q, e <- Set.toList (g y)]
+> isMTDefM s = and [f v y e
+>                  | v <- q, y <- q, e <- Set.toList (g y)]
 >     where g y = primitiveIdeal2 s y `Set.intersection` idempotents s
 >           q = Set.toList $ states s
 >           q0 = fst . choose $ initials s
->           f u v y e = follow s (concatMap h [u,y,v,e]) q0
->                       == follow s (concatMap h [u,v,e]) q0
+>           f v y e = follow s (concatMap h [y,v,e]) q0
+>                       == follow s (concatMap h [v,e]) q0
 >           h = snd . nodeLabel
