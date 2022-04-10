@@ -25,7 +25,7 @@
 >                   -- * Tier-based generalizations
 >                   , isTDef, isTRDef, isTGD
 >                   , isTSL, isTLT, isTLTT, isTLPT
->                   , isMTDef
+>                   , isMTF, isMTDef, isMTRDef, isMTGD
 >                   -- * Others between CB and G
 >                   , isB, isLB, isTLB
 >                   -- * Two-Variable Logics
@@ -53,4 +53,4 @@
 > import LTK.Decide.Acom
 > import LTK.Decide.Definite
 > import LTK.Decide.Trivial
-> import LTK.Decide.MTD
+> import LTK.Decide.Multitier

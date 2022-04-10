@@ -19,6 +19,8 @@
 >     , me
 >     , emee
 >     , ese
+>       -- * Other generation
+>     , emblock
 >       -- *Powers
 >     , idempotents
 >     , omega
@@ -120,6 +122,51 @@ if it does not appear in the syntactic semigroup.
 >                  . until (uncurry (==)) (\(_,b) -> (b, f b))
 >                  $ (s, f s)
 >     where f x = Set.findMin $ follow monoid (snd (nodeLabel x)) x
+
+> -- |Construct a monoid based on the idempotent paths
+> -- as described by Straubing (1985).  Elements are of the form
+> -- \((e,esf,f)\) for idempotents \(e\) and \(f\) and arbitrary \(s\).
+> emblock :: (Ord n, Ord e) => SynMon n e -> SynMon Integer Integer
+> emblock = syntacticMonoid . renameStates . renameSymbols . emblock'
+>     where renameSymbols f = renameSymbolsBy index f
+>               where syms = zip (Set.toList $ alphabet f) [1..]
+>                     index x = let xs = filter ((==x) . fst) syms
+>                               in case xs of
+>                                    []    -> 0
+>                                    (y:_) -> snd y
+
+> emblock' :: (Ord n, Ord e) => SynMon n e
+>          -> FSA ([e],[e],[e]) ([e],[e],[e])
+> emblock' s = FSA { sigma = Set.fromList $ map (nodeLabel . source) trs
+>                  , transitions = Set.fromList (trs ++ itrs)
+>                  , initials = Set.singleton (State ([],[],[]))
+>                  , finals = Set.empty
+>                  , isDeterministic = True
+>                  }
+>     where es = map h . Set.toList $ idempotents s
+>           qs = map h . Set.toList $ states s
+>           ismon = initials s `Set.isSubsetOf` idempotents s
+>           h = ([] ++) . unsymbols . snd . nodeLabel
+>           go xs q = fst . choose $ follow s (map Symbol $ concat xs) q
+>           q0 = fst . choose $ initials s
+>           trs = [let exf = go [e,x,f] q0
+>                      fyg = go [f,y,g] q0
+>                  in Transition { source      = State (e, h exf, f)
+>                                , destination = State
+>                                                (e,h $ go [h fyg] exf,g)
+>                                , edgeLabel   = Symbol (f, h fyg, g)
+>                             }
+>                 | e <- es, f <- es, g <- es
+>                 , x <- qs, y <- qs
+>                 ]
+>           itrs = if ismon
+>                  then []
+>                  else [Transition { source = State ([],[],[])
+>                                   , destination = State p
+>                                   , edgeLabel = Symbol p
+>                                   }
+>                       | (Symbol p) <- map edgeLabel trs
+>                       ]
 
 
 Helpers
