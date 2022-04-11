@@ -47,7 +47,7 @@
 >                         , isLPT, isTLPT
 >                         , isSP
 >                         , isPT
->                         , isFO2, isFO2B, isFO2S
+>                         , isFO2, isFO2B, isFO2BF, isFO2S
 >                         , isSF
 >                         , isGLT, isGLPT
 >                         , isFinite
@@ -61,6 +61,7 @@
 >                         , isTDef
 >                         , isTRDef
 >                         , isTrivial
+>                         , isMTF, isMTDef, isMTRDef, isMTGD
 >                         )
 > import LTK.FSA
 > import LTK.Learn.SL  (fSL)
@@ -157,6 +158,7 @@
 >               | IsFin Expr
 >               | IsFO2 Expr
 >               | IsFO2B Expr
+>               | IsFO2BF Expr
 >               | IsFO2S Expr
 >               | IsGD Expr
 >               | IsGLPT Expr
@@ -165,6 +167,10 @@
 >               | IsLT Expr
 >               | IsLPT Expr
 >               | IsLTT Expr
+>               | IsMTDef Expr
+>               | IsMTF Expr
+>               | IsMTGD Expr
+>               | IsMTRDef Expr
 >               | IsPT Expr
 >               | IsRDef Expr
 >               | IsSF Expr
@@ -377,6 +383,11 @@ in order to deal with spaces or other special characters.
 >                   , [ArgE]
 >                   , "determine if expr is FO2[<,bet]-definable"
 >                   )
+>                 , ( ":isFO2BF"
+>                   , (M . IsFO2BF) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is FO2[<,betfac]-definable"
+>                   )
 >                 , ( ":isFO2S"
 >                   , (M . IsFO2S) <$> pe
 >                   , [ArgE]
@@ -416,6 +427,26 @@ in order to deal with spaces or other special characters.
 >                   , (M . IsLTT) <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Locally Threshold Testable"
+>                   )
+>                 , ( ":isMTDef"
+>                   , (M . IsMTDef) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is a combination of TDef things"
+>                   )
+>                 , ( ":isMTF"
+>                   , (M . IsMTF) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is a combination of tier-(co)finite things"
+>                   )
+>                 , ( ":isMTGD"
+>                   , (M . IsMTGD) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is a combination of TGD things"
+>                   )
+>                 , ( ":isMTRDef"
+>                   , (M . IsMTRDef) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is a combination of TRDef things"
 >                   )
 >                 , ( ":isPT"
 >                   , (M . IsPT) <$> pe
@@ -870,6 +901,7 @@ in order to deal with spaces or other special characters.
 >          IsFin p        ->  check isFinite p
 >          IsFO2 p        ->  check isFO2 p
 >          IsFO2B p       ->  check isFO2B p
+>          IsFO2BF p      ->  check isFO2BF p
 >          IsFO2S p       ->  check isFO2S p
 >          IsGD p         ->  check isGD p
 >          IsGLPT p       ->  check isGLPT p
@@ -878,6 +910,10 @@ in order to deal with spaces or other special characters.
 >          IsLPT p        ->  check isLPT p
 >          IsLT p         ->  check isLT p
 >          IsLTT p        ->  check isLTT p
+>          IsMTDef p      ->  check isMTDef p
+>          IsMTF p        ->  check isMTF p
+>          IsMTGD p       ->  check isMTGD p
+>          IsMTRDef p     ->  check isMTRDef p
 >          IsPT p         ->  check isPT p
 >          IsRDef p       ->  check isRDef p
 >          IsSF p         ->  check isSF p

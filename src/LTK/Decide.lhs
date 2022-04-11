@@ -29,7 +29,7 @@
 >                   -- * Others between CB and G
 >                   , isB, isLB, isTLB
 >                   -- * Two-Variable Logics
->                   , isFO2, isFO2B, isFO2S
+>                   , isFO2, isFO2B, isFO2BF, isFO2S
 >                   ) where
 
 > import LTK.Decide.Finite

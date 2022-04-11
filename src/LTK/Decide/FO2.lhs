@@ -19,8 +19,8 @@
 >
 > @since 1.0
 > -}
-> module LTK.Decide.FO2 (isFO2, isFO2B, isFO2S,
->                        isFO2M, isFO2BM, isFO2SM) where
+> module LTK.Decide.FO2 (isFO2, isFO2B, isFO2BF, isFO2S,
+>                        isFO2M, isFO2BM, isFO2BFM, isFO2SM) where
 
 > import Data.Set (Set)
 > import qualified Data.Set as Set
@@ -110,6 +110,18 @@ is in MeDA.
 > -- |True iff the monoid represents a stringset that satisfies @isFO2B@.
 > isFO2BM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isFO2BM s = all (fo2testFull s . emee s) $ Set.toList (idempotents s)
+
+
+> -- |True iff the automaton recognizes a stringset
+> -- representable in \(\mathrm{FO}^{2}[<,\mathrm{betfac}]\).
+> -- This is like \(\mathrm{FO}^{2}[<,\mathrm{bet}]\)
+> -- except betweenness is of entire factors.
+> isFO2BF :: (Ord n, Ord e) => FSA n e -> Bool
+> isFO2BF = isFO2BFM . syntacticMonoid
+
+> -- |True iff the monoid lies in MeDA*D
+> isFO2BFM :: (Ord n, Ord e) => SynMon n e -> Bool
+> isFO2BFM = isFO2BM . emblock
 
 
 Misc

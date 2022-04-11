@@ -33,7 +33,7 @@
 >                   -- * Others between CB and G
 >                   , isBM, isLBM, isTLBM
 >                    -- * Two-Variable Logics
->                    , isFO2M, isFO2BM, isFO2SM
+>                    , isFO2M, isFO2BM, isFO2BFM, isFO2SM
 >                   ) where
 
 > import LTK.Decide.LT
