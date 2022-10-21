@@ -56,8 +56,11 @@
 > -- The result represents the transitions, input symbols, and output symbols
 > -- in that order.
 > extractSymbolsATT :: String -> (String, String, String)
-> extractSymbolsATT = (\(a:b:c:_) -> (a, b, c)) . flip (++) [[],[],[]] .
->                     map unlines . splitOn separator . lines
+> extractSymbolsATT = f . map unlines . splitOn separator . lines
+>     where f (x:y:z:_)  =  (x, y, z)
+>           f (x:y:_)    =  (x, y, [])
+>           f (x:_)      =  (x, [], [])
+>           f _          =  ([], [], [])
 
 > -- |Convert an AT&T format string into one where input and output symbols
 > -- have been reversed.

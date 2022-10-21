@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.DecideM
-> Copyright : (c) 2021 Dakotah Lambert
+> Copyright : (c) 2021-2022 Dakotah Lambert
 > License   : MIT
 >
 > Functions used for deciding the complexity class of a monoid.

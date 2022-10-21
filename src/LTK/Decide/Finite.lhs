@@ -31,13 +31,13 @@
 > -- |True iff the syntactic monoid is nilpotent
 > -- and the sole idempotent is rejecting
 > isFiniteM :: (Ord n, Ord e) => SynMon n e -> Bool
-> isFiniteM s = isPTM s && (size i == 1) && not (isSubsetOf (finals s) i)
+> isFiniteM s = isPTM s && (isize i == 1) && not (isSubsetOf (finals s) i)
 >     where i = idempotents s
 
 > -- |True iff the syntactic monoid is nilpotent
 > -- and the sole idempotent is accepting
 > isCofiniteM :: (Ord n, Ord e) => SynMon n e -> Bool
-> isCofiniteM s = isPTM s && (size i == 1) && isSubsetOf (finals s) i
+> isCofiniteM s = isPTM s && (isize i == 1) && isSubsetOf (finals s) i
 >     where i = idempotents s
 
 > -- |True iff the automaton is finite on a tier.

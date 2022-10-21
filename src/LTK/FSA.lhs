@@ -301,8 +301,10 @@ State
 >           (<*>)  =  fmap . nodeLabel
 
 > instance Monad State
->     where return   =  pure
->           a >>= f  =  f $ nodeLabel a
+>     where a >>= f  =  f $ nodeLabel a
+#if !MIN_VERSION_base(4,8,0)
+>           return    =  pure
+#endif
 
 #if MIN_VERSION_base(4,9,0)
 Semigroup instance to satisfy base-4.11
@@ -313,7 +315,14 @@ Semigroup instance to satisfy base-4.11
 
 > instance (Monoid n) => Monoid (State n)
 >     where mempty   =  State mempty
+
+#if MIN_VERSION_base(4,11,0)
+> -- mappend will eventually be removed
+#elif MIN_VERSION_base(4,9,0)
+>           mappend  = (<>)
+#else
 >           mappend  =  fmap . nodeLabel . fmap mappend
+#endif
 
 > instance (NFData n) => NFData (State n)
 >     where rnf (State n) = rnf n
@@ -409,12 +418,23 @@ Here we consider FSAs to be Semigroups (and Monoids) under concatenation
 Semigroup instance to satisfy base-4.9
 
 > instance (Enum n, Ord n, Ord e) => Semigroup (FSA n e)
->     where (<>) = mappend
+>     where (<>) = apply autConcatenation
 #endif
 
 > instance (Enum n, Ord n, Ord e) => Monoid (FSA n e)
 >     where mempty   =  singletonLanguage empty
+
+#if MIN_VERSION_base(4,11,0)
+-- mappend will eventually be removed
+#elif MIN_VERSION_base(4,9,0)
+
+>           mappend = (<>)
+
+#else
+
 >           mappend  =  apply autConcatenation
+
+#endif
 
 > apply :: (Ord e, Ord n1, Ord n2, Enum n2) =>
 >          (a -> b -> FSA n1 e) -> a -> b -> FSA n2 e

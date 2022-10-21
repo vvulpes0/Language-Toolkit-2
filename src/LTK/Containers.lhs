@@ -440,14 +440,13 @@ lookup-time logarithmic in the number of distinct elements.
 
 > instance Linearizable Multiset
 >     where choose (Multiset xs)
->               | Set.null xs
->                   =  ( error
->                        "cannot choose from an empty multiset"
->                      , Multiset Set.empty)
->               | m == 1       =  (a, f as)
->               | otherwise    =  (a, f ((a, pred m) : as))
->               where ((a,m):as) = Set.toAscList xs
->                     f = Multiset . Set.fromDistinctAscList
+>               = case Set.toAscList xs of
+>                   ((a,1):as) -> (a, f as)
+>                   ((a,m):as) -> (a, f ((a, pred m) : as))
+>                   _          -> ( error
+>                                   "cannot choose from an empty multiset"
+>                                 , Multiset Set.empty)
+>               where f = Multiset . Set.fromDistinctAscList
 > instance Collapsible Multiset
 >     where size (Multiset xs) = fromIntegral . sum . map snd
 >                                $ Set.toList xs
@@ -483,12 +482,18 @@ lookup-time logarithmic in the number of distinct elements.
 
 #if MIN_VERSION_base(4,9,0)
 > instance Ord a => Semigroup (Multiset a)
->     where (<>) = mappend
+>     where (<>) = union
 #endif
 
 > instance Ord a => Monoid (Multiset a)
 >     where mempty = empty
+#if MIN_VERSION_base(4,11,0)
+> -- mappend will eventually be removed
+#elif MIN_VERSION_base(4,9,0)
+>           mappend = (<>)
+#else
 >           mappend = union
+#endif
 
 > instance Show a => Show (Multiset a)
 >     where showsPrec p m = showParen (p > 10) $

@@ -7,7 +7,7 @@
 
 > {-|
 > Module:    LTK.Porters.Pleb
-> Copyright: (c) 2018-2021 Dakotah Lambert
+> Copyright: (c) 2018-2022 Dakotah Lambert
 > License:   MIT
 
 > The (P)iecewise / (L)ocal (E)xpression (B)uilder.
@@ -252,17 +252,19 @@ prevents having to descend through the tree to find this information.
 
 > automatonFromPLFactor :: PLFactor -> FSA Integer (Maybe String)
 > automatonFromPLFactor (PLFactor h t pieces)
->     | isEmpty pieces  =  bl (Substring [] h t)
->     | isEmpty ps      =  bl (Substring p  h t)
->     | isPF            =  bl (Subsequence (concat (p:ps)))
->     | otherwise       =  renameStates . minimize . mconcat $ map bl lfs
+>     = case (tmap (tmap (tmap Just)) pieces) of
+>         []      ->  bl (Substring [] h t)
+>         (p:[])  ->  bl (Substring p  h t)
+>         (p:ps)  ->  if isPF
+>                     then bl (Subsequence (concat (p:ps)))
+>                     else (renameStates . minimize . mconcat
+>                          $ map bl lfs)
+>                         where lfs  =  Substring p h False : lfs' ps
 >     where as           =  insert Nothing . tmap Just $
 >                           unionAll (unionAll pieces)
 >           bl           =  buildLiteral as . required
->           (p:ps)       =  tmap (tmap (tmap Just)) pieces
 >           isPF         =  not h && not t &&
 >                           all ((==) [()] . map (const ())) pieces
->           lfs          =  Substring p h False : lfs' ps
 >           lfs' (x:[])  =  Substring x False t : lfs' []
 >           lfs' (x:xs)  =  Substring x False False : lfs' xs
 >           lfs' _       =  []
@@ -494,7 +496,7 @@ prevents having to descend through the tree to find this information.
 >     where fmap g (Parse f) = Parse (fmap (mapfst g) . f)
 
 > instance Applicative Parse
->     where pure x   =  Parse (Right . (,) x . id)
+>     where pure x   =  Parse $ Right . (,) x . id
 >           f <*> x  =  Parse $ \s0 ->
 >                       let h (g, s1) = fmap (mapfst g) $ doParse x s1
 >                       in either Left h $ doParse f s0
@@ -509,10 +511,12 @@ prevents having to descend through the tree to find this information.
 >                       in either h Right $ doParse p ts
 
 > instance Monad Parse
->     where return x  =  Parse $ Right . (,) x . id
->           p >>= f   =  Parse $ \s0 ->
+>     where p >>= f   =  Parse $ \s0 ->
 >                        let h (a, s1) = doParse (f a) s1
 >                        in either Left h $ doParse p s0
+#if !MIN_VERSION_base(4,8,0)
+>           return    =  pure
+#endif
 
 
 
