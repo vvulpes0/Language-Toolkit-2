@@ -14,6 +14,7 @@
 >                   -- * Classes involving finiteness
 >                   isTrivial
 >                   , isFinite, isCofinite
+>                   , isTFinite, isTCofinite
 >                   -- * Piecewise classes
 >                   , isSP, isPT
 >                   -- * Local classes

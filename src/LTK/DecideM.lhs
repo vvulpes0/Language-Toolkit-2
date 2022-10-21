@@ -18,8 +18,11 @@
 > @since 1.0
 > -}
 > module LTK.DecideM (
+>                    -- * Classes involving finiteness
+>                    isFiniteM, isCofiniteM
+>                    , isTFiniteM, isTCofiniteM
 >                    -- * Piecewise classes
->                      isPTM
+>                    , isPTM
 >                    -- * Local classes
 >                    , isDefM, isRDefM, isGDM
 >                    , isLTM, isLTTM
@@ -36,6 +39,7 @@
 >                    , isFO2M, isFO2BM, isFO2BFM, isFO2SM
 >                   ) where
 
+> import LTK.Decide.Finite
 > import LTK.Decide.LT
 > import LTK.Decide.LPT
 > import LTK.Decide.LTT

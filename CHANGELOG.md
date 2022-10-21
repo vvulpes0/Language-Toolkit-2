@@ -9,6 +9,7 @@
 ### Changed
 * performance enhancement: faster FO2(S) test
 * performance enhancement: faster (T)LTT test
+* performance enhancement: faster (co)finite test
 
 ## Version 1.0.1 — 2022-03-28
 ### Changed
