@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEB 5 "2022-03-24" "Version 1.0" "Language Toolkit"
+.TH PLEB 5 "2022-11-05" "Version 1.0" "Language Toolkit"
 .SH NOM
 pleb \- Piecewise / Local Expression Builder
 .SH DESCRIPTION
@@ -314,6 +314,11 @@ de l'opérande avec lui-même.
 La même mise en garde qui affecte la concaténation s'applique ici:
 les facteurs sans ancre permettent une expansion arbitraire.
 .TP
+.B ^
+La fermeture vers le haut de l'opérande:
+toutes les chaînes qui peuvent être créees
+en insérant zéro ou plusieurs caractères d'un mot valide.
+.TP
 .B $
 La fermeture vers le bas de l'opérande:
 toutes les chaînes qui peuvent être créees
@@ -361,6 +366,9 @@ Les synonymes suivent.
 .TP
 .B *
 <U+2217> [asterisk operator]
+.TP
+.B ^
+<U+2191> [upwards arrow]
 .TP
 .B $
 <U+2193> [downwards arrow]

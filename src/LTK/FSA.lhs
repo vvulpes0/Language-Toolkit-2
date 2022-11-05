@@ -35,6 +35,7 @@
 >        , singletonLanguage
 >        -- * Derived automata
 >        , brzozowskiDerivative
+>        , loopify
 >        , quotLeft
 >        , quotMid
 >        , quotRight
@@ -1416,6 +1417,19 @@ alphabets unified.
 >                   contractAlphabetTo
 >                   (Set.delete Nothing (alphabet fsa))
 >                   fsa
+
+> -- |Add self-loops on all symbols to all edges to compute
+> -- an upward closure.
+> loopify :: (Ord a, Ord b) => FSA a b -> FSA a b
+> loopify fsa = fsa { transitions = Set.union (transitions fsa) trs }
+>     where as = Set.toList $ alphabet fsa
+>           qs = Set.toList $ states fsa
+>           trs = Set.fromList $ concatMap sigmatr as
+>           sigmatr x = map (\q -> Transition
+>                                  { edgeLabel = Symbol x
+>                                  ,  source = q
+>                                  , destination = q
+>                                  }) qs
 
 Tierify:
 * Ensure that all of T is accounted for in the input

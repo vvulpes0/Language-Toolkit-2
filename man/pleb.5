@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEB 5 "2022-03-15" "Version 1.0" "Language Toolkit"
+.TH PLEB 5 "2022-11-05" "Version 1.0" "Language Toolkit"
 .SH NAME
 pleb \- Piecewise / Local Expression Builder
 .SH DESCRIPTION
@@ -305,6 +305,11 @@ This has the same caveat as the concatenation operator:
 factor-expressions that are not fully anchored
 may have arbitrary strings at the non-anchored ends.
 .TP
+.B ^
+The upward closure of the operand.
+Accept all and only those strings that can be formed
+by inserting zero or more symbols into a string accepted by the operand.
+.TP
 .B $
 The downward closure of the operand.
 Accept all and only those strings that can be formed
@@ -356,6 +361,9 @@ there is a unicode syntax that provides the following synonyms:
 .TP
 .B *
 <U+2217> [asterisk operator]
+.TP
+.B ^
+<U+2191> [upwards arrow]
 .TP
 .B $
 <U+2193> [downwards arrow]

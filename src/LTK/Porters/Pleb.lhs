@@ -103,6 +103,7 @@
 >     | Iteration Expr
 >     | Negation Expr
 >     | Tierify [SymSet] Expr
+>     | UpClose Expr
 >       deriving (Eq, Ord, Read, Show)
 
 > -- |A subexpression representing a single Piecewise-Local factor.
@@ -190,6 +191,7 @@ Therefore, this cleanup step has been removed.
 >                    Unary (Negation ex)      ->  g Negation ex
 >                    Unary (Tierify ts ex)
 >                        -> g (Tierify (tmap restrictUniverseS ts)) ex
+>                    Unary (UpClose ex)       ->  g UpClose ex
 >           f t es = NAry (t $ tmap restrictUniverseE es)
 >           g t e  = Unary (t $ restrictUniverseE e)
 >           fixFactor h t ps
@@ -237,6 +239,9 @@ prevents having to descend through the tree to find this information.
 >              -> complementDeterministic $ automatonFromExpr ex
 >          Unary (Tierify ts ex)
 >              -> tierify (unionAll ts) $ automatonFromExpr ex
+>          Unary (UpClose ex)
+>              -> renameStates . minimize . loopify $
+>                 automatonFromExpr ex
 >     where f tl = renameStates . minimize . tl . automata
 >           automata es
 >               =  let as = map automatonFromExpr es
@@ -287,6 +292,7 @@ prevents having to descend through the tree to find this information.
 >           usedSymbolsU (Iteration ex)      =  usedSymbols ex
 >           usedSymbolsU (Negation ex)       =  usedSymbols ex
 >           usedSymbolsU (Tierify ts _)      =  unionAll ts
+>           usedSymbolsU (UpClose ex)      =  usedSymbols ex
 >           usedSymbolsF (PLFactor _ _ ps)   =  unionAll $ unionAll ps
 
 > parseStatements :: Env -> Parse Env
@@ -366,6 +372,7 @@ prevents having to descend through the tree to find this information.
 > parseUnaryExpr dict subexprs
 >     = (makeLifter
 >        [ (["↓", "$"],       DownClose)
+>        , (["↑", "^"],       UpClose)
 >        , (["*", "∗"],       Iteration)
 >        , (["¬", "~", "!"],  Negation)
 >        ] <*> parseExpr dict subexprs
