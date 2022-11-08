@@ -52,6 +52,7 @@
 >        , flatIntersection
 >        , flatUnion
 >        , LTK.FSA.reverse
+>        , autDifference
 >        , complement
 >        , complementDeterministic
 >        , determinize

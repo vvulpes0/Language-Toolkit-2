@@ -374,11 +374,20 @@ whether a stringset is $\SP$:
 
 %if false
 
+Additionally, it holds that a language is downward-closed
+iff its complement is upward-closed.
+We can use that fact to avoid generating (and following)
+epsilon transitions, by computing the upward closure of the complement
+rather than the downward closure of the input.
+In either case, the closure is a superset of the input,
+and so they are the same if subtracting the input yields emptiness.
+
 > -- |Returns @True@ iff the stringset represented by the given 'FSA'
 > -- is Strictly Piecewise, that is,
 > -- if the 'FSA' accepts all subsequences of every string it accepts.
 > isSP :: (Ord n, Ord e) => FSA n e -> Bool
-> isSP = isSP'
+> isSP x' = isEmpty . finals $ autDifference (loopify x) x
+>     where x = complement x'
 
 > -- |The stringset represented by the forbiddenSubsequences.
 > fsaFromForbiddenSubsequences :: (Ord e, NFData e) =>
