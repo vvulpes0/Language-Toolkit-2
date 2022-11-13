@@ -22,6 +22,7 @@
 >        , Type
 >        , Dot(Dot)
 >        , EggBox(EggBox)
+>        , SyntacticOrder(SyntacticOrder)
 >        , Jeff(Jeff)
 >        , Pleb(Pleb)
 >        , ATT(ATT)
@@ -47,6 +48,7 @@
 > import LTK.Porters.Corpus (readCorpus)
 > import LTK.Porters.Dot  (exportDot, formatSet)
 > import LTK.Porters.EggBox (exportEggBox)
+> import LTK.Porters.SyntacticOrder (exportSyntacticOrder)
 > import LTK.Porters.Jeff ( exportJeff
 >                         , readJeff
 >                         , transliterate
@@ -109,6 +111,13 @@
 
 > instance Exportable EggBox
 >     where fromFSA _ = exportEggBox . syntacticMonoid
+
+=== instances for SyntacticOrder (in Dot format)
+
+> -- |A Hasse diagram of the syntactic order.
+> newtype SyntacticOrder = SyntacticOrder SyntacticOrder
+> instance Exportable SyntacticOrder
+>     where fromFSA _ = exportSyntacticOrder . syntacticMonoid
 
 === instances for Pleb format
 

@@ -20,6 +20,7 @@
 >     , emee
 >     , ese
 >       -- * Other generation
+>     , syntacticOrder
 >     , emblock
 >       -- *Powers
 >     , idempotents
@@ -105,7 +106,7 @@ Here we use the syntactic monoid and simply exclude the identity
 if it does not appear in the syntactic semigroup.
 
 > -- |All elements \(e\) of the given monoid such that \(e*e=e\).
-> -- Except the identity element.  Add that manually if you need it.
+> -- Except the null word.  Add that manually if you need it.
 > idempotents :: (Ord n, Ord e) =>
 >                FSA (n, [Symbol e]) e -> Set (T n e)
 > idempotents f = keep isIdem . tmap destination $ transitions f
@@ -167,6 +168,45 @@ if it does not appear in the syntactic semigroup.
 >                                   }
 >                       | (Symbol p) <- map edgeLabel trs
 >                       ]
+
+Syntactic Order
+===============
+Pin (1997) suggests the following parial order on syntactic semigroups:
+s <= t iff for all u,v it holds that utv in L implies usv in L.
+This is a weak partial order:
+* reflexive: clear from construction
+* antisymmetric:
+  suppose x <= y and y <= x; then uxv in L iff uyv in L
+  and thus x is Myhill-related to y.
+
+The way the syntactic monoid is constructed,
+this information does remain accessible, so we can generate this order.
+We'll generate it as an FSA with only one sort of edge label,
+where an edge exists from p to q iff p <= q.
+The initial state is the identity and the finals are the finals.
+
+> syntacticOrder :: (Ord n, Ord e) => SynMon n e -> FSA [e] ()
+> syntacticOrder s = FSA
+>                    { sigma = Set.singleton ()
+>                    , transitions = Set.fromList
+>                                    [ Transition { source = f x
+>                                                 , destination = f y
+>                                                 , edgeLabel = Symbol ()
+>                                                 }
+>                                    | x <- q, y <- q, x # y
+>                                    ]
+>                    , initials = tmap f (initials s)
+>                    , finals = tmap f (finals s)
+>                    , isDeterministic = False
+>                    }
+>     where q = Set.toList $ states s
+>           f = fmap (unsymbols . snd)
+>           g = snd . nodeLabel
+>           x # y = all (accepts s . unsymbols)
+>                   [ g u ++ g x ++ g v
+>                   | u <- q, v <- q,
+>                     accepts s (unsymbols (g u ++ g y ++ g v))
+>                   ]
 
 
 Helpers

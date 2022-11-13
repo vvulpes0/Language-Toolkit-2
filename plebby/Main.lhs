@@ -70,6 +70,7 @@
 > import LTK.Learn.StringExt (Grammar(..), learn)
 > import LTK.Porters      ( ATT(ATT), ATTO(ATTO), Dot(Dot)
 >                         , EggBox(EggBox)
+>                         , SyntacticOrder(SyntacticOrder)
 >                         , Jeff(Jeff)
 >                         , formatSet, fromE, to
 >                         )
@@ -120,14 +121,15 @@
 >                deriving (Eq, Ord, Read, Show)
 
 > data Command = Bindings
+>              | D_EB Expr -- Display EggBox
 >              | D_JE Expr -- Display J-minimized Form
 >              | D_PSG Expr -- Display Powerset Graph
 >              | D_SM Expr -- Display Syntactic Monoid
+>              | D_SO Expr -- Display Syntactic Order
 >              | Display Expr
 >              | Dotify Expr
 >              | DT_PSG Expr -- Dotify Powerset Graph
 >              | DT_SM Expr -- Dotify Syntactic Monoid
->              | D_EB Expr
 >              | ErrorMsg String
 >              | Help [(String, [ArgType], String)]
 >              | Import FilePath
@@ -618,6 +620,11 @@ in order to deal with spaces or other special characters.
 >                   , [ArgE]
 >                   , ":display the syntactic monoid of expr"
 >                   )
+>                 , ( ":synord"
+>                   , (L . D_SO) <$> pe
+>                   , [ArgE]
+>                   , "display teh syntactic order of expr"
+>                   )
 >                 , ( ":unset"
 >                   , error ":unset not defined here"
 >                   , [ArgV]
@@ -654,6 +661,7 @@ in order to deal with spaces or other special characters.
 >                             . syntacticMonoid) expr
 >          D_PSG expr -> disp (renameStatesBy formatSet . powersetGraph) expr
 >          D_SM expr -> disp (renameStatesBy f . syntacticMonoid) expr
+>          D_SO expr -> disp' display' (to SyntacticOrder) expr
 >          Dotify expr -> dot id expr
 >          DT_PSG expr -> dot (renameStatesBy formatSet . powersetGraph) expr
 >          DT_SM expr -> dot (renameStatesBy f . syntacticMonoid) expr
@@ -877,7 +885,9 @@ in order to deal with spaces or other special characters.
 > lessHelp xs = do
 >   mpager <- fmap (map snd . filter ((==) "PAGER" . fst)) getEnvironment
 >   let ps     =  words $ head (mpager ++ ["less"])
->       (p:s)  =  if null ps then ["less"] else ps
+>       (p,s)  =  case ps of
+>                   (y:ys) -> (y,ys)
+>                   _ -> ("less",[])
 >       lessP  =  (proc p s)
 >                 { std_in = CreatePipe
 >                 , std_out = UseHandle stdout

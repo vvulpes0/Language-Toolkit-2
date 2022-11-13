@@ -109,6 +109,7 @@ library
                 , LTK.Porters.EggBox
                 , LTK.Porters.Jeff
                 , LTK.Porters.Pleb
+                , LTK.Porters.SyntacticOrder
                 , LTK.Tiers
                 , LTK.Traversals
   -- Modules included in this library but not exported.
