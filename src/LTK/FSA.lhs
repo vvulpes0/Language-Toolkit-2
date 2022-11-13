@@ -27,6 +27,7 @@
 >        , states
 >        , isNull
 >        , follow
+>        , accepts
 >        -- * Constructing simple automata
 >        , totalWithAlphabet
 >        , emptyWithAlphabet
@@ -1422,7 +1423,9 @@ alphabets unified.
 > -- |Add self-loops on all symbols to all edges to compute
 > -- an upward closure.
 > loopify :: (Ord a, Ord b) => FSA a b -> FSA a b
-> loopify fsa = fsa { transitions = Set.union (transitions fsa) trs }
+> loopify fsa = fsa { transitions = Set.union (transitions fsa) trs
+>                   , isDeterministic = False
+>                   }
 >     where as = Set.toList $ alphabet fsa
 >           qs = Set.toList $ states fsa
 >           trs = Set.fromList $ concatMap sigmatr as

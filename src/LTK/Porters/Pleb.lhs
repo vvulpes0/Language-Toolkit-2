@@ -240,7 +240,7 @@ prevents having to descend through the tree to find this information.
 >          Unary (Tierify ts ex)
 >              -> tierify (unionAll ts) $ automatonFromExpr ex
 >          Unary (UpClose ex)
->              -> renameStates . minimize . loopify $
+>              -> renameStates . minimize . determinize . loopify $
 >                 automatonFromExpr ex
 >     where f tl = renameStates . minimize . tl . automata
 >           automata es
@@ -292,7 +292,7 @@ prevents having to descend through the tree to find this information.
 >           usedSymbolsU (Iteration ex)      =  usedSymbols ex
 >           usedSymbolsU (Negation ex)       =  usedSymbols ex
 >           usedSymbolsU (Tierify ts _)      =  unionAll ts
->           usedSymbolsU (UpClose ex)      =  usedSymbols ex
+>           usedSymbolsU (UpClose ex)        =  usedSymbols ex
 >           usedSymbolsF (PLFactor _ _ ps)   =  unionAll $ unionAll ps
 
 > parseStatements :: Env -> Parse Env
