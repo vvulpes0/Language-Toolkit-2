@@ -3,13 +3,18 @@
 ## Version NEXT
 ### Added
 * egg-box display (a Porter, and `:eggbox` in Plebby)
+* syntactic order display (a Porter, and `:synord` in Plebby)
 * French translation of manual pages
 * basic Emacs mode for syntax highlighting
 * decision problem for Acom (aperiodic and commutative)
+* decision problem for FO2BF (betweenness of factors)
+* upward closures (`loopify`, or `↑` in Pleb)
+* multitier decision procedures
 ### Changed
 * performance enhancement: faster FO2(S) test
 * performance enhancement: faster (T)LTT test
 * performance enhancement: faster (co)finite test
+* performance enhancement: faster SP test
 
 ## Version 1.0.1 — 2022-03-28
 ### Changed
