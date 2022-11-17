@@ -21,7 +21,8 @@
 > exportSyntacticOrder :: (Ord n, Ord e, Show e) => SynMon n e -> String
 > exportSyntacticOrder m
 >     = unlines
->       ([ "digraph {", "node [shape=box]", "edge [dir=none]" ]
+>       ([ "digraph {", "graph [rankdir=BT]"
+>        , "node [shape=box]", "edge [dir=none]" ]
 >       ++ sts
 >       ++ map (uncurry showtr) (reduce rel)
 >       ++ ["}"]
