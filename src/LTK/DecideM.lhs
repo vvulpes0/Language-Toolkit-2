@@ -25,13 +25,13 @@
 >                    , isPTM
 >                    -- * Local classes
 >                    , isDefM, isRDefM, isGDM
->                    , isLTM, isLTTM
+>                    , isLTM, isLTTM, isLAcomM
 >                    -- * Both Local and Piecewise
 >                    , isAcomM
 >                    , isCBM, isGLTM, isLPTM, isGLPTM, isSFM
 >                    -- * Tier-based generalizations
 >                    , isTDefM, isTRDefM, isTGDM
->                    , isTLTM, isTLTTM, isTLPTM
+>                    , isTLTM, isTLTTM, isTLAcomM, isTLPTM
 >                    , isMTFM, isMTDefM, isMTRDefM, isMTGDM
 >                   -- * Others between CB and G
 >                   , isBM, isLBM, isTLBM
@@ -55,5 +55,7 @@
 > import LTK.Decide.CB
 > import LTK.Decide.B
 > import LTK.Decide.Acom
+> import LTK.Decide.LAcom
+> import LTK.Decide.TLAcom
 > import LTK.Decide.Definite
 > import LTK.Decide.Multitier

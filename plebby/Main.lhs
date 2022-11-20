@@ -54,7 +54,7 @@
 >                         , isGD
 >                         , isTGD
 >                         , isCB
->                         , isAcom
+>                         , isAcom, isLAcom, isTLAcom
 >                         , isB, isLB, isTLB
 >                         , isDef
 >                         , isRDef
@@ -165,6 +165,7 @@
 >               | IsGD Expr
 >               | IsGLPT Expr
 >               | IsGLT Expr
+>               | IsLAcom Expr
 >               | IsLB Expr
 >               | IsLT Expr
 >               | IsLPT Expr
@@ -180,6 +181,7 @@
 >               | IsSP Expr
 >               | IsTDef Expr
 >               | IsTGD Expr
+>               | IsTLAcom Expr
 >               | IsTLB Expr
 >               | IsTLT Expr
 >               | IsTLPT Expr
@@ -410,6 +412,11 @@ in order to deal with spaces or other special characters.
 >                   , [ArgE]
 >                   , "determine if expr is Generalized Locally Testable"
 >                   )
+>                 , ( ":isLAcom"
+>                   , (M . IsLAcom) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is locally Acom"
+>                   )
 >                 , ( ":isLB"
 >                   , (M . IsLB) <$> pe
 >                   , [ArgE]
@@ -484,6 +491,11 @@ in order to deal with spaces or other special characters.
 >                   , (M . IsTGD) <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Generalized Definite on a tier"
+>                   )
+>                 , ( ":isTLAcom"
+>                   , (M . IsTLAcom) <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is tier-locally Acom"
 >                   )
 >                 , ( ":isTLB"
 >                   , (M . IsTLB) <$> pe
@@ -916,6 +928,7 @@ in order to deal with spaces or other special characters.
 >          IsGD p         ->  check isGD p
 >          IsGLPT p       ->  check isGLPT p
 >          IsGLT p        ->  check isGLT p
+>          IsLAcom p      ->  check isLAcom p
 >          IsLB p         ->  check isLB p
 >          IsLPT p        ->  check isLPT p
 >          IsLT p         ->  check isLT p
@@ -931,6 +944,7 @@ in order to deal with spaces or other special characters.
 >          IsSP p         ->  check isSP p
 >          IsTDef p       ->  check isTDef p
 >          IsTGD p        ->  check isTGD p
+>          IsTLAcom p     ->  check isTLAcom p
 >          IsTLB p        ->  check isTLB p
 >          IsTLT p        ->  check isTLT p
 >          IsTLPT p       ->  check isTLPT p

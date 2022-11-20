@@ -10,9 +10,9 @@
 * decision problem for FO2BF (betweenness of factors)
 * upward closures (`loopify`, or `↑` in Pleb)
 * multitier decision procedures
+* LAcom test
 ### Changed
 * performance enhancement: faster FO2(S) test
-* performance enhancement: faster (T)LTT test
 * performance enhancement: faster (co)finite test
 * performance enhancement: faster SP test
 

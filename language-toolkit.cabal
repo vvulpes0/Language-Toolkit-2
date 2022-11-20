@@ -76,6 +76,7 @@ library
                 , LTK.Decide.GD
                 , LTK.Decide.GLPT
                 , LTK.Decide.GLT
+                , LTK.Decide.LAcom
                 , LTK.Decide.LPT
                 , LTK.Decide.LT
                 , LTK.Decide.LTT
@@ -84,6 +85,7 @@ library
                 , LTK.Decide.SF
                 , LTK.Decide.SL
                 , LTK.Decide.SP
+                , LTK.Decide.TLAcom
                 , LTK.Decide.TLT
                 , LTK.Decide.TLPT
                 , LTK.Decide.TLTT
