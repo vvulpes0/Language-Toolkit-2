@@ -152,7 +152,8 @@
 >              | WriteATT FilePath FilePath FilePath Expr
 >                deriving (Eq, Read, Show)
 
-> data Relation = Equal Expr Expr
+> data Relation = CEqual Expr Expr
+>               | Equal Expr Expr
 >               | IsAcom Expr
 >               | IsB Expr
 >               | IsCB Expr
@@ -296,6 +297,11 @@ in order to deal with spaces or other special characters.
 >                   , pure $ L Bindings
 >                   , []
 >                   , "print list of variables and their bindings"
+>                   )
+>                 , ( ":cequal"
+>                   , (M . uncurry CEqual) <$> p2e
+>                   , [ArgE, ArgE]
+>                   , "compare two exprs for logical equivalence"
 >                   )
 >                 , ( ":compile"
 >                   , pure . R $ compileEnv d
@@ -915,7 +921,8 @@ in order to deal with spaces or other special characters.
 > doRelation :: Env -> Relation -> Maybe Bool
 > doRelation e r
 >     = case r
->       of Equal p1 p2    ->  relate e (==) p1 p2
+>       of CEqual p1 p2   ->  relate id e (==) p1 p2
+>          Equal p1 p2    ->  relate desemantify e (==) p1 p2
 >          IsAcom p       ->  check isAcom p
 >          IsB p          ->  check isB p
 >          IsCB p         ->  check isCB p
@@ -952,21 +959,22 @@ in order to deal with spaces or other special characters.
 >          IsTRDef p      ->  check isTRDef p
 >          IsTrivial p    ->  check isTrivial p
 >          IsTSL p        ->  check isTSL p
->          Subset p1 p2   ->  relate e isSupersetOf p1 p2
->          SSubset p1 p2  ->  relate e isProperSupersetOf p1 p2
+>          Subset p1 p2   ->  relate desemantify e isSupersetOf p1 p2
+>          SSubset p1 p2  ->  relate desemantify e isProperSupersetOf p1 p2
 >     where check f p = fmap f . fmap normalize . fmap desemantify .
 >                       makeAutomaton $ (\(a, b, _) -> (a, b, Just p)) e
 
-> relate :: Env ->
->           (FSA Integer String -> FSA Integer String -> a) -> Expr -> Expr ->
+> relate :: (FSA Integer (Maybe String) -> x) ->
+>           Env ->
+>           (x -> x -> a) -> Expr -> Expr ->
 >           Maybe a
-> relate (a,b,_) f p1 p2 = f' <$> makeAutomaton e1 <*> makeAutomaton e2
+> relate g (a,b,_) f p1 p2 = f' <$> makeAutomaton e1 <*> makeAutomaton e2
 >     where e1 = (a, b, Just p1)
 >           e2 = (a, b, Just p2)
 >           f' x y = let ss = collapse (maybe id insert) empty $
 >                             union (alphabet x) (alphabet y)
->                    in f (desemantify $ semanticallyExtendAlphabetTo ss x)
->                         (desemantify $ semanticallyExtendAlphabetTo ss y)
+>                    in f (g $ semanticallyExtendAlphabetTo ss x)
+>                         (g $ semanticallyExtendAlphabetTo ss y)
 
 > act :: Env -> Trither Command Relation Env -> IO Env
 > act d = trither

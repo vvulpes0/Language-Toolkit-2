@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEBBY 1 "2022-03-15" "Version 1.0" "Language Toolkit"
+.TH PLEBBY 1 "2023-03-03" "Version 1.0" "Language Toolkit"
 .SH NAME
 plebby \- Piecewise / Local Expression Builder Interpreter
 .SH SYNOPSIS
@@ -475,6 +475,18 @@ is equal to the second
 in the current
 .BR universe ,
 i.e. each is a subset of the other.
+.RE
+.
+.PP
+.B :cequal
+.RI < expr >
+.RI < expr >
+.RS
+Determine whether the first
+.RI < expr >
+is logically equivalent to the second,
+whether they are equal in every possible
+.BR universe .
 .RE
 .
 .PP
