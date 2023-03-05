@@ -11,6 +11,7 @@
 * upward closures (`loopify`, or `↑` in Pleb)
 * multitier decision procedures
 * LAcom test
+* :cequal and :cimplies Plebby commands, for logic over language
 ### Changed
 * performance enhancement: faster FO2(S) test
 * performance enhancement: faster (co)finite test

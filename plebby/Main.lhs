@@ -153,6 +153,7 @@
 >                deriving (Eq, Read, Show)
 
 > data Relation = CEqual Expr Expr
+>               | CImply Expr Expr
 >               | Equal Expr Expr
 >               | IsAcom Expr
 >               | IsB Expr
@@ -303,6 +304,11 @@ in order to deal with spaces or other special characters.
 >                   , [ArgE, ArgE]
 >                   , "compare two exprs for logical equivalence"
 >                   )
+>                 , ( ":cimplies"
+>                   , (M . uncurry CImply) <$> p2e
+>                   , [ArgE, ArgE]
+>                   , "determine if expr1 logically implies expr2"
+>                   )
 >                 , ( ":compile"
 >                   , pure . R $ compileEnv d
 >                   , []
@@ -351,7 +357,7 @@ in order to deal with spaces or other special characters.
 >                 , ( ":implies"
 >                   , (M . uncurry Subset) <$> p2e
 >                   , [ArgE, ArgE]
->                   , "determine if expr1 implies expr2"
+>                   , "synonym for :subset"
 >                   )
 >                 , ( ":import"
 >                   , error ":import not defined here"
@@ -923,6 +929,7 @@ in order to deal with spaces or other special characters.
 >     = case r
 >       of CEqual p1 p2   ->  relate id e (==) p1 p2
 >          Equal p1 p2    ->  relate desemantify e (==) p1 p2
+>          CImply p1 p2   ->  relate id e isSupersetOf p1 p2
 >          IsAcom p       ->  check isAcom p
 >          IsB p          ->  check isB p
 >          IsCB p         ->  check isCB p
