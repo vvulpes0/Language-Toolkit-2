@@ -73,7 +73,7 @@
 >     | isLetter x  =  uncurry (:) . mapfst TName . fmap tokenize $
 >                      break (\s -> s == ',' || isDelim s || isSpace s) (x:xs)
 >     | otherwise   =  TSymbol x : tokenize xs
->     where isDelim c = matchingDelimiter c /= c
+>     where isDelim c = matchingDelimiter c /= c || c == '|'
 
 > -- |The environment: defined sets of symbols, defined expressions, and
 > -- possibly a value for the special variable @(it)@.
@@ -102,6 +102,7 @@
 >     = DownClose Expr -- ^@since 1.0
 >     | Iteration Expr
 >     | Negation Expr
+>     | Neutralize [SymSet] Expr
 >     | Tierify [SymSet] Expr
 >     | UpClose Expr
 >       deriving (Eq, Ord, Read, Show)
@@ -189,6 +190,8 @@ Therefore, this cleanup step has been removed.
 >                    Unary (DownClose ex)     ->  g DownClose ex
 >                    Unary (Iteration ex)     ->  g Iteration ex
 >                    Unary (Negation ex)      ->  g Negation ex
+>                    Unary (Neutralize ts ex)
+>                        -> g (Neutralize (tmap restrictUniverseS ts)) ex
 >                    Unary (Tierify ts ex)
 >                        -> g (Tierify (tmap restrictUniverseS ts)) ex
 >                    Unary (UpClose ex)       ->  g UpClose ex
@@ -237,6 +240,10 @@ prevents having to descend through the tree to find this information.
 >                 automatonFromExpr ex
 >          Unary (Negation ex)
 >              -> complementDeterministic $ automatonFromExpr ex
+>          Unary (Neutralize ts ex)
+>              -> renameStates . minimize . determinize
+>                 . neutralize (Set.mapMonotonic Just $ unionAll ts)
+>                 $ automatonFromExpr ex
 >          Unary (Tierify ts ex)
 >              -> tierify (unionAll ts) $ automatonFromExpr ex
 >          Unary (UpClose ex)
@@ -291,6 +298,9 @@ prevents having to descend through the tree to find this information.
 >           usedSymbolsU (DownClose ex)      =  usedSymbols ex
 >           usedSymbolsU (Iteration ex)      =  usedSymbols ex
 >           usedSymbolsU (Negation ex)       =  usedSymbols ex
+>           usedSymbolsU (Neutralize ts ex)  =  Set.union
+>                                               (usedSymbols ex)
+>                                               (unionAll ts)
 >           usedSymbolsU (Tierify ts _)      =  unionAll ts
 >           usedSymbolsU (UpClose ex)        =  usedSymbols ex
 >           usedSymbolsF (PLFactor _ _ ps)   =  unionAll $ unionAll ps
@@ -346,8 +356,8 @@ prevents having to descend through the tree to find this information.
 > -- |Parse an expression from a 'Token' stream.
 > parseExpr :: Dictionary SymSet -> Dictionary Expr -> Parse Expr
 > parseExpr dict subexprs = asum
->                           [ NAry    <$>  parseNAryExpr dict subexprs
->                           , Unary   <$>  parseUnaryExpr dict subexprs
+>                           [ parseNAryExpr dict subexprs
+>                           , parseUnaryExpr dict subexprs
 >                           , Factor  <$>  parsePLFactor dict subexprs
 >                           , Parse expandVar
 >                           ]
@@ -355,30 +365,35 @@ prevents having to descend through the tree to find this information.
 >               = fmap (flip (,) ts) $ definition n subexprs
 >           expandVar _ = Left "not a variable"
 
-> parseNAryExpr :: Dictionary SymSet -> Dictionary Expr -> Parse NAryExpr
+> parseNAryExpr :: Dictionary SymSet -> Dictionary Expr -> Parse Expr
 > parseNAryExpr dict subexprs
 >     = makeLifter
->       [ (["⋀", "⋂", "∧", "∩", "/\\"],  Conjunction)
->       , (["⋁", "⋃", "∨", "∪", "\\/"],  Disjunction)
->       , (["\\\\"], QuotientL)
->       , (["//"], QuotientR)
->       , (["∙∙", "@@"],       Domination)
->       , (["∙" , "@" ],       Concatenation)
+>       [ (["⋀", "⋂", "∧", "∩", "/\\"],  NAry . Conjunction)
+>       , (["⋁", "⋃", "∨", "∪", "\\/"],  NAry . Disjunction)
+>       , (["\\\\"],                     NAry . QuotientL)
+>       , (["//"],                       NAry . QuotientR)
+>       , (["∙∙", "@@"],                 NAry . Domination)
+>       , (["∙" , "@" ],                 NAry . Concatenation)
 >       ] <*>
 >       parseDelimited ['(', '{']
 >       (parseSeparated "," (parseExpr dict subexprs))
 
-> parseUnaryExpr :: Dictionary SymSet -> Dictionary Expr -> Parse UnaryExpr
+> parseUnaryExpr :: Dictionary SymSet -> Dictionary Expr -> Parse Expr
 > parseUnaryExpr dict subexprs
 >     = (makeLifter
->        [ (["↓", "$"],       DownClose)
->        , (["↑", "^"],       UpClose)
->        , (["*", "∗"],       Iteration)
->        , (["¬", "~", "!"],  Negation)
+>        [ (["↓", "$"],       Unary . DownClose)
+>        , (["↑", "^"],       Unary . UpClose)
+>        , (["*", "∗"],       Unary . Iteration)
+>        , (["+"],            NAry  . plus)
+>        , (["¬", "~", "!"],  Unary . Negation)
 >        ] <*> parseExpr dict subexprs
->       ) <|> (Tierify <$> pt <*> parseExpr dict subexprs)
+>       ) <|> (Unary <$> (Tierify <$> pt <*> parseExpr dict subexprs))
+>         <|> (Unary <$> (Neutralize <$> pn <*> parseExpr dict subexprs))
 >     where pt = parseDelimited ['[']
 >                (parseSeparated "," (parseSymExpr dict))
+>           pn = parseDelimited ['|']
+>                (parseSeparated "," (parseSymExpr dict))
+>           plus e = Concatenation [e, Unary $ Iteration e]
 
 > parsePLFactor :: Dictionary SymSet -> Dictionary Expr -> Parse PLFactor
 > parsePLFactor dict subexprs
@@ -563,4 +578,5 @@ prevents having to descend through the tree to find this information.
 >                 , ('(', ')')
 >                 , ('[', ']')
 >                 , ('{', '}')
+>                 , ('|', '|')
 >                 ]

@@ -37,6 +37,8 @@
 >        -- * Derived automata
 >        , brzozowskiDerivative
 >        , loopify
+>        , tierify
+>        , neutralize
 >        , quotLeft
 >        , quotMid
 >        , quotRight
@@ -71,7 +73,6 @@
 >        -- ** Alphabetic Transformations
 >        , extendAlphabetTo
 >        , semanticallyExtendAlphabetTo
->        , tierify
 >        , contractAlphabetTo
 >        , forceAlphabetTo
 >        , desemantify
@@ -1460,6 +1461,28 @@ Tierify:
 >                   , destination  =  q
 >                   }
 >           as   =  collapse (maybe id insert) empty $ alphabet fsa
+
+> -- |Allow a given set of symbols to be freely inserted or deleted.
+> -- In other words, make those symbols neutral.
+> neutralize :: (Ord a, Ord b) => Set b -> FSA a b -> FSA a b
+> neutralize t fsa = fsa
+>                    { sigma = Set.union t $ alphabet fsa
+>                    , transitions = transitions fsa
+>                                    `union` loops
+>                                    `union` omissions
+>                    , isDeterministic = False
+>                    }
+>     where tsym      =  map Symbol $ Set.toList t
+>           x p       =  p { edgeLabel = Epsilon }
+>           c s       =  Set.mapMonotonic (m s) (states fsa)
+>           m s q     =  Transition
+>                        { edgeLabel    =  s
+>                        , source       =  q
+>                        , destination  =  q
+>                        }
+>           loops     =  unionAll $ map c tsym
+>           omissions =  tmap x . keep (isIn tsym . edgeLabel)
+>                        $ transitions fsa
 
 > -- |Remove symbols from the alphabet of an automaton.
 > contractAlphabetTo :: (Ord a, Ord b) => Set b -> FSA a b -> FSA a b

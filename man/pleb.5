@@ -305,6 +305,12 @@ This has the same caveat as the concatenation operator:
 factor-expressions that are not fully anchored
 may have arbitrary strings at the non-anchored ends.
 .TP
+.B +
+The expression
+.B +x
+is equivalent to
+.BR @(x,*x) .
+.TP
 .B ^
 The upward closure of the operand.
 Accept all and only those strings that can be formed
@@ -328,6 +334,18 @@ on which the operand should occur.
 This returns the preprojection of the operand:
 the largest language that when projected to the tier
 is equal to the operand.
+.RE
+.PP
+.B |
+.RI < symbols "> ["
+.B ,
+.RI < symbols "> ...\&]"
+.B |
+.RS
+The symbols defined by the
+.RI < symbols >
+components are made neutral
+in the language specified by the operand.
 .RE
 .SS Unicode Syntax
 In addition to the ASCII syntax described previously,

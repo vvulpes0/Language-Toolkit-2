@@ -314,6 +314,12 @@ de l'opérande avec lui-même.
 La même mise en garde qui affecte la concaténation s'applique ici:
 les facteurs sans ancre permettent une expansion arbitraire.
 .TP
+.B +
+L'expression
+.B +x
+est équivalente à
+.BR @(x,*x) .
+.TP
 .B ^
 La fermeture vers le haut de l'opérande:
 toutes les chaînes qui peuvent être créees
@@ -333,6 +339,16 @@ en supprimant zéro ou plusieurs caractères d'un mot valide.
 Les caractères donnés specifient l'ensemble de caractères saillants,
 et tous les autres sont ignorés lors
 de la vérification de la bonne formation.
+.RE
+.PP
+.B |
+.RI < caractères "> ["
+.B ,
+.RI < caractères "> ...\&]"
+.B |
+.RS
+Les caractères donnés sont rendus neutres dans l'opérande.
+Ils peuvent être librement insérés ou supprimés.
 .RE
 .SS Les syntaxes Unicode
 En plus de la syntaxe ASCII, il y a la syntaxe Unicode.
