@@ -91,6 +91,7 @@ library
                 , LTK.Decide.TLTT
                 , LTK.Decide.Trivial
                 , LTK.Decide.TSL
+                , LTK.Decide.Variety
                 , LTK.DecideM
                 , LTK.Extract
                 , LTK.Extract.SL

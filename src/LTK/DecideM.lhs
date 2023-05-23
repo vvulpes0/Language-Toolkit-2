@@ -37,6 +37,8 @@
 >                   , isBM, isLBM, isTLBM
 >                    -- * Two-Variable Logics
 >                    , isFO2M, isFO2BM, isFO2BFM, isFO2SM
+>                    -- * Generic Algebra
+>                    , isVarietyM
 >                   ) where
 
 > import LTK.Decide.Finite
@@ -59,3 +61,4 @@
 > import LTK.Decide.TLAcom
 > import LTK.Decide.Definite
 > import LTK.Decide.Multitier
+> import LTK.Decide.Variety

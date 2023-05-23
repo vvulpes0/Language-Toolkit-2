@@ -62,6 +62,7 @@
 >                         , isTRDef
 >                         , isTrivial
 >                         , isMTF, isMTDef, isMTRDef, isMTGD
+>                         , isVariety
 >                         )
 > import LTK.FSA
 > import LTK.Learn.SL  (fSL)
@@ -89,6 +90,7 @@
 >                         , restrictUniverse
 >                         , tokenize
 >                         )
+> import LTK.Tiers     (project)
 
 
 #if !MIN_VERSION_base(4,4,0)
@@ -117,6 +119,7 @@
 > data ArgType = ArgE
 >              | ArgF
 >              | ArgI
+>              | ArgS
 >              | ArgV
 >                deriving (Eq, Ord, Read, Show)
 
@@ -191,9 +194,13 @@
 >               | IsTRDef Expr
 >               | IsTrivial Expr
 >               | IsTSL Expr
+>               | IsVariety VType String Expr
 >               | Subset Expr Expr
 >               | SSubset Expr Expr -- Strict Subset
 >                 deriving (Eq, Read, Show)
+
+> data VType = VTStar | VTPlus | VTTier
+>              deriving (Eq, Ord, Read, Show)
 
 > processLines :: Env -> InputT IO ()
 > processLines e = f =<< getInputLine prompt
@@ -212,6 +219,21 @@ in order to deal with spaces or other special characters.
 > processLine d@(dict, subexprs, _) str
 >     | null str = R d
 >     | not (isPrefixOf str ":") = R $ doStatements d str
+>     | isStartOf str ":isvarietym"
+>         = case words str
+>           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
+>                            in g ((M . IsVariety VTStar u) <$> pe) v
+>              _         ->  R d
+>     | isStartOf str ":isvarietys"
+>         = case words str
+>           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
+>                            in g ((M . IsVariety VTPlus u) <$> pe) v
+>              _         ->  R d
+>     | isStartOf str ":isvarietyt"
+>         = case words str
+>           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
+>                            in g ((M . IsVariety VTTier u) <$> pe) v
+>              _         ->  R d
 >     | isStartOf str ":import"
 >         = case modwords str
 >           of (_:a:[])  ->  L (Import a)
@@ -283,6 +305,8 @@ in order to deal with spaces or other special characters.
 >           p2e       =  (,) <$> pe <*> pe
 >           f (s, p)  =  g p (drop (length s) str)
 >           g p x     =  either (L . err) fst . doParse p $ tokenize x
+>           getVDesc  =  (\(a,b) -> (a ++ take 1 b, drop 1 b))
+>                        . break (== ']')
 >           p12       =  map (\(a,b,_,_) -> (a,b))
 >           p134      =  map (\(w,_,y,z) -> (w,y,z))
 >           doOne xs  =  case xs
@@ -543,6 +567,21 @@ in order to deal with spaces or other special characters.
 >                   , (M . IsTSL) <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Strictly Tier-Local"
+>                   )
+>                 , ( ":isVarietyM"
+>                   , error ":isVarietyM not defined here"
+>                   , [ArgS, ArgE]
+>                   , "determine if expr is in the *-variety"
+>                   )
+>                 , ( ":isVarietyS"
+>                   , error ":isVarietyS not defined here"
+>                   , [ArgS, ArgE]
+>                   , "determine if expr is in the +-variety"
+>                   )
+>                 , ( ":isVarietyT"
+>                   , error ":isVarietyT not defined here"
+>                   , [ArgS, ArgE]
+>                   , "determine if expr is in the +-variety on a tier"
 >                   )
 >                 , ( ":Jmin"
 >                   , (L . D_JE) <$> pe
@@ -888,6 +927,7 @@ in order to deal with spaces or other special characters.
 > doHelp xs = showArg ArgE ++ " = expression, "  ++
 >             showArg ArgF ++ " = file, "        ++
 >             showArg ArgI ++ " = int, "         ++
+>             showArg ArgS ++ " = string, "      ++
 >             showArg ArgV ++ " = variable\n\n"  ++
 >             unlines s2
 >     where cs = zipWith (\a b -> a ++ b) (p1 xs) (map showArgs (p2 xs))
@@ -899,6 +939,7 @@ in order to deal with spaces or other special characters.
 >           showArg ArgE  =  "<e>"
 >           showArg ArgF  =  "<f>"
 >           showArg ArgI  =  "<i>"
+>           showArg ArgS  =  "<s>"
 >           showArg _     =  "<v>"
 >           showArgs = concatMap ((' ':) . showArg)
 >           p1 = map (\(a,_,_) -> a)
@@ -966,10 +1007,16 @@ in order to deal with spaces or other special characters.
 >          IsTRDef p      ->  check isTRDef p
 >          IsTrivial p    ->  check isTrivial p
 >          IsTSL p        ->  check isTSL p
+>          IsVariety t s p
+>              -> case t of
+>                   VTStar -> check (isV True s) p
+>                   VTPlus -> check (isV False s) p
+>                   VTTier -> check (isV False s . project) p
 >          Subset p1 p2   ->  relate desemantify e isSupersetOf p1 p2
 >          SSubset p1 p2  ->  relate desemantify e isProperSupersetOf p1 p2
 >     where check f p = fmap f . fmap normalize . fmap desemantify .
 >                       makeAutomaton $ (\(a, b, _) -> (a, b, Just p)) e
+>           isV a b = maybe False id . isVariety a b
 
 > relate :: (FSA Integer (Maybe String) -> x) ->
 >           Env ->
