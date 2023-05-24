@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEBBY 1 "2023-03-03" "Version 1.0" "Language Toolkit"
+.TH PLEBBY 1 "2023-05-24" "Version 1.0" "Language Toolkit"
 .SH NOM
 plebby \- Piecewise / Local Expression Builder interpreteur
 .SH SYNOPSIS
@@ -19,7 +19,7 @@ Sortir.
 .B :help
 Afficher un message d'aide.
 .
-.SS Saving and Loading
+.SS Sauvegarde et chargement
 .B :savestate
 .RI < fichier >
 .RS
@@ -396,6 +396,31 @@ Le monoïde n'a qu'un seul état.
 après ignorant les symboles non-saillant.
 .RE
 .
+.PP
+.B :isVarietyM
+.RI < variété >
+.RI < expr >
+Le monoïde appartient à la *-variété donnée.
+Voir plus loin la section
+.BR Variétés .
+.
+.PP
+.B :isVarietyS
+.RI < variété >
+.RI < expr >
+Le demi-groupe appartient à la +-variété donnée.
+Voir plus loin la section
+.BR Variétés .
+.
+.PP
+.B :isVarietyT
+.RI < variété >
+.RI < expr >
+Le demi-groupe projeté appartient à la +-variété donnée,
+après ignorant les symboles non-saillant.
+Voir plus loin la section
+.BR Variétés .
+.
 .SS L'inférence des grammaires
 .B :learnSL
 .RI < int >
@@ -630,7 +655,7 @@ ou un message indiquant qu'il n'y a rien.
 .
 .TP
 .B :reset
-Éradiquer l'environnement.
+Vider l'environnement.
 .
 .TP
 .B :restore-universe
@@ -659,6 +684,110 @@ Par commodité,
 si un facteur devenait insatisfaisant,
 il deviendrait
 .BR !<> .
+.
+.SS Variétés
+On peut demander si une structure
+appartient à une variété algébrique arbitraire.
+Le théorème d'Eilenberg dit qu'à
+chaque variété de langages formels
+correspond une variété de monoïdes ou de demi-groupes
+caractèrisée par un système d'équations.
+On donne les équations et
+.B plebby
+vérifie si elles sont universellement vraies.
+Par exemple,
+.B [ab=ba;x*=x]
+dit que toutes les instanciations de
+.IR a ,
+.IR b ,
+et
+.I x
+satisfont les deux équivalences
+.B ab=ba
+et
+.BR x*=x .
+.PP
+La grammaire est comme suivant:
+.RS
+.RI < variété >
+::=
+.B [
+.RI < conjonction >
+.B ]
+.PP
+.RI < conjonction >
+::=
+.RI < équiv >
+.B ;
+.RI < conjonction >
+|
+.RI < équiv >
+.PP
+.RI < équiv >
+::=
+.RI < produit >
+.B =
+.RI < équiv >
+|
+.RI < produit >
+.B =
+.RI < produit >
+.PP
+.RI < produit >
+::=
+.RI < produit >
+.RI < produit >
+|
+.RI < valeur >
+.PP
+.RI < valeur >
+::=
+.B 0
+|
+.B 1
+|
+.RI < LETTRE >
+|
+.B (
+.RI < produit >
+.B )
+|
+.RI < valeur >
+.B *
+.RE
+Une
+.RI < LETTRE >
+désigne une variable quantifié universellement.
+Les valeurs
+.B 0
+et
+.B 1
+sont les seules valeurs où
+.B 0x=0=x0
+et
+.B 1x=x=x1
+pour chaque instanciation de
+.IR x ,
+si elles existent.
+La juxtaposition désigne le produit du demi-groupe : concaténation.
+L'expression
+.B x*
+désigne la valeur unique de la forme
+.B xx...x
+où
+.BR x*x*=x* .
+.
+.PP
+Une chaîne d'équivalences indique que chaque expression contenue
+a la même valeur.
+Enfin, le point-virgule indique une conjonction :
+l'expression
+.B [e1;e2]
+est vrai si et seulement si
+.B e1
+est vrai et
+.B e2
+est vrai.
 .SH OPTIONS
 Rien.
 .SH "CODE DE SORTIE"

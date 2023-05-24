@@ -12,7 +12,10 @@
 > and determines whether all specified relationships hold.
 > -}
 
-> module LTK.Decide.Variety (isVariety, isVarietyM) where
+> module LTK.Decide.Variety ( -- * Documentation
+>                             -- $doc
+>                             isVariety
+>                           , isVarietyM) where
 
 > import Data.Char (isSpace)
 > import Data.Set (Set)
@@ -20,6 +23,46 @@
 
 > import LTK.FSA
 > import LTK.Algebra (SynMon, omega)
+
+> {- $doc
+> A (pseudo)variety is specified here by a system of equations.
+> These equations may contain (single-letter) variables,
+> which are universally quantified.
+> The grammar is as follows:
+
+> >      expr ::= '[' conj-list ']'
+> > conj-list ::= eq-list ';' conj-list | eq-list
+> >   eq-list ::= value '=' eq-list | value '=' value
+> >     value ::= value value | iter
+> >      iter ::= '0' | '1' | LETTER | '(' value ')' | iter '*'
+
+> Here, @LETTER@ refers to any character which Unicode deems a letter.
+> Concatenation is denoted by adjacency,
+> and @x*@ represents the unique element of the form
+> @x@, @xx@, and so on, such that @x*x*=x*@.
+> A @LETTER@ represents a universally-quantified variable,
+> while @0@ and @1@ refer to the unique elements where for all @x@
+> it holds that @0x=0=x0@ and @1x=x=x1@,
+> if such elements exist.
+> If @0@ or @1@ is used in an equation,
+> but the given structure lacks such an element,
+> then the structure of course does not satisfy the equality.
+
+> The equality @x=y@ asserts that,
+> for all possible variable instantiations,
+> the value of @x@ is the same as that of @y@.
+> For longer chains of equality, all values must be equal.
+> Then @[e1;e2]@ asserts that the equalities @e1@ and @e2@
+> both hold universally.
+> Essentially, the semicolon is an "and" operator.
+
+> Suppose we wish to express the *-variety
+> of idempotent and commutative monoids.
+> A monoid is idempotent if and only if it holds that @xx=x@
+> for all values @x@, which can also be expressed as @x*=x@.
+> It is commutative if and only if @ab=ba@ for all @a@ and @b@.
+> This variety could then be expressed as @[ab=ba;x*=x]@.
+> -}
 
 We shall assume that we are working with forests
 wherein each tree represents a set of equalities that must hold

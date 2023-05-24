@@ -185,6 +185,9 @@ We'll generate it as an FSA with only one sort of edge label,
 where an edge exists from p to q iff p <= q.
 The initial state is the identity and the finals are the finals.
 
+> -- |Returns a machine whose states represent monoid elements
+> -- and where a transition exists from \(p\) to \(q\)
+> -- if and only if \(p\leq q\).
 > syntacticOrder :: (Ord n, Ord e) => SynMon n e -> FSA [e] ()
 > syntacticOrder s = FSA
 >                    { sigma = Set.singleton ()
