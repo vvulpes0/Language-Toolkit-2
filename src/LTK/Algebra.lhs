@@ -116,13 +116,13 @@ if it does not appear in the syntactic semigroup.
 > -- and \(t\) is in \(\{s, s^2, s^3, \ldots\}\).
 > -- In other words, \(t\) is the unique idempotent element
 > -- in this set.
-> -- This method used here assumes @monoid@ is aperiodic and finite
-> -- and uses this to skip many otherwise necessary checks.
 > omega :: (Ord n, Ord e) => FSA (S n e) e -> T n e -> T n e
 > omega monoid s = fst
->                  . until (uncurry (==)) (\(_,b) -> (b, f b))
->                  $ (s, f s)
->     where f x = Set.findMin $ follow monoid (snd (nodeLabel x)) x
+>                  . until (uncurry (==)) (\(a,_) -> f (next a))
+>                  $ (s, square s)
+>     where square x = Set.findMin $ follow monoid (snd (nodeLabel x)) x
+>           next   x = Set.findMin $ follow monoid (snd (nodeLabel s)) x
+>           f      x = (x, square x)
 
 > -- |Construct a monoid based on the idempotent paths
 > -- as described by Straubing (1985).  Elements are of the form
