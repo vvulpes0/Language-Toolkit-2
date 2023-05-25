@@ -117,9 +117,7 @@ if it does not appear in the syntactic semigroup.
 > -- In other words, \(t\) is the unique idempotent element
 > -- in this set.
 > omega :: (Ord n, Ord e) => FSA (S n e) e -> T n e -> T n e
-> omega monoid s = fst
->                  . until (uncurry (==)) (\(a,_) -> f (next a))
->                  $ (s, square s)
+> omega monoid s = fst . until (uncurry (==)) (\(a,_) -> f (next a)) $ f s
 >     where square x = Set.findMin $ follow monoid (snd (nodeLabel x)) x
 >           next   x = Set.findMin $ follow monoid (snd (nodeLabel s)) x
 >           f      x = (x, square x)
