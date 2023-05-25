@@ -2,17 +2,27 @@
 
 ## Version NEXT
 ### Added
-* egg-box display (a Porter, and `:eggbox` in Plebby)
-* syntactic order display (a Porter, and `:synord` in Plebby)
 * French translation of manual pages
 * basic Emacs mode for syntax highlighting
-* decision problem for Acom (aperiodic and commutative)
-* decision problem for FO2BF (betweenness of factors)
-* upward closures (`loopify`, or `↑` in Pleb)
-* multitier decision procedures
-* LAcom test
-* :cequal and :cimplies Plebby commands, for logic over language
+* classification procedures
+  + isAcom (aperiodic and commutative)
+  + isLAcom (locally isAcom)
+  + isFO2BF (two-variable FO with betweenness of factors)
+  + isVariety (Plebby has one command each for *, +, and tier)
+  + isMTF, isMTDef, isMTRDef, isMTGD (simple multitier classes)
+* Porters
+  + egg-box diagrams
+  + graphs of syntactic orders
+* Pleb syntax
+  + upward closures (`↑`, or `loopify` in the library)
+  + symbol neutralization (`|syms|`, or `neutralize` in the library)
+  + nonempty iteration (`+e` equivalent to `@(e,*e)`)
+* Plebby commands
+  + `:cequal` and `:cimplies` to account for the semantics
+  + `:eggbox` (display the egg-box)
+  + `:synord` (display syntactic order)
 ### Changed
+* bugfix: omega function works in properly regular semigroups
 * performance enhancement: faster FO2(S) test
 * performance enhancement: faster (co)finite test
 * performance enhancement: faster SP test
