@@ -223,15 +223,16 @@ prevents having to descend through the tree to find this information.
 >     = case e
 >       of Automaton x             -> x
 >          Factor x                -> automatonFromPLFactor x
->          NAry (Concatenation es) -> f mconcat es
->          NAry (Conjunction es)   -> f flatIntersection es
->          NAry (Disjunction es)   -> f flatUnion es
+>          NAry (Concatenation es) -> f emptyStr mconcat es
+>          NAry (Conjunction es)   -> f univLang flatIntersection es
+>          NAry (Disjunction es)   -> f emptyLanguage flatUnion es
 >          NAry (Domination es)
->              -> f (mconcat .
->                    intersperse (totalWithAlphabet (singleton Nothing))
->                   ) es
->          NAry (QuotientL es)     -> f ql es
->          NAry (QuotientR es)     -> f qr es
+>              -> f emptyStr
+>                 (mconcat .
+>                  intersperse (totalWithAlphabet (singleton Nothing))
+>                 ) es
+>          NAry (QuotientL es)     -> f emptyLanguage ql es
+>          NAry (QuotientR es)     -> f emptyLanguage qr es
 >          Unary (DownClose ex)
 >              -> renameStates . minimize . subsequenceClosure $
 >                 automatonFromExpr ex
@@ -249,10 +250,14 @@ prevents having to descend through the tree to find this information.
 >          Unary (UpClose ex)
 >              -> renameStates . minimize . determinize . loopify $
 >                 automatonFromExpr ex
->     where f tl = renameStates . minimize . tl . automata
+>     where f z tl xs = case automata xs
+>                       of [] -> z
+>                          a -> renameStates . minimize $ tl a
 >           automata es
 >               =  let as = map automatonFromExpr es
 >                  in map (semanticallyExtendAlphabetTo $ bigAlpha as) as
+>           univLang = totalWithAlphabet (Set.singleton Nothing)
+>           emptyStr = totalWithAlphabet Set.empty
 >           bigAlpha = collapse (maybe id insert) Set.empty .
 >                      collapse (union . alphabet) Set.empty
 >           ql xs = if null xs
@@ -374,9 +379,15 @@ prevents having to descend through the tree to find this information.
 >       , (["//"],                       NAry . QuotientR)
 >       , (["∙∙", "@@"],                 NAry . Domination)
 >       , (["∙" , "@" ],                 NAry . Concatenation)
->       ] <*>
->       parseDelimited ['(', '{']
->       (parseSeparated "," (parseExpr dict subexprs))
+>       ] <*> pd
+>     where pd = parseEmpty
+>                <|> (parseDelimited ['(', '{']
+>                     (parseSeparated "," (parseExpr dict subexprs)))
+>           parseEmpty = Parse $ \xs ->
+>                        case xs of
+>                          (TSymbol '(':TSymbol ')':ts) -> Right ([], ts)
+>                          (TSymbol '{':TSymbol '}':ts) -> Right ([], ts)
+>                          _ -> Left "not an empty expr"
 
 > parseUnaryExpr :: Dictionary SymSet -> Dictionary Expr -> Parse Expr
 > parseUnaryExpr dict subexprs

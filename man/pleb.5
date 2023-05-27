@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEB 5 "2022-11-05" "Version 1.0" "Language Toolkit"
+.TH PLEB 5 "2023-05-27" "Version 1.0" "Language Toolkit"
 .SH NAME
 pleb \- Piecewise / Local Expression Builder
 .SH DESCRIPTION
@@ -83,18 +83,18 @@ Additionally it can be the name of a defined subexpression.
 ::=
 .RI < n-op >
 .B {
-.RI < exp >
+.RI [< exp >
 .RB [ ,
-.RI < exp "> ...\&]"
+.RI < exp "> ...\&]]"
 .B }
 .RS
 .RE
 .BR "        " "  |"
 .RI < n-op >
 .B (
-.RI < exp >
+.RI [< exp >
 .RB [ ,
-.RI < exp "> ...\&]"
+.RI < exp "> ...\&]]"
 .B )
 .PP
 .RI < unary >

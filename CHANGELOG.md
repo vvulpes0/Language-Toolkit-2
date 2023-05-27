@@ -14,6 +14,7 @@
   + egg-box diagrams
   + graphs of syntactic orders
 * Pleb syntax
+  + empty variadics
   + upward closures (`↑`, or `loopify` in the library)
   + symbol neutralization (`|syms|`, or `neutralize` in the library)
   + nonempty iteration (`+e` equivalent to `@(e,*e)`)
