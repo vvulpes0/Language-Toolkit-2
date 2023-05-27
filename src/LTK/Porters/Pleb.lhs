@@ -231,8 +231,8 @@ prevents having to descend through the tree to find this information.
 >                 (mconcat .
 >                  intersperse (totalWithAlphabet (singleton Nothing))
 >                 ) es
->          NAry (QuotientL es)     -> f emptyLanguage ql es
->          NAry (QuotientR es)     -> f emptyLanguage qr es
+>          NAry (QuotientL es)     -> f emptyStr ql es
+>          NAry (QuotientR es)     -> f emptyStr qr es
 >          Unary (DownClose ex)
 >              -> renameStates . minimize . subsequenceClosure $
 >                 automatonFromExpr ex
