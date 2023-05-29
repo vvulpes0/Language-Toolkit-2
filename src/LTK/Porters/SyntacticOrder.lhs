@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK hide,show-extensions #-}
 > {-|
 > Module    : LTK.Porters.SyntacticOrder
-> Copyright : (c) 2022 Dakotah Lambert
+> Copyright : (c) 2022,2023 Dakotah Lambert
 > License   : MIT
 >
 > This module provides a mechanism to display the syntactic order

@@ -7,7 +7,7 @@
 
 > {-|
 > Module : LTK.Porters.Jeff
-> Copyright : (c) 2016-2021,2023 Dakotah Lambert
+> Copyright : (c) 2016-2019,2021,2023 Dakotah Lambert
 > LICENSE : MIT
 > 
 > This module provides methods to convert automata to and from

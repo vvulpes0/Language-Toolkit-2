@@ -91,7 +91,7 @@
 
 > {-|
 > Module    : LTK.Extract.SP
-> Copyright : (c) 2017-2020,2023 Dakotah Lambert
+> Copyright : (c) 2017-2020,2022-2023 Dakotah Lambert
 > License   : MIT
 > 
 > Find forbidden subsequences of an automaton.

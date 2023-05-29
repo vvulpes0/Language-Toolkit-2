@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Learn.StringExt
-> Copyright : (c) 2019 Dakotah Lambert
+> Copyright : (c) 2019-2020 Dakotah Lambert
 > License   : MIT
 > 
 > A generic implementation of Jeff Heinz's "String Extension Learning".

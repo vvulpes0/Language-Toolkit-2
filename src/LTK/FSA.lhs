@@ -13,7 +13,7 @@
 
 > {-|
 > Module    : LTK.FSA
-> Copyright : (c) 2014-2021 Dakotah Lambert
+> Copyright : (c) 2014-2023 Dakotah Lambert
 > License   : MIT
 
 > The purpose of this module is to define an interface to a generic,

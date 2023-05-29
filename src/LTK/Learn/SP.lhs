@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Learn.SP
-> Copyright : (c) 2019,2023 Dakotah Lambert
+> Copyright : (c) 2019-2020,2023 Dakotah Lambert
 > License   : MIT
 
 > This module implements a string extension learner for the SP class.

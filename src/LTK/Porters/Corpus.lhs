@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module : LTK.Porters.Corpus
-> Copyright : (c) 2019,2023 Dakotah Lambert
+> Copyright : (c) 2019-2020,2023 Dakotah Lambert
 > LICENSE : MIT
 > 
 > This module provides methods to construct

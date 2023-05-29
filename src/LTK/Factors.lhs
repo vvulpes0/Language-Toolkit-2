@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module:    LTK.Factors
-> Copyright: (c) 2017-2019 Dakotah Lambert
+> Copyright: (c) 2017-2019,2023 Dakotah Lambert
 > License:   MIT
 
 > This module provides a means to define

@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.Acom
-> Copyright : (c) 2022 Dakotah Lambert
+> Copyright : (c) 2022-2023 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA

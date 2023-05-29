@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide
-> Copyright : (c) 2019-2022 Dakotah Lambert
+> Copyright : (c) 2019-2023 Dakotah Lambert
 > License   : MIT
 > 
 > Functions used for deciding the complexity class of an automaton.

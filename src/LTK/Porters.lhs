@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module : LTK.Porters
-> Copyright : (c) 2018-2020 Dakotah Lambert
+> Copyright : (c) 2018-2020,2022-2023 Dakotah Lambert
 > License   : MIT
 > 
 > This module provides methods to convert automata to and from

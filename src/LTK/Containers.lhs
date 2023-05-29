@@ -16,7 +16,7 @@
 
 > {-|
 > Module      : LTK.Containers
-> Copyright   : (c) 2016-2021 Dakotah Lambert
+> Copyright   : (c) 2016-2023 Dakotah Lambert
 > License     : MIT
 > 
 > Containers: a uniform way to work with entities that may

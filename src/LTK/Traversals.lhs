@@ -7,7 +7,7 @@
 
 > {-|
 > Module    : Traversals
-> Copyright : (c) 2017-2022 Jim Rogers and Dakotah Lambert
+> Copyright : (c) 2017-2023 Jim Rogers and Dakotah Lambert
 > License   : MIT
 >
 > Find paths through an automaton.

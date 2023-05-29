@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Algebra
-> Copyright : (c) 2021 Dakotah Lambert
+> Copyright : (c) 2021-2023 Dakotah Lambert
 > License   : MIT
 
 > This module centralizes definitions of some commonly used
