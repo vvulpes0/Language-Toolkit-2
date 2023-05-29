@@ -206,11 +206,11 @@ Therefore, this cleanup step has been removed.
 > -- |Create an 'FSA' from an expression tree and environment,
 > -- complete with metadata regarding the constraint(s) it represents.
 > makeAutomaton :: Env -> Maybe (FSA Integer (Maybe String))
-> makeAutomaton (dict, _, e) = normalize <$>
->                              semanticallyExtendAlphabetTo symsets <$>
->                              automatonFromExpr <$> e
->     where symsets = either (const Set.empty) id $
->                     definition "universe" dict
+> makeAutomaton (dict, _, e) = normalize
+>                              . semanticallyExtendAlphabetTo symsets
+>                              . automatonFromExpr <$> e
+>     where symsets = either (const Set.empty) id
+>                     $ definition "universe" dict
 
 The properties of semantic automata are used here to prevent having to
 pass alphabet information to the individual constructors, which in turn
@@ -269,20 +269,20 @@ prevents having to descend through the tree to find this information.
 
 > automatonFromPLFactor :: PLFactor -> FSA Integer (Maybe String)
 > automatonFromPLFactor (PLFactor h t pieces)
->     = case (tmap (tmap (tmap Just)) pieces) of
+>     = case tmap (tmap (tmap Just)) pieces of
 >         []      ->  bl (Substring [] h t)
->         (p:[])  ->  bl (Substring p  h t)
+>         [p]     ->  bl (Substring p  h t)
 >         (p:ps)  ->  if isPF
->                     then bl (Subsequence (concat (p:ps)))
->                     else (renameStates . minimize . mconcat
->                          $ map bl lfs)
+>                     then bl . Subsequence $ concat (p:ps)
+>                     else renameStates . minimize . mconcat
+>                          $ map bl lfs
 >                         where lfs  =  Substring p h False : lfs' ps
 >     where as           =  insert Nothing . tmap Just $
 >                           unionAll (unionAll pieces)
 >           bl           =  buildLiteral as . required
 >           isPF         =  not h && not t &&
 >                           all ((==) [()] . map (const ())) pieces
->           lfs' (x:[])  =  Substring x False t : lfs' []
+>           lfs' [x]     =  Substring x False t : lfs' []
 >           lfs' (x:xs)  =  Substring x False False : lfs' xs
 >           lfs' _       =  []
 
@@ -293,7 +293,7 @@ prevents having to descend through the tree to find this information.
 >                    Factor f     ->  usedSymbolsF f
 >                    NAry n       ->  usedSymbolsN n
 >                    Unary u      ->  usedSymbolsU u
->     where us es = collapse (union . usedSymbols) Set.empty $ es
+>     where us = collapse (union . usedSymbols) Set.empty
 >           usedSymbolsN (Concatenation es)  =  us es
 >           usedSymbolsN (Conjunction es)    =  us es
 >           usedSymbolsN (Disjunction es)    =  us es
@@ -312,16 +312,14 @@ prevents having to descend through the tree to find this information.
 
 > parseStatements :: Env -> Parse Env
 > parseStatements (dict, subexprs, prev)
->     = asum $
->       [ start >>
->         (f False <$> getName <*> (Just <$> parseExpr dict subexprs)) >>=
->         parseStatements
->       , start >> putFst <$>
->         (mkSyms <$> getName <*> parseSymExpr dict <*>
->          pure dict
->         ) >>=
->         parseStatements
->       , f True "it" <$> Just <$> parseExpr dict subexprs
+>     = asum
+>       [ start
+>         >> (f False <$> getName <*> (Just <$> parseExpr dict subexprs))
+>         >>= parseStatements
+>       , start >> putFst
+>         <$> (mkSyms <$> getName <*> parseSymExpr dict <*> pure dict)
+>         >>= parseStatements
+>       , f True "it" . Just <$> parseExpr dict subexprs
 >       , Parse $ \ts ->
 >         case ts
 >         of []  ->  Right ((dict, subexprs, prev), [])
@@ -343,7 +341,7 @@ prevents having to descend through the tree to find this information.
 >          mkSyms name value
 >              = define "universe"
 >                (if name /= "universe"
->                 then union universe value
+>                 then universe `union` value
 >                 else value
 >                ) . define name value
 >          f isL name me
@@ -367,7 +365,7 @@ prevents having to descend through the tree to find this information.
 >                           , Parse expandVar
 >                           ]
 >     where expandVar (TName n : ts)
->               = fmap (flip (,) ts) $ definition n subexprs
+>               = flip (,) ts <$> definition n subexprs
 >           expandVar _ = Left "not a variable"
 
 > parseNAryExpr :: Dictionary SymSet -> Dictionary Expr -> Parse Expr
@@ -381,8 +379,8 @@ prevents having to descend through the tree to find this information.
 >       , (["∙" , "@" ],                 NAry . Concatenation)
 >       ] <*> pd
 >     where pd = parseEmpty
->                <|> (parseDelimited ['(', '{']
->                     (parseSeparated "," (parseExpr dict subexprs)))
+>                <|> parseDelimited ['(', '{']
+>                    (parseSeparated "," $ parseExpr dict subexprs)
 >           parseEmpty = Parse $ \xs ->
 >                        case xs of
 >                          (TSymbol '(':TSymbol ')':ts) -> Right ([], ts)
@@ -415,8 +413,7 @@ prevents having to descend through the tree to find this information.
 >     where combine s f = eat s (foldr1 f) <*>
 >                         parseDelimited ['<', '⟨']
 >                         (parseSeparated "," pplf)
->           pplf = parseBasicPLFactor dict <|>
->                  (Parse expandVar)
+>           pplf = parseBasicPLFactor dict <|> Parse expandVar
 >           expandVar (TName n : ts)
 >               = case v
 >                 of Right (Factor x) -> Right (x, ts)
@@ -431,22 +428,20 @@ prevents having to descend through the tree to find this information.
 >       , (["⋊", "%|"], PLFactor True False)
 >       , (["⋉", "|%"], PLFactor False True)
 >       , ([""], PLFactor False False)
->       ] <*>
->       (parseDelimited ['<', '⟨']
->        (parseSeparated "," (some (parseSymExpr dict)) <|>
->         Parse (\ts -> Right ([], ts))))
+>       ]
+>       <*> parseDelimited ['<', '⟨']
+>           (parseSeparated "," $ some (parseSymExpr dict)
+>            <|> Parse (\ts -> Right ([], ts)))
 
 > parseSymExpr :: Dictionary SymSet -> Parse SymSet
 > parseSymExpr dict
->     = ((fmap Set.unions
+>     = (fmap Set.unions
 >        . parseDelimited ['{', '(']
 >        $ parseSeparated "," (parseSymExpr dict))
->       <|>
->        (fmap (foldr1 Set.intersection)
->        . parseDelimited ['[']
->        $ parseSeparated "," (parseSymExpr dict))
->       <|>
->        parseSymSet dict)
+>       <|> ( fmap (foldr1 Set.intersection)
+>           . parseDelimited ['[']
+>           $ parseSeparated "," (parseSymExpr dict))
+>       <|> parseSymSet dict
 
 > parseSymSet :: Dictionary SymSet -> Parse SymSet
 > parseSymSet dict
@@ -463,14 +458,14 @@ prevents having to descend through the tree to find this information.
 
 > makeLifter :: [([String], a)] -> Parse a
 > makeLifter = asum . concatMap (map (uncurry eat) . f)
->     where f ([], _)      =  []
->           f ((x:xs), g)  =  (x, g) : f (xs, g)
+>     where f ([], _)    =  []
+>           f (x:xs, g)  =  (x, g) : f (xs, g)
 
 > eat :: String -> a -> Parse a
 > eat str f = Parse $ \ts ->
 >             if isPrefixOf ts (tmap TSymbol str)
 >             then Right (f, drop (length str) ts)
->             else Left $ ""
+>             else Left ""
 
 > parseDelimited :: [Char] -> Parse [a] -> Parse [a]
 > parseDelimited ds pl = parseOpeningDelimiter ds >>= f
@@ -496,10 +491,10 @@ prevents having to descend through the tree to find this information.
 
 > plCatenate :: PLFactor -> PLFactor -> PLFactor
 > plCatenate (PLFactor h _ xs) (PLFactor _ t ys) = PLFactor h t (pc xs ys)
->     where pc [] bs          =  bs
->           pc (a:[]) []      =  [a]
->           pc (a:[]) (b:bs)  =  (a ++ b) : bs
->           pc (a:as) bs      =  a : pc as bs
+>     where pc [] bs       =  bs
+>           pc [a] []      =  [a]
+>           pc [a] (b:bs)  =  (a ++ b) : bs
+>           pc (a:as) bs   =  a : pc as bs
 
 > plGap :: PLFactor -> PLFactor -> PLFactor
 > plGap (PLFactor h _ xs) (PLFactor _ t ys) = PLFactor h t (xs ++ ys)
@@ -529,10 +524,10 @@ prevents having to descend through the tree to find this information.
 >     where fmap g (Parse f) = Parse (fmap (mapfst g) . f)
 
 > instance Applicative Parse
->     where pure x   =  Parse $ Right . (,) x . id
+>     where pure     =  Parse <$> fmap Right . (,)
 >           f <*> x  =  Parse $ \s0 ->
->                       let h (g, s1) = fmap (mapfst g) $ doParse x s1
->                       in either Left h $ doParse f s0
+>                       let h (g, s1) = mapfst g <$> doParse x s1
+>                       in h =<< doParse f s0
 
 > instance Alternative Parse
 >     where empty    =  Parse . const $ Left ""
@@ -546,7 +541,7 @@ prevents having to descend through the tree to find this information.
 > instance Monad Parse
 >     where p >>= f   =  Parse $ \s0 ->
 >                        let h (a, s1) = doParse (f a) s1
->                        in either Left h $ doParse p s0
+>                        in h =<< doParse p s0
 #if !MIN_VERSION_base(4,8,0)
 >           return    =  pure
 #endif

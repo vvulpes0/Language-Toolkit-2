@@ -74,13 +74,13 @@
 > -- |Try to create an 'FSA' from a @String@ treated as the given 'Type'.
 > fromE :: (Importable i) =>
 >          Type i -> String -> Either String (FSA Integer String)
-> fromE ty = toFSA ty
+> fromE = toFSA
 
 > -- |Create a @String@ from an 'FSA', formatted appropriately for
 > -- the given 'Type'.
 > to :: (Ord n, Ord e, Show n, Show e, Exportable x) =>
 >       Type x -> FSA n e -> String
-> to ty = fromFSA ty
+> to = fromFSA
 
 > -- |An importable or exportable format.
 > type Type t = t -> t

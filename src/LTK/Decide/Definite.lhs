@@ -37,7 +37,7 @@
 
 > -- |True iff \(Se=e\) for idempotents \(e\).
 > isDefM :: (Ord n, Ord e) => SynMon n e -> Bool
-> isDefM s = all ((==1) . Set.size) . map (primitiveIdealL s)
+> isDefM s = all ((==1) . Set.size . primitiveIdealL s)
 >            . Set.toList $ idempotents s
 
 > -- |True iff the automaton recognizes a reverse definite stringset,
@@ -47,7 +47,7 @@
 
 > -- |True iff \(eS=e\) for idempotents \(e\).
 > isRDefM :: (Ord n, Ord e) => SynMon n e -> Bool
-> isRDefM s = all ((==1) . Set.size) . map (primitiveIdealR s)
+> isRDefM s = all ((==1) . Set.size . primitiveIdealR s)
 >            . Set.toList $ idempotents s
 
 > -- |Definite on some tier.

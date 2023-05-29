@@ -38,8 +38,8 @@
 >     | otherwise = all commutes $ Set.toList p
 >     where p = pairs $ tmap (snd . nodeLabel) qs
 >           i = Set.findMin $ initials m
->           commutes x = follow m (fst x ++ snd x) i
->                        == follow m (snd x ++ fst x) i
+>           commutes x = follow m (uncurry (++) x) i
+>                        == follow m (uncurry (flip (++)) x) i
 
 > pairs :: Ord a => Set a -> Set (a, a)
 > pairs xs = collapse (union . f) empty xs

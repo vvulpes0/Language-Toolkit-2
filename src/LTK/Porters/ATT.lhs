@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module : LTK.Porters.ATT
-> Copyright : (c) 2019 Dakotah Lambert
+> Copyright : (c) 2019,2023 Dakotah Lambert
 > LICENSE : MIT
 > 
 > This module provides methods to convert automata to and from the
@@ -24,6 +24,7 @@
 
 > import Data.Char (isDigit)
 > import Data.List (intercalate)
+> import Data.Maybe (fromMaybe)
 > import Data.Set (Set)
 > import Data.Map (Map)
 > import qualified Data.Map.Strict as Map
@@ -43,7 +44,7 @@
 > -- input symbols, and output symbols, respectively.
 > embedSymbolsATT :: String -> Maybe String -> Maybe String -> String
 > embedSymbolsATT x mi mo
->     = unlines . (++) (lines x) . maybe [] id . m mi $ m mo Nothing
+>     = unlines . (++) (lines x) . fromMaybe [] . m mi $ m mo Nothing
 >     where presep   = (:) separator
 >           multisep = maybe
 >                      (fmap presep)
@@ -82,7 +83,7 @@ Reading an AT&T format automaton
 > -- it discards weights and returns only the input projection.
 > readATT :: String -> FSA Integer String
 > readATT x = renameStates $
->             FSA { sigma            =  union al' as
+>             FSA { sigma            =  al' `union` as
 >                 , transitions      =  ts
 >                 , initials         =  singleton qi
 >                 , finals           =  fs
@@ -95,7 +96,7 @@ Reading an AT&T format automaton
 
 > makeAlphabet :: [String] -> (Map String String, Maybe String)
 > makeAlphabet ss = findEps (Map.empty, Nothing) ps
->     where ps = foldr maybeInsert [] (map words ss)
+>     where ps = foldr (maybeInsert . words) [] ss
 >           maybeInsert (a:b:_)  =  (:) (a, b)
 >           maybeInsert _        =  id
 >           findEps (l, x) []    =  (l, x)
@@ -110,16 +111,16 @@ Reading an AT&T format automaton
 >                    , Set (State String)              -- final states
 >                    )
 > makeTransitions ss tags meps
->     = foldr update
->       (Set.empty, Set.empty, State "", Set.empty) $
->       map words ss
+>     = foldr (update . words)
+>       (Set.empty, Set.empty, State "", Set.empty)
+>       ss
 >     where symbolify x
 >               | x == "0" = Nothing -- 0 is reserved for epsilon
 >               | Just x == meps = Nothing
->               | otherwise = Just . maybe x id $ Map.lookup x tags
->           update (a:[]) (ts, as, qi, fs)
+>               | otherwise = Just . fromMaybe x $ Map.lookup x tags
+>           update [a] (ts, as, qi, fs)
 >               = (ts, as, qi, Set.insert (State a) fs)
->           update (a:_:[]) partial  -- if final state with cost
+>           update [a,_] partial  -- if final state with cost
 >               = update [a] partial -- just ignore the cost
 >           update (s:d:l:_) (ts, as, _, fs)
 >               = ( flip Set.insert ts $
@@ -128,7 +129,7 @@ Reading an AT&T format automaton
 >                   , destination = State d
 >                   , edgeLabel   = maybe Epsilon Symbol $ symbolify l
 >                   }
->                 , maybe as (flip Set.insert as) $ symbolify l
+>                 , maybe as (`Set.insert` as) $ symbolify l
 >                 , State s -- the first line updates this last in foldr
 >                 , fs
 >                 )
@@ -154,7 +155,7 @@ Creating an AT&T format automaton
 >               ++ syms ++ syms -- once for input, once for output
 >     where tags = flip zip [1..] . Set.toAscList $ alphabet f'
 >           syms = separator : dumpAlphabet tags
->           f'   = if (Set.size (initials f) == 1)
+>           f'   = if Set.size (initials f) == 1
 >                  then renameStatesBy (subtract (1::Integer)) $
 >                       renameStates f
 >                  else renameStates f
@@ -162,7 +163,7 @@ Creating an AT&T format automaton
 >                  transitions f'
 
 > dumpAlphabet :: (Ord e, Show e) => [(e, Int)] -> [String]
-> dumpAlphabet tags = p defaultEpsilon 0 : (map (uncurry p) tags)
+> dumpAlphabet tags = p defaultEpsilon 0 : map (uncurry p) tags
 >     where p a t = deescape (showish a) ++ "\t" ++ show (t + (0 :: Int))
 
 > dumpInitials :: (Ord n, Ord e, Show n, Show e, Num n) =>
@@ -183,7 +184,7 @@ Creating an AT&T format automaton
 > dumpTr :: (Ord n, Ord e, Show n, Show e) =>
 >           [(e, Int)] -> (State n, State n, Symbol e) -> String
 > dumpTr tags (s, d, l)
->     = intercalate "\t" $
+>     = intercalate "\t"
 >       [show $ nodeLabel s, show $ nodeLabel d, l', l']
 >     where l' = case l
 >                of Symbol e -> f e

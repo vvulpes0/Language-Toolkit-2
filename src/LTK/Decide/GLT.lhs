@@ -26,6 +26,6 @@
 > -- |True iff the monoid satisfies the generalized local testabiltiy
 > -- condition.
 > isGLTM :: (Ord n, Ord e) => FSA (n, [Symbol e]) e -> Bool
-> isGLTM f = all commutativeBand . map (emee f) $ Set.toList i
+> isGLTM f = all (commutativeBand . emee f) $ Set.toList i
 >     where i = idempotents f
 >           commutativeBand = both (isCommutative f) (isSubsetOf i)

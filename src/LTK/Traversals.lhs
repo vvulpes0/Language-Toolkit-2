@@ -105,11 +105,11 @@ The extensions of a path p are paths extending p by a single edge
 > extend :: (Ord e, Ord n) =>
 >           Path n e -> Set (Transition n e) -> Set (Path n e)
 > extend p = tmap (\t ->
->                  Path { labels    =  (edgeLabel t : labels p)
->                       , endstate  =  (Just (destination t))
+>                  Path { labels    =  edgeLabel t : labels p
+>                       , endstate  =  Just (destination t)
 >                       , stateMultiset
->                             = (insert (destination t) (stateMultiset p))
->                       , depth     = (depth p + 1)
+>                             = destination t `insert` stateMultiset p
+>                       , depth     = depth p + 1
 >                       }
 >                 )
 

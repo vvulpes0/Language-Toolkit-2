@@ -41,12 +41,12 @@ a bit.
 >     where i = idempotents m
 >           x = Set.toList . emee m
 >           f e = isDistinct . map (g e) $ x e
->           g e h = Set.unions $ map (flip (follow m) qi)
->                   [label a ++ label h ++ label b
+>           g e h = Set.unions
+>                   [flip (follow m) qi $ label a ++ label h ++ label b
 >                    | a <- x e, b <- x e]
 >           qi = Set.findMin $ initials m
 >           label = snd . nodeLabel
 
 > isDistinct :: Eq a => [a] -> Bool
 > isDistinct [] = True
-> isDistinct (x:xs) = not (elem x xs) && isDistinct xs
+> isDistinct (x:xs) = x `notElem` xs && isDistinct xs

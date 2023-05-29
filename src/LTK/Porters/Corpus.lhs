@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module : LTK.Porters.Corpus
-> Copyright : (c) 2019 Dakotah Lambert
+> Copyright : (c) 2019,2023 Dakotah Lambert
 > LICENSE : MIT
 > 
 > This module provides methods to construct
@@ -33,7 +33,7 @@
 >            (Set a, Set (Transition [a] a), Set (State [a]))
 > addWord w (alpha, trans, fin)
 >     = ( collapse insert alpha w
->       , union trans trans'
+>       , trans `union` trans'
 >       , insert (State w) fin
 >       )
 >     where trans' = Set.fromList $ f (inits w) w

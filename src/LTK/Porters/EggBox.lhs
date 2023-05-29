@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK hide,show-extensions #-}
 > {-|
 > Module    : LTK.Porters.EggBox
-> Copyright : (c) 2022 Dakotah Lambert
+> Copyright : (c) 2022-2023 Dakotah Lambert
 > License   : MIT
 >
 > This module provides a mechanism to display the egg-box representation
@@ -11,7 +11,7 @@
 > module LTK.Porters.EggBox ( exportEggBox ) where
 
 > import Data.List (intercalate, nub)
-> import Data.Maybe (catMaybes)
+> import Data.Maybe (mapMaybe)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
@@ -35,7 +35,7 @@
 >                           ++ constructTable m y ++ ">];")
 >                 js
 >           ps = pairs js
->           g = catMaybes $ map (uncurry f) ps
+>           g = mapMaybe (uncurry f) ps
 >           f x y
 >               | x2 `Set.isSubsetOf` y2 = Just (fst y, fst x)
 >               | y2 `Set.isSubsetOf` x2 = Just (fst x, fst y)
@@ -87,8 +87,8 @@ Otherwise, we use □ symbol.
 > constructCell m h = "<TD>" ++ intercalate "<BR/>" h' ++ "</TD>"
 >     where h' = map (display . snd . nodeLabel) $ Set.toList h
 >           display x
->               | not (null x) = (intercalate "\x2009" . catMaybes)
->                                 (map (toMaybe . fmap showish) x)
+>               | not (null x) = intercalate "\x2009"
+>                                (mapMaybe (toMaybe . fmap showish) x)
 >                                ++ if x `Set.member` i then "*" else ""
 >               | otherwise = (case t of
 >                                ((Symbol n):_) -> showish n
@@ -124,7 +124,7 @@ The precondition, that the graph be acyclic, is not checked.
 
 > reduce :: (Eq a) => [(a,a)] -> [(a,a)]
 > reduce ps = [(x,y) | x <- nodes, y <- nodes, y `elem` expand x,
->              all (`notElem` ps) (map (flip (,) y) (expand x))]
+>              all ((`notElem` ps) . flip (,) y) $ expand x]
 >     where nodes = nub $ map fst ps ++ map snd ps
 >           expand p = let n = map snd $ filter ((p ==) . fst) ps
 >                      in n ++ concatMap expand n

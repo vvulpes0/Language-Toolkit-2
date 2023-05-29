@@ -67,7 +67,7 @@ The precondition, that the graph be acyclic, is not checked.
 
 > reduce :: (Eq a) => [(a,a)] -> [(a,a)]
 > reduce ps = [(x,y) | x <- nodes, y <- nodes, y `elem` expand x,
->              all (`notElem` ps) (map (flip (,) y) (expand x))]
+>              all ((`notElem` ps) . flip (,) y) (expand x)]
 >     where nodes = nub $ map fst ps ++ map snd ps
 >           expand p = let n = map snd $ filter ((p ==) . fst) ps
 >                      in n ++ concatMap expand n

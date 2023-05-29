@@ -67,7 +67,7 @@ from something star-free.
 > fo2testFull :: (Ord n, Ord e) =>
 >               FSA (S n e) e -> Set (State (S n e)) -> Bool
 > fo2testFull monoid xs = trivialUnder hEquivalence monoid -- isSF
->                         && (all f $ triples xs) -- in DA
+>                         && all f (triples xs) -- in DA
 >     where f (x, y, z) = let xyzw = omega monoid ((x $*$ y) $*$ z)
 >                         in (xyzw $*$ y) $*$ xyzw == xyzw
 >           a $*$ b = Set.findMin $ follow monoid (snd (nodeLabel b)) a

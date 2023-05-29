@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Learn.TSL.ViaSL
-> Copyright : (c) 2020 Dakotah Lambert
+> Copyright : (c) 2020,2023 Dakotah Lambert
 > License   : MIT
 
 > This module implements a string extension learner for the TSL class.
@@ -94,7 +94,7 @@
 
 > gSet :: (Ord a, Ord b, Ord x, Ord y) =>
 >         (a -> Set b) -> Set (x, a, y) -> Set (x, b, y)
-> gSet f = collapse (\w -> union (gDo f w)) empty
+> gSet f = collapse (union . gDo f) empty
 
 > gDo :: (Ord a, Ord b, Ord x, Ord y) =>
 >        (a -> Set b) -> (x, a, y) -> Set (x, b, y)

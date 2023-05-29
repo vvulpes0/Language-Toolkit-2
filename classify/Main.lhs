@@ -121,8 +121,8 @@ The main meat:
 >           >> exitFailure
 >     | otherwise
 >         = do c <- classified
->              (if (optQuiet opts) then void else f) c
->              if (optReduce opts c) then exitSuccess else exitFailure
+>              (if optQuiet opts then void else f) c
+>              if optReduce opts c then exitSuccess else exitFailure
 >     where printUsage = putStr $ usageInfo usageHeader options
 >           unknowns = filter (`notElem` toCheck) classes
 >           aut = readAut opts input
@@ -143,8 +143,10 @@ The main meat:
 >     where m = syntacticMonoid aut
 
 > readAut :: Options -> String -> IO (FSA Integer String)
-> readAut opts b = fmap (if optNormalize opts then normalize else id)
->                  $ fmap (optType opts) str
+> readAut opts b = fmap
+>                  ((if optNormalize opts then normalize else id)
+>                   . optType opts)
+>                  str
 >     where str :: IO String
 >           str = maybe (return b)
 >                 (\fp -> withFile fp ReadMode embed)
@@ -170,7 +172,7 @@ so that results may be listed in topographic order.
 
 > classmap :: (Ord n, Ord e) =>
 >             Map String
->             ( (Either (FSA n e -> Bool) (SynMon n e -> Bool))
+>             ( Either (FSA n e -> Bool) (SynMon n e -> Bool)
 >             , [String])
 > classmap = Map.fromList
 >            [ ("1", (Left isTrivial, ["Fin","CB","SP"]))
@@ -213,10 +215,10 @@ so that results may be listed in topographic order.
 
 
 > inclusion :: [(String, String)]
-> inclusion = foldr expand [] . map (fmap snd) $ Map.assocs cm
+> inclusion = foldr (expand . fmap snd) [] $ Map.assocs cm
 >     where expand (x, ss) a = map ((,) x) ss ++ a
 >           cm :: Map String
->             ( (Either (FSA () () -> Bool) (SynMon () () -> Bool))
+>             ( Either (FSA () () -> Bool) (SynMon () () -> Bool)
 >             , [String])
 >           cm = classmap
 

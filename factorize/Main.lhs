@@ -19,6 +19,7 @@
 > import Data.Functor ((<$>))
 #endif
 > import Data.List (sortBy)
+> import Data.Maybe (fromMaybe)
 > import Data.Set (Set)
 > import System.Directory (createDirectoryIfMissing, doesFileExist)
 > import System.Environment (getArgs)
@@ -67,7 +68,7 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 >           filesToRead <- getArgs
 >           createDirectoryIfMissing True outputDirectory
 >           eHypotheses <- collectErrs "\n" <$> getHypotheses hypothesesFile
->           either (\m -> const $ die m) (f children) eHypotheses filesToRead
+>           either (const . die) (f children) eHypotheses filesToRead
 >           waitForChildren children
 >     where f c h = mapM_ (forkChild c . processFile h)
 
@@ -79,8 +80,8 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 
 > getHypotheses :: FilePath ->
 >                  IO [Either String (FilePath, FSA Integer String)]
-> getHypotheses fp = (fmap f $ doesFileExist fp) >>= id
->     where f True  =  sequence . map getHypothesis =<< (lines <$> readFile fp)
+> getHypotheses fp = f =<< doesFileExist fp
+>     where f True  =  mapM getHypothesis . lines =<< readFile fp
 >           f _     =  hPutStrLn stderr
 >                      (fp ++ " not found, continuing without"
 >                       ++ " nonstrict constraints")
@@ -88,15 +89,16 @@ https://hackage.haskell.org/package/base-4.10.1.0/docs/Control-Concurrent.html
 
 > getHypothesis :: FilePath ->
 >                  IO (Either String (FilePath, FSA Integer String))
-> getHypothesis fp = (fmap f $ doesFileExist fp) >>= id
->     where f True  =  Right <$> (,) fp <$> from ATTO <$> readFile fp
+> getHypothesis fp = f =<< doesFileExist fp
+>     where f True  =  Right . (,) fp . from ATTO <$> readFile fp
 >           f _     =  pure . Left $ "Could not find '" ++ fp ++ "'."
 
 > processFile :: [(FilePath, FSA Integer String)] -> FilePath -> IO ()
-> processFile hypotheses fp = f =<< normalize <$> from ATTO <$> readFile fp
+> processFile hypotheses fp = f . (normalize . from ATTO) =<< readFile fp
 >     where bn = takeBaseName fp
->           f x = withFile (outputDirectory </> res) WriteMode $ \out ->
->                 hPutStrLn out . output name x $ factorization hypotheses x
+>           f x = writeFile
+>                 (outputDirectory </> res)
+>                 (output name x (factorization hypotheses x) ++ "\n")
 >           lect = takeWhile (isIn "0123456789") bn
 >           name = tr "_" " " $ dropWhile (isIn "0123456789_") bn
 >           res  = if null lect then bn else lect
@@ -171,7 +173,7 @@ implied by the remaining piecewise ones.
 >           sp   =  renameStates (subsequenceClosure fsa)
 >           fq2  =  difference fq (forbiddenSubsequences sl)
 >           -- f x == x is not forbidden by a subsequence
->           f x  =  not $ anyS (flip isSSQ x) (getSubsequences fq2)
+>           f x  =  not $ anyS (`isSSQ` x) (getSubsequences fq2)
 >           fs2  =  fs { forbiddenWords     =  keep f (forbiddenWords fs)
 >                      , forbiddenInitials  =  keep f (forbiddenInitials fs)
 >                      , forbiddenFrees     =  keep f (forbiddenFrees fs)
@@ -214,31 +216,27 @@ actually required.
 >                              , ForbiddenSubsequences e
 >                              ) -> Set (Literal e)
 > literalsFromApproximation (_, fs, fq) = unionAll [lfr, lin, lfi, lwo, lq]
->     where lq       =  tmap
->                       (forbidden . Subsequence . tmap singleton) $
->                       getSubsequences fq
+>     where lq     =  tmap
+>                     (forbidden . Subsequence . tmap singleton) $
+>                     getSubsequences fq
 >           f :: Ord x => Bool -> Bool -> Set [x] -> Set (Literal x)
->           f h t x  =  tmap
->                       (\a -> forbidden (Substring (tmap singleton a) h t))
->                       x
->           lfr      =  f False False (forbiddenFrees fs)
->           lin      =  f True False (forbiddenInitials fs)
->           lfi      =  f False True (forbiddenFinals fs)
->           lwo      =  f True True (forbiddenWords fs)
+>           f h t  =  tmap
+>                     (\a -> forbidden $ Substring (tmap singleton a) h t)
+>           lfr    =  f False False (forbiddenFrees fs)
+>           lin    =  f True False (forbiddenInitials fs)
+>           lfi    =  f False True (forbiddenFinals fs)
+>           lwo    =  f True True (forbiddenWords fs)
 
 > trueRequireds :: (Ord e, NFData e) =>
 >                  FSA Integer e -> Set (Literal e) -> Set (Literal e)
-> trueRequireds fsa = maybe empty id           .
->                     findGood isGood Nothing  .
->                     singleton                .
->                     DecreasingSize
->     where isGood = isEmpty               .
->                    intersection fsa      .
->                    build (alphabet fsa)  .
->                    singleton             .
->                    makeConstraint        .
->                    fromCollapsible       .
->                    tmap singleton
+> trueRequireds fsa = fromMaybe empty
+>                     . findGood isGood Nothing
+>                     . singleton
+>                     . DecreasingSize
+>     where isGood = isEmpty . intersection fsa
+>                    . build (alphabet fsa)
+>                    . singleton . makeConstraint . fromCollapsible
+>                    . tmap singleton
 
 > findGood :: Ord a =>
 >             (Set a -> Bool) -> Maybe (DecreasingSize (Set a)) ->
@@ -250,10 +248,10 @@ actually required.
 >     -- is the one with fewer elements
 >     | isGood s   =  findGood isGood
 >                     (maybe (Just s') (Just . max s') current)
->                     (union ss smaller)
+>                     (ss `union` smaller)
 >     | otherwise  =  findGood isGood
 >                     current
->                     (tmap (fmap (flip difference s)) ss)
+>                     (tmap (fmap (`difference` s)) ss)
 >     where (s', ss)  =  choose subsets
 >           s         =  getDecreasing s'
 >           smaller   =  tmap (DecreasingSize . difference s . singleton) s
@@ -298,7 +296,7 @@ those sets that are known to be non-productive.
 >           }
 >         )
 >     where factors = tmap (\(Literal _ f) -> f) literals
->           isSubstring (Substring _ _ _) = True
+>           isSubstring (Substring {}) = True
 >           isSubstring _                 = False
 >           substrings = keep isSubstring factors
 >           singlify = tmap chooseOne
@@ -324,7 +322,7 @@ Formatting output
 >           , Either () (Maybe FilePath)
 >           ) -> String
 > output name fsa ((strictFSA, ffs, fssqs), (_, rfs, rssqs), higher)
->     = concatMap unlines $
+>     = concatMap unlines
 >       [ [ "[metadata]"
 >         , "name=" ++ show name
 >         , "alphabet=" ++ formatAlphabet (alphabet strictFSA)

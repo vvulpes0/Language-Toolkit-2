@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK hide,show-extensions #-}
 > {-|
 > Module    : LTK.Porters.Dot
-> Copyright : (c) 2017-2019 Dakotah Lambert
+> Copyright : (c) 2017-2019,2023 Dakotah Lambert
 > License   : MIT
 > 
 > This module provides methods to convert automata to the GraphViz
@@ -39,8 +39,8 @@
 >                        c (Symbol e, Int, Int) -> String
 > dotifyTransitionSet ts
 >     | zsize ts   = ""
->     | otherwise  = (show src) ++ " -> " ++ (show dest) ++
->                    " [label=\"" ++ syms ++ "\"];"
+>     | otherwise  = show src ++ " -> " ++ show dest
+>                    ++ " [label=\"" ++ syms ++ "\"];"
 >     where (_, src, dest)  = chooseOne ts
 >           first (a,_,_)   = a
 >           list            = collapse (:) [] ts
@@ -52,7 +52,7 @@
 > dotifyTransitions f = collapse (:) [] .
 >                       tmap
 >                       (dotifyTransitionSet .
->                        tmap (remakeTransition)
+>                        tmap remakeTransition
 >                       ) $ transitionClasses f
 >     where remakeTransition t
 >               = ( edgeLabel t

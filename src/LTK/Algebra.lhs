@@ -77,8 +77,7 @@ ese is e*S*e: first go wherever you can from e, then take another e.
 > -- |The semigroup multiplied on the left and right
 > -- by the given idempotent.
 > ese :: (Ord n, Ord e) => FSA (S n e) e -> T n e -> Set (T n e)
-> ese sg e = collapse (union . follow sg (s e)) empty
->            $ es
+> ese sg e = collapse (union . follow sg (s e)) empty es
 >     where es = primitiveIdealR sg e
 >           s = snd . nodeLabel
 

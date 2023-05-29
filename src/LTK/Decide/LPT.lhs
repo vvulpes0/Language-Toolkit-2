@@ -26,8 +26,7 @@
 > isLPTM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isLPTM m = all (jtriv . ese m) . Set.toList $ idempotents m
 >     where jcs     = Set.toList $ jEquivalence m
->           jtriv x = null . filter ((>1) . Set.size)
->                     $ map (Set.intersection x) jcs
+>           jtriv x = not $ any ((>1) . Set.size . Set.intersection x) jcs
 
 Interestingly we can avoid recomputing the J relation
 for the subsemigroups, because eae J ebe iff the same

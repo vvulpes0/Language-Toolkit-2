@@ -18,6 +18,7 @@
 >                           , isVarietyM) where
 
 > import Data.Char (isSpace)
+> import Data.Maybe (isJust,maybeToList)
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
@@ -134,8 +135,8 @@ then clearly the system cannot hold true.
 >     = VEquality <$> fill v <*> splatMap fill vs
 >     where fill (VOmega x) = VOmega <$> fill x
 >           fill (VConcat x y) = VConcat <$> fill x <*> splatMap fill y
->           fill VOne = maybe Nothing (Just . VElement) one
->           fill VZero = maybe Nothing (Just . VElement) zero
+>           fill VOne = VElement <$> one
+>           fill VZero = VElement <$> zero
 >           fill x = Just x
 
 Next, we'd like a way to evaluate any levels of the tree
@@ -275,11 +276,10 @@ and return the remainder.
 > ckyParse :: [[Cell Char]] -> String -> (Maybe (ETree Char), String)
 > ckyParse t [] = (extractExpr t, [])
 > ckyParse t (x:xs)
->     | success    =  (output, x:xs)
->     | isSpace x  =  try t
->     | otherwise  =  try $ ckyExtend (mkunary x) t
+>     | isJust output  =  (output, x:xs)
+>     | isSpace x      =  try t
+>     | otherwise      =  try $ ckyExtend (mkunary x) t
 >     where output = extractExpr t
->           success = maybe False (const True) output
 >           try t' = let ~(me, s) = ckyParse t' xs
 >                    in case me of
 >                         Nothing  ->  (me, x:xs)
@@ -318,7 +318,7 @@ Each equality becomes a tree, and the whole is a forest.
 >         (Node EXPR _ (Node CLOSE_EXP x _))
 >             -> case tag x of
 >                  CONJ_LIST -> forestFromConjList zero one x
->                  EQ_LIST -> maybe [] (:[]) $ treeFromEqList zero one x
+>                  EQ_LIST -> maybeToList $ treeFromEqList zero one x
 >                  _ -> []
 >         _ -> []
 
@@ -334,7 +334,7 @@ Each equality becomes a tree, and the whole is a forest.
 >                             in maybe [] (maybe (const []) f xs) ys
 >                  _ -> []
 >         _ -> []
->       where f x y = x : y : []
+>       where f x y = [x,y]
 
 > treeFromEqList :: Eq a => a -> a -> ETree a -> Maybe (VEquality b)
 > treeFromEqList zero one t
@@ -354,7 +354,7 @@ Each equality becomes a tree, and the whole is a forest.
 >                          -> f x ++ treesFromCons zero one vs y
 >                      _ -> []
 >         _ -> []
->     where f = maybe [] (:[]) . treeFromEx zero one vs
+>     where f = maybeToList . treeFromEx zero one vs
 
 The meat of the system lies in collapsing interior nodes
 and removing unnecessary levels introduced for the sake of the CNF.
@@ -395,8 +395,7 @@ a mechanism for finding one / zero in a semigroup,
 and a cartesian product for the CKY parser.
 
 > splat :: [Maybe a] -> Maybe [a]
-> splat (x:xs) = maybe (const Nothing) (fmap . (:)) x $ splat xs
-> splat [] = Just []
+> splat = foldr (maybe (const Nothing) (fmap . (:))) (Just [])
 
 > splatMap :: (a -> Maybe b) -> [a] -> Maybe [b]
 > splatMap f = splat . map f
@@ -418,7 +417,7 @@ Semigroup Parts
 > findOne star m
 >     = if star || hasid then safeMin inits else safeMin neuts
 >     where trs   = transitions m
->           sts   = tmap destination $ trs
+>           sts   = tmap destination trs
 >           inits = initials m
 >           hasid = not $ Set.disjoint inits sts
 >           isNeut x
@@ -453,7 +452,7 @@ Streamable Cartesian Product
 >                     g (x:xs) = let ~(hs, ts) = g xs
 >                                in case x of
 >                                     [] -> (hs, ts)
->                                     (y:[]) -> (y : hs, ts)
+>                                     [y] -> (y : hs, ts)
 >                                     (y:ys) -> (y : hs, ys : ts)
 
 > basicProduct :: [a] -> [b] -> [[(a, b)]]
