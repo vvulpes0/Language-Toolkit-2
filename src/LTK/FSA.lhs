@@ -54,8 +54,10 @@
 >        -- * Transformations
 >        , flatIntersection
 >        , flatUnion
+>        , flatShuffle
 >        , LTK.FSA.reverse
 >        , autDifference
+>        , autShuffle
 >        , complement
 >        , complementDeterministic
 >        , determinize
@@ -473,6 +475,17 @@ of parallelism if possible.
 >     where u a b = let x = renameStates . minimize $ autUnion a b
 >                   in rnf x `seq` x
 
+> -- |Shuffle all given automata, in parallel if possible.
+> -- An empty shuffle is defined as the single language over
+> -- an empty alphabet containing only the empty string.
+> -- Intermediate results are evaluated to normal form.
+> flatShuffle :: (Enum n, Ord n, NFData n, Ord e, NFData e) =>
+>                [FSA n e] -> FSA n e
+> flatShuffle []  =  singletonLanguage []
+> flatShuffle xs  =  pfold s xs
+>     where s a b = let x = renameStates . minimize $ autShuffle a b
+>                   in rnf x `seq` x
+
 > instance (NFData n, NFData e) => NFData (FSA n e)
 >     where rnf (FSA a t i f d)
 >               = rnf a `seq` rnf t `seq` rnf i `seq` rnf f `seq` rnf d
@@ -788,6 +801,62 @@ and the string "a" is accepted in both.
 > coresidue :: (Ord n, Ord e, Enum n) => FSA n e -> FSA n e -> FSA n e
 > coresidue a = renameStates . minimize .
 >               union (renameStates $ complement a)
+
+The shuffle product of two languages can be constructed
+similarly to their intersection.
+The difference is that in the standard Cartesian construction,
+an edge follows its labeling symbol in both source automata,
+while in the shuffle product it follows in only one.
+Thus rather than one out-edge per symbol per state,
+there are two.
+
+> -- |Returns the shuffle product of its two input autamata.
+> autShuffle :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e
+>            -> FSA (Maybe n1, Maybe n2) e
+> autShuffle f1 f2 = FSA { sigma            =  alpha
+>                        , transitions      =  ts
+>                        , initials         =  qi
+>                        , finals           =  qf
+>                        , isDeterministic  =  False
+>                        }
+>     where alpha  =  alphabet f1 `union` alphabet f2
+>           qi     =  Set.mapMonotonic (uncurry combine)
+>                     $ makeJustPairs (initials f1) (initials f2)
+>           isFinal q
+>               = let (a,b)  =  nodeLabel q
+>                     f m    =  maybe False (isIn (finals m) . State)
+>                 in f f1 a && f f2 b
+>           (_,_,ts,qf)
+>               = until
+>                 (\(new, _, _, _) -> isEmpty new)
+>                 (\(new, prev, partial, fins) ->
+>                  let exts   =  collapse (union . extensions)
+>                                empty new
+>                      seen   =  new `union` prev
+>                      dests  =  tmap destination exts
+>                      fins'  =  keep isFinal dests
+>                  in ( difference dests seen
+>                     , seen
+>                     , exts `union` partial
+>                     , fins `union` fins'
+>                     )
+>                 )
+>                 (qi, empty, empty, keep isFinal qi)
+>           extensions q =  collapse (union . exts' q) empty
+>                           $ Set.mapMonotonic Symbol alpha
+>           exts' q x    =  Set.mapMonotonic (Transition x q) $ nexts x q
+>           nexts x q    =  let n1 = nexts' x f1 $ fmap fst q
+>                               n2 = nexts' x f2 $ fmap snd q
+>                           in Set.mapMonotonic (`combine` fmap snd q) n1
+>                              `union`
+>                              Set.mapMonotonic (combine (fmap fst q)) n2
+>           nexts' x f   =  maybe
+>                           (singleton $ State Nothing)
+>                           (mDests x f . State) . nodeLabel
+>           mDests x f q
+>               | isEmpty exts  =  singleton $ State Nothing
+>               | otherwise     =  Set.mapMonotonic (fmap Just) exts
+>               where exts = delta f x $ singleton q
 
 
 Other Combinations

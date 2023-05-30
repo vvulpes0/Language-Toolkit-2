@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEB 5 "2023-05-27" "Version 1.0" "Language Toolkit"
+.TH PLEB 5 "2023-05-30" "Version 1.0" "Language Toolkit"
 .SH NOM
 pleb \- Piecewise / Local Expression Builder
 .SH DESCRIPTION
@@ -287,6 +287,12 @@ On peut utiliser la forme
 .BR .\&< ...\& >
 dans ce cas.
 .TP
+.B |_|_|
+Le produit de mélange d'opérandes.
+Si x appartient au langage A et y appartient au langage B,
+tous les entrelacements de x et y
+appartiennent au produit de mélange de A et B.
+.TP
 .B \e\e
 Quotients à gauche d'opérandes, qui s'associent à gauche.
 Le quotient à gauche A\eB est l'ensemble de chaînes
@@ -373,6 +379,9 @@ Les synonymes suivent.
 .B \e/
 <U+22C1> [n-ary logical or] ou <U+2228> [logical or] ou
 <U+22C3> [n-ary union] ou <U+222A> [union]
+.TP
+.B |_|_|
+<U+29E2> [shuffle product]
 .TP
 .B @
 <U+2219> [bullet operator]

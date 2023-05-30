@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEB 5 "2023-05-27" "Version 1.0" "Language Toolkit"
+.TH PLEB 5 "2023-05-30" "Version 1.0" "Language Toolkit"
 .SH NAME
 pleb \- Piecewise / Local Expression Builder
 .SH DESCRIPTION
@@ -280,6 +280,12 @@ It is better to use the
 .BR .\&< ...\& >
 form in that case.
 .TP
+.B |_|_|
+Shuffle product of the operands.
+The shuffle product of A and B
+is the set of words formed by taking a word from A and a word from B
+and interleaving them.
+.TP
 .B \e\e
 Left-quotients of the operands, associating to the left.
 The left-quotient A\eB is the set of strings that can be
@@ -370,6 +376,9 @@ there is a unicode syntax that provides the following synonyms:
 .B \e/
 <U+22C1> [n-ary logical or] or <U+2228> [logical or] or
 <U+22C3> [n-ary union] or <U+222A> [union]
+.TP
+.B |_|_|
+<U+29E2> [shuffle product]
 .TP
 .B @
 <U+2219> [bullet operator]

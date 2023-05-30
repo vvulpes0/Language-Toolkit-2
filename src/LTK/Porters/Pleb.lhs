@@ -93,6 +93,7 @@
 >     | Conjunction   [Expr]
 >     | Disjunction   [Expr]
 >     | Domination    [Expr]
+>     | Shuffle       [Expr]
 >     | QuotientL     [Expr] -- ^@since 1.0
 >     | QuotientR     [Expr] -- ^@since 1.0
 >       deriving (Eq, Ord, Read, Show)
@@ -185,6 +186,7 @@ Therefore, this cleanup step has been removed.
 >                    NAry (Conjunction es)    ->  f Conjunction es
 >                    NAry (Disjunction es)    ->  f Disjunction es
 >                    NAry (Domination es)     ->  f Domination es
+>                    NAry (Shuffle es)        ->  f Shuffle es
 >                    NAry (QuotientL es)      ->  f QuotientL es
 >                    NAry (QuotientR es)      ->  f QuotientR es
 >                    Unary (DownClose ex)     ->  g DownClose ex
@@ -231,6 +233,7 @@ prevents having to descend through the tree to find this information.
 >                 (mconcat .
 >                  intersperse (totalWithAlphabet (singleton Nothing))
 >                 ) es
+>          NAry (Shuffle es)       -> f emptyStr flatShuffle es
 >          NAry (QuotientL es)     -> f emptyStr ql es
 >          NAry (QuotientR es)     -> f emptyStr qr es
 >          Unary (DownClose ex)
@@ -298,6 +301,7 @@ prevents having to descend through the tree to find this information.
 >           usedSymbolsN (Conjunction es)    =  us es
 >           usedSymbolsN (Disjunction es)    =  us es
 >           usedSymbolsN (Domination es)     =  us es
+>           usedSymbolsN (Shuffle es)        =  us es
 >           usedSymbolsN (QuotientL es)      =  us es
 >           usedSymbolsN (QuotientR es)      =  us es
 >           usedSymbolsU (DownClose ex)      =  usedSymbols ex
@@ -377,6 +381,7 @@ prevents having to descend through the tree to find this information.
 >       , (["//"],                       NAry . QuotientR)
 >       , (["∙∙", "@@"],                 NAry . Domination)
 >       , (["∙" , "@" ],                 NAry . Concatenation)
+>       , (["⧢", "|_|_|"],               NAry . Shuffle)
 >       ] <*> pd
 >     where pd = parseEmpty
 >                <|> parseDelimited ['(', '{']
