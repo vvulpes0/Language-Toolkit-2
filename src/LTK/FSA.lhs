@@ -554,6 +554,8 @@ function `delta` from an FSA, a symbol, and a state to a set of states:
 >     where initialIDs = Set.mapMonotonic (`ID` str) expandedInitials
 >           expandedInitials = epsilonClosure fsa $ initials fsa
 
+> -- |Returns whether the given 'FSA' lands in a final state
+> -- after processing the given sequence.
 > accepts :: (Ord e, Ord n) => FSA n e -> [e] -> Bool
 > accepts fsa = anyS (isIn (finals fsa)) . tmap state
 >               . compute fsa . tmap Symbol
@@ -747,6 +749,8 @@ accepting in B.  This is not what we want, as it means that w is still
 accepted.  Thus we cannot use the cartesian construction to gain an
 advantage over the naive implementation (A & not B).
 
+> -- |Returns an 'FSA' accepting all and only those strings
+> -- accepted by the first input but rejected by the second.
 > autDifference :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e ->
 >                  FSA (Maybe n1, Maybe (Set n2)) e
 > autDifference = fmap (. complement) autIntersection
