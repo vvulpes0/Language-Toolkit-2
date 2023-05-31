@@ -54,9 +54,11 @@
 >        -- * Transformations
 >        , flatIntersection
 >        , flatUnion
+>        , flatInfiltration
 >        , flatShuffle
 >        , LTK.FSA.reverse
 >        , autDifference
+>        , autInfiltration
 >        , autShuffle
 >        , complement
 >        , complementDeterministic
@@ -476,7 +478,7 @@ of parallelism if possible.
 >                   in rnf x `seq` x
 
 > -- |Shuffle all given automata, in parallel if possible.
-> -- An empty shuffle is defined as the single language over
+> -- An empty shuffle is defined as the singleton language over
 > -- an empty alphabet containing only the empty string.
 > -- Intermediate results are evaluated to normal form.
 > flatShuffle :: (Enum n, Ord n, NFData n, Ord e, NFData e) =>
@@ -484,6 +486,17 @@ of parallelism if possible.
 > flatShuffle []  =  singletonLanguage []
 > flatShuffle xs  =  pfold s xs
 >     where s a b = let x = renameStates . minimize $ autShuffle a b
+>                   in rnf x `seq` x
+
+> -- |Infiltrate all given automata, in parallel if possible.
+> -- An empty infiltration is defined as the singleton language over
+> -- an empty alphabet containing only the empty string.
+> -- Intermediate results are evaluated to normal form.
+> flatInfiltration :: (Enum n, Ord n, NFData n, Ord e, NFData e) =>
+>                [FSA n e] -> FSA n e
+> flatInfiltration []  =  singletonLanguage []
+> flatInfiltration xs  =  pfold s xs
+>     where s a b = let x = renameStates . minimize $ autInfiltration a b
 >                   in rnf x `seq` x
 
 > instance (NFData n, NFData e) => NFData (FSA n e)
@@ -674,33 +687,37 @@ the initial states of M2.
 
 The Cartesian construction preserves determinism
 and guarantees totality of the result.
+We will slightly generalize this construction,
+with options for whether to trace the machines in sync,
+out of sync, or both
 
-> cartesianConstruction :: (Ord e, Ord n1, Ord n2) =>
->                          (Bool -> Bool -> Bool) -> FSA n1 e -> FSA n2 e ->
->                          FSA (Maybe n1, Maybe n2) e
-> cartesianConstruction isFinal' f1 f2
->     = FSA
->       { sigma            =  alpha
->       , transitions      =  ts
->       , initials         =  qi
->       , finals           =  qf
->       , isDeterministic  =  isDet
->       }
+> pairTrace :: (Ord e, Ord n1, Ord n2) =>
+>              Bool -> Bool
+>           -> (Bool -> Bool -> Bool) -> FSA n1 e -> FSA n2 e
+>           -> FSA (Maybe n1, Maybe n2) e
+> pairTrace sync unsync isFinal' f1 f2
+>     = FSA { sigma            =  alpha
+>           , transitions      =  ts
+>           , initials         =  qi
+>           , finals           =  qf
+>           , isDeterministic  =  isDet
+>           }
 >     where alpha  =  alphabet f1 `union` alphabet f2
->           isDet  =  isDeterministic f1 && isDeterministic f2
->           qi     =  Set.mapMonotonic (uncurry combine) $
->                     makeJustPairs (initials f1) (initials f2)
+>           isDet  =  not unsync
+>                     && isDeterministic f1 && isDeterministic f2
+>           qi     =  Set.mapMonotonic (uncurry combine)
+>                     $ makeJustPairs (initials f1) (initials f2)
 >           isFinal q
->               =  let (a,b)  =  nodeLabel q
->                      f m    =  maybe False (isIn (finals m) . State)
->                  in isFinal' (f f1 a) (f f2 b)
+>               = let ~(a,b)  =  nodeLabel q
+>                     f m     =  maybe False (isIn (finals m) . State)
+>                 in isFinal' (f f1 a) (f f2 b)
 >           (_,_,ts,qf)
 >               = until
 >                 (\(new, _, _, _) -> isEmpty new)
 >                 (\(new, prev, partial, fins) ->
 >                  let exts   =  collapse (union . extensions)
 >                                empty new
->                      seen   =  union new prev
+>                      seen   =  new `union` prev
 >                      dests  =  tmap destination exts
 >                      fins'  =  keep isFinal dests
 >                  in ( difference dests seen
@@ -710,20 +727,35 @@ and guarantees totality of the result.
 >                     )
 >                 )
 >                 (qi, empty, empty, keep isFinal qi)
->           extensions q =  collapse (union . exts' q) empty $
->                           Set.mapMonotonic Symbol alpha
->           exts' q x    =  Set.mapMonotonic (Transition x q) $ nexts x q
->           nexts x q    =  let n1   =  nexts' x f1 $ fmap fst q
->                               n2   =  nexts' x f2 $ fmap snd q
->                               f a  =  Set.mapMonotonic (combine a) n2
->                           in collapse (union . f) empty n1
->           nexts' x f   =  maybe
->                           (singleton $ State Nothing)
->                           (mDests x f . State) . nodeLabel
+>           extensions q  =  collapse (union . exts' q) empty
+>                            $ Set.mapMonotonic Symbol alpha
+>           exts' q x     =  Set.mapMonotonic (Transition x q) $ nexts x q
+>           nexts x q     =  let n1   =  nexts' x f1 $ fmap fst q
+>                                n2   =  nexts' x f2 $ fmap snd q
+>                                f a  =  Set.mapMonotonic (combine a) n2
+>                            in union
+>                               (if unsync
+>                                then Set.mapMonotonic
+>                                     (`combine` fmap snd q) n1
+>                                     `union`
+>                                     Set.mapMonotonic
+>                                     (combine (fmap fst q)) n2
+>                                else empty)
+>                               (if sync
+>                                then collapse (union . f) empty n1
+>                                else empty)
+>           nexts' x f    =  maybe
+>                            (singleton $ State Nothing)
+>                            (mDests x f . State) . nodeLabel
 >           mDests x f q
 >               | isEmpty exts  =  singleton $ State Nothing
 >               | otherwise     =  Set.mapMonotonic (fmap Just) exts
 >               where exts = delta f x $ singleton q
+
+> cartesianConstruction :: (Ord e, Ord n1, Ord n2) =>
+>                          (Bool -> Bool -> Bool) -> FSA n1 e -> FSA n2 e
+>                       -> FSA (Maybe n1, Maybe n2) e
+> cartesianConstruction = pairTrace True False
 
 > autIntersection :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e ->
 >                    FSA (Maybe n1, Maybe n2) e
@@ -817,50 +849,16 @@ there are two.
 > -- |Returns the shuffle product of its two input autamata.
 > autShuffle :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e
 >            -> FSA (Maybe n1, Maybe n2) e
-> autShuffle f1 f2 = FSA { sigma            =  alpha
->                        , transitions      =  ts
->                        , initials         =  qi
->                        , finals           =  qf
->                        , isDeterministic  =  False
->                        }
->     where alpha  =  alphabet f1 `union` alphabet f2
->           qi     =  Set.mapMonotonic (uncurry combine)
->                     $ makeJustPairs (initials f1) (initials f2)
->           isFinal q
->               = let (a,b)  =  nodeLabel q
->                     f m    =  maybe False (isIn (finals m) . State)
->                 in f f1 a && f f2 b
->           (_,_,ts,qf)
->               = until
->                 (\(new, _, _, _) -> isEmpty new)
->                 (\(new, prev, partial, fins) ->
->                  let exts   =  collapse (union . extensions)
->                                empty new
->                      seen   =  new `union` prev
->                      dests  =  tmap destination exts
->                      fins'  =  keep isFinal dests
->                  in ( difference dests seen
->                     , seen
->                     , exts `union` partial
->                     , fins `union` fins'
->                     )
->                 )
->                 (qi, empty, empty, keep isFinal qi)
->           extensions q =  collapse (union . exts' q) empty
->                           $ Set.mapMonotonic Symbol alpha
->           exts' q x    =  Set.mapMonotonic (Transition x q) $ nexts x q
->           nexts x q    =  let n1 = nexts' x f1 $ fmap fst q
->                               n2 = nexts' x f2 $ fmap snd q
->                           in Set.mapMonotonic (`combine` fmap snd q) n1
->                              `union`
->                              Set.mapMonotonic (combine (fmap fst q)) n2
->           nexts' x f   =  maybe
->                           (singleton $ State Nothing)
->                           (mDests x f . State) . nodeLabel
->           mDests x f q
->               | isEmpty exts  =  singleton $ State Nothing
->               | otherwise     =  Set.mapMonotonic (fmap Just) exts
->               where exts = delta f x $ singleton q
+> autShuffle = pairTrace False True (&&)
+
+Closely related is the infiltration product,
+in which an edge may follow its labeling symbol
+in one source, the other, or both simultaneously.
+
+> -- |Returns the infiltration product of its two input autamata.
+> autInfiltration :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e
+>                 -> FSA (Maybe n1, Maybe n2) e
+> autInfiltration = pairTrace True True (&&)
 
 
 Other Combinations
