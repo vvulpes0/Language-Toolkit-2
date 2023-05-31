@@ -14,7 +14,7 @@
    '("/[[:alpha:]][^][:space:]\n[(){}<>⟨⟩,|]*" . font-lock-string-face)
    '("[=!~*$]\\|[\\/][\\/]\\|%||%\\|%|\\||%\\|@\\(@\\|\\)"
      . font-lock-keyword-face)
-   '("[≝⟨⟩⋊⋉⋀∧⋂∩⋁∨⋃∪∙¬∗↓↑+]" . font-lock-keyword-face)
+   '("[≝⟨⟩⋊⋉⋀∧⋂∩⋁∨⋃∪∙¬∗↓↑+⧢]" . font-lock-keyword-face)
    '("\\<[[:alpha:]][^][:space:]\n[(){}<>⟨⟩,|]*"
      . font-lock-variable-name-face)
    '("#.*$" . font-lock-comment-face)
@@ -28,6 +28,7 @@
     (define-key map "\C-cn" (lambda () (interactive) (insert-char ?¬)))
     (define-key map "\C-cu" (lambda () (interactive) (insert-char ?⋁)))
     (define-key map "\C-cv" (lambda () (interactive) (insert-char ?↓)))
+    (define-key map "\C-cw" (lambda () (interactive) (insert-char ?⧢)))
     (define-key map "\C-c^" (lambda () (interactive) (insert-char ?↑)))
     (define-key map "\C-c[" (lambda () (interactive) (insert-char ?⋊)))
     (define-key map "\C-c]" (lambda () (interactive) (insert-char ?⋉)))
