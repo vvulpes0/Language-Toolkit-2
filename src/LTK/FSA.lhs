@@ -705,6 +705,7 @@ out of sync, or both
 >     where alpha  =  alphabet f1 `union` alphabet f2
 >           isDet  =  not unsync
 >                     && isDeterministic f1 && isDeterministic f2
+>                     && Set.size qi == 1
 >           qi     =  Set.mapMonotonic (uncurry combine)
 >                     $ makeJustPairs (initials f1) (initials f2)
 >           isFinal q
