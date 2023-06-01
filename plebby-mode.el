@@ -30,6 +30,7 @@
     (define-key map "\C-cv" (lambda () (interactive) (insert-char ?↓)))
     (define-key map "\C-cw" (lambda () (interactive) (insert-char ?⧢)))
     (define-key map "\C-c^" (lambda () (interactive) (insert-char ?↑)))
+    (define-key map "\C-ck" (lambda () (interactive) (insert-char ?⇑)))
     (define-key map "\C-c[" (lambda () (interactive) (insert-char ?⋊)))
     (define-key map "\C-c]" (lambda () (interactive) (insert-char ?⋉)))
     (define-key map "\C-c<" (lambda () (interactive) (insert-char ?⟨)))

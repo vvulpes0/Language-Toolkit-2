@@ -93,6 +93,7 @@
 >     | Conjunction   [Expr]
 >     | Disjunction   [Expr]
 >     | Domination    [Expr]
+>     | Infiltration  [Expr]
 >     | Shuffle       [Expr]
 >     | QuotientL     [Expr] -- ^@since 1.0
 >     | QuotientR     [Expr] -- ^@since 1.0
@@ -186,6 +187,7 @@ Therefore, this cleanup step has been removed.
 >                    NAry (Conjunction es)    ->  f Conjunction es
 >                    NAry (Disjunction es)    ->  f Disjunction es
 >                    NAry (Domination es)     ->  f Domination es
+>                    NAry (Infiltration es)   ->  f Infiltration es
 >                    NAry (Shuffle es)        ->  f Shuffle es
 >                    NAry (QuotientL es)      ->  f QuotientL es
 >                    NAry (QuotientR es)      ->  f QuotientR es
@@ -233,6 +235,7 @@ prevents having to descend through the tree to find this information.
 >                 (mconcat .
 >                  intersperse (totalWithAlphabet (singleton Nothing))
 >                 ) es
+>          NAry (Infiltration es)  -> f emptyStr flatInfiltration es
 >          NAry (Shuffle es)       -> f emptyStr flatShuffle es
 >          NAry (QuotientL es)     -> f emptyStr ql es
 >          NAry (QuotientR es)     -> f emptyStr qr es
@@ -301,6 +304,7 @@ prevents having to descend through the tree to find this information.
 >           usedSymbolsN (Conjunction es)    =  us es
 >           usedSymbolsN (Disjunction es)    =  us es
 >           usedSymbolsN (Domination es)     =  us es
+>           usedSymbolsN (Infiltration es)   =  us es
 >           usedSymbolsN (Shuffle es)        =  us es
 >           usedSymbolsN (QuotientL es)      =  us es
 >           usedSymbolsN (QuotientR es)      =  us es
@@ -382,6 +386,7 @@ prevents having to descend through the tree to find this information.
 >       , (["∙∙", "@@"],                 NAry . Domination)
 >       , (["∙" , "@" ],                 NAry . Concatenation)
 >       , (["⧢", "|_|_|"],               NAry . Shuffle)
+>       , (["⇑", ".^."],                 NAry . Infiltration)
 >       ] <*> pd
 >     where pd = parseEmpty
 >                <|> parseDelimited ['(', '{']

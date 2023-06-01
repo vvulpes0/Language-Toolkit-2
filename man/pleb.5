@@ -286,6 +286,16 @@ The shuffle product of A and B
 is the set of words formed by taking a word from A and a word from B
 and interleaving them.
 .TP
+.B .^.
+Infiltration product of the operands.
+The infiltration product of A and B
+is the set of words formed by taking a word from A and a word from B
+and interleaving them,
+with overlaps.
+That is, if the two words both contain the symbol x,
+the interleaving might contain only one instance of x
+if the order requirements are fulfilled.
+.TP
 .B \e\e
 Left-quotients of the operands, associating to the left.
 The left-quotient A\eB is the set of strings that can be
