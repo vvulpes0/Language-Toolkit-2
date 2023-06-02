@@ -707,7 +707,9 @@ out of sync, or both
 >                     && isDeterministic f1 && isDeterministic f2
 >                     && Set.size qi == 1
 >           qi     =  Set.mapMonotonic (uncurry combine)
->                     $ makeJustPairs (initials f1) (initials f2)
+>                     $ makeJustPairs
+>                       (epsilonClosure f1 $ initials f1)
+>                       (epsilonClosure f2 $ initials f2)
 >           isFinal q
 >               = let ~(a,b)  =  nodeLabel q
 >                     f m     =  maybe False (isIn (finals m) . State)
