@@ -27,6 +27,7 @@ GLT -> FO2;
 FO2S -> LPT;
 FO2S -> LB;
 LB -> LT;
+LB -> B;
 LPT -> LAcom;
 LPT -> PT;
 GLPT -> TLPT;
