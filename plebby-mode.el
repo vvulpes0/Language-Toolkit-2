@@ -1,4 +1,4 @@
-;;; plebby-mode.el -- Emacs plebby mode
+;;; plebby-mode.el -- Emacs plebby mode -*- lexical-binding: t;
 
 (require 'font-lock)
 
