@@ -15,6 +15,7 @@
   + graphs of syntactic orders
 * Pleb syntax
   + empty variadics
+  + reversal (`⇄`)
   + upward closures (`↑`, or `loopify` in the library)
   + shuffle products (`⧢` or `autShuffle` in the library)
   + symbol neutralization (`|syms|`, or `neutralize` in the library)

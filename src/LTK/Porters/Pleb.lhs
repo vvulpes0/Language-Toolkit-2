@@ -7,7 +7,7 @@
 
 > {-|
 > Module:    LTK.Porters.Pleb
-> Copyright: (c) 2018-2022 Dakotah Lambert
+> Copyright: (c) 2018-2023 Dakotah Lambert
 > License:   MIT
 
 > The (P)iecewise / (L)ocal (E)xpression (B)uilder.
@@ -105,6 +105,7 @@
 >     | Iteration Expr
 >     | Negation Expr
 >     | Neutralize [SymSet] Expr
+>     | Reversal Expr
 >     | Tierify [SymSet] Expr
 >     | UpClose Expr
 >       deriving (Eq, Ord, Read, Show)
@@ -196,6 +197,7 @@ Therefore, this cleanup step has been removed.
 >                    Unary (Negation ex)      ->  g Negation ex
 >                    Unary (Neutralize ts ex)
 >                        -> g (Neutralize (tmap restrictUniverseS ts)) ex
+>                    Unary (Reversal ex)      ->  g Reversal ex
 >                    Unary (Tierify ts ex)
 >                        -> g (Tierify (tmap restrictUniverseS ts)) ex
 >                    Unary (UpClose ex)       ->  g UpClose ex
@@ -248,8 +250,11 @@ prevents having to descend through the tree to find this information.
 >          Unary (Negation ex)
 >              -> complementDeterministic $ automatonFromExpr ex
 >          Unary (Neutralize ts ex)
->              -> renameStates . minimize . determinize
+>              -> renameStates . minimize
 >                 . neutralize (Set.mapMonotonic Just $ unionAll ts)
+>                 $ automatonFromExpr ex
+>          Unary (Reversal ex)
+>              -> renameStates . minimize . LTK.FSA.reverse
 >                 $ automatonFromExpr ex
 >          Unary (Tierify ts ex)
 >              -> tierify (unionAll ts) $ automatonFromExpr ex
@@ -314,6 +319,7 @@ prevents having to descend through the tree to find this information.
 >           usedSymbolsU (Neutralize ts ex)  =  Set.union
 >                                               (usedSymbols ex)
 >                                               (unionAll ts)
+>           usedSymbolsU (Reversal ex)       =  usedSymbols ex
 >           usedSymbolsU (Tierify ts _)      =  unionAll ts
 >           usedSymbolsU (UpClose ex)        =  usedSymbols ex
 >           usedSymbolsF (PLFactor _ _ ps)   =  unionAll $ unionAll ps
@@ -405,6 +411,7 @@ prevents having to descend through the tree to find this information.
 >        , (["*", "∗"],       Unary . Iteration)
 >        , (["+"],            NAry  . plus)
 >        , (["¬", "~", "!"],  Unary . Negation)
+>        , (["⇄", "-"],       Unary . Reversal)
 >        ] <*> parseExpr dict subexprs
 >       ) <|> (Unary <$> (Tierify <$> pt <*> parseExpr dict subexprs))
 >         <|> (Unary <$> (Neutralize <$> pn <*> parseExpr dict subexprs))

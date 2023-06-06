@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEB 5 "2023-05-30" "Version 1.0" "Language Toolkit"
+.TH PLEB 5 "2023-06-06" "Version 1.0" "Language Toolkit"
 .SH NAME
 pleb \- Piecewise / Local Expression Builder
 .SH DESCRIPTION
@@ -332,6 +332,9 @@ The upward closure of the operand.
 Accept all and only those strings that can be formed
 by inserting zero or more symbols into a string accepted by the operand.
 .TP
+.B -
+The reversal of the operand.
+.TP
 .B $
 The downward closure of the operand.
 Accept all and only those strings that can be formed
@@ -390,6 +393,9 @@ there is a unicode syntax that provides the following synonyms:
 .B |_|_|
 <U+29E2> [shuffle product]
 .TP
+.B .^.
+<U+21D1> [upwards double arrow]
+.TP
 .B @
 <U+2219> [bullet operator]
 .TP
@@ -401,6 +407,9 @@ there is a unicode syntax that provides the following synonyms:
 .TP
 .B ^
 <U+2191> [upwards arrow]
+.TP
+.B -
+<U+21C4> [right arrow over left arrow]
 .TP
 .B $
 <U+2193> [downwards arrow]
