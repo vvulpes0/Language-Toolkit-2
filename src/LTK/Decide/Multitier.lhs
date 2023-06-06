@@ -9,6 +9,11 @@
 > definite is a proper subclass of the L-trivial languages.
 > This module includes decision algorithms for some classes
 > of multiple-tier-based languages.
+>
+> The equations given here are adapted from Almeida's (1995)
+> "Finite Semigroups and Universal Algebra"
+> https://doi.org/10.1142/2481
+> as they are simpler than the equivalent ones I had found independently.
 > -}
 > module LTK.Decide.Multitier
 >     ( isMTF, isMTDef, isMTRDef, isMTGD
@@ -37,53 +42,44 @@
 > isMTGD :: (Ord n, Ord e) => FSA n e -> Bool
 > isMTGD = isMTGDM . syntacticMonoid
 
-> -- |True iff the monoid satisfies \(yv(xyz)^{\omega}=v(xyz)^{\omega}\).
+> -- |True iff the monoid satisfies \(xyx^{\omega}=yx^{\omega}\).
 > isMTDefM :: (Ord n, Ord e) => SynMon n e -> Bool
-> isMTDefM s = and [f v y e
->                  | v <- q, y <- q, e <- Set.toList (g y)]
->     where g y = primitiveIdeal2 s y `Set.intersection` idempotents s
->           q = Set.toList $ states s
->           q0 = fst . choose $ initials s
->           f v y e = follow s (concatMap h [y,v,e]) q0
->                     == follow s (concatMap h [v,e]) q0
+> isMTDefM s = and [f x y | x <- q, y <- q]
+>     where q = Set.toList $ states s
+>           f x y = let ye = follow s (h $ omega s x) y
+>                   in case Set.toList ye
+>                      of (z:[])  ->  ye == follow s (h z) x
+>                         _       ->  False
 >           h = snd . nodeLabel
 
-> -- |True iff the monoid satisfies \((xyz)^{\omega}vy=(xyz)^{\omega}v\).
+> -- |True iff the monoid satisfies \(x^{\omega}yx=x^{\omega}y\).
 > isMTRDefM :: (Ord n, Ord e) => SynMon n e -> Bool
-> isMTRDefM s = and [f v y e
->                   | v <- q, y <- q, e <- Set.toList (g y)]
->     where g y = primitiveIdeal2 s y `Set.intersection` idempotents s
->           q = Set.toList $ states s
->           q0 = fst . choose $ initials s
->           f v y e
->               | Set.null ev = True
->               | otherwise = follow s (h y) ev' == ev
->               where ev = follow s (concatMap h [e,v]) q0
->                     ev' = fst $ choose ev
+> isMTRDefM s = and [f x y | x <- q, y <- q]
+>     where q = Set.toList $ states s
+>           f x y = let ey = follow s (h y) (omega s x)
+>                   in case Set.toList ey
+>                      of (z:[])  ->  ey == follow s (h x) z
+>                         _       ->  False
 >           h = snd . nodeLabel
 
-> -- |True iff the monoid satisfies
-> -- \(yv(xyz)^{\omega}u=v(xyz)^{\omega}u=v(xyz)^{\omega}uy\).
+> -- |True iff the monoid is aperiodic and satisfies
+> -- \(x^{\omega}y=yx^{\omega}\).
 > isMTFM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isMTFM s = isMTDefM s && isMTRDefM s
 
 > -- |True iff the monoid satisfies
-> -- \((xyz)^{\omega}uyv(xyz)^{\omega}=(xyz)^{\omega}uv(xyz)^{\omega}\)
-> -- and \(a^{\omega}b^{\omega}=(a^{\omega}b^{\omega})^{\omega}\).
+> -- \(x^{\omega}uxvx^{\omega}=x^{\omega}uvx^{\omega}\)
+> -- and \(x^{\omega}uxzvz^{\omega}=x^{\omega}uzxvz^{\omega}\).
+> -- Thanks to Almeida (1995) for the simplification.
 > isMTGDM :: (Ord n, Ord e) => SynMon n e -> Bool
-> isMTGDM s = and [f u v y e
->                 | u <- q, v <- q, y <- q, e <- Set.toList (g y)]
->             && and [idp x y | x <- lids, y <- lids]
->     where g y = primitiveIdeal2 s y `Set.intersection` ids
->           ids = idempotents s
->           lids = Set.toList ids
->           q = Set.toList $ states s
->           q0 = fst . choose $ initials s
->           idp x y = follow s (h y) x == follow s (concatMap h [y,x,y]) x
->           f u v y e
->               | Set.null eu = True
->               | otherwise   = follow s (concatMap h [y,v,e]) eu'
->                               == follow s (concatMap h [v,e]) eu'
->               where eu = follow s (concatMap h [e,u]) q0
->                     eu' = fst $ choose eu
+> isMTGDM s = and [f u v x | u <- q, v <- q, x <- q]
+>     where q = Set.toList $ states s
+>           f u v x = let e = omega s x
+>                     in allS (g u v x) q
+>                        && follow s (concatMap h [u,x,v,e]) e
+>                           == follow s (concatMap h [u,v,e]) e
+>           g u v x z = let x' = omega s x
+>                           z' = omega s z
+>                       in follow s (concatMap h [u,x,z,v,z']) x'
+>                          == follow s (concatMap h [u,z,x,v,z']) x'
 >           h = snd . nodeLabel
