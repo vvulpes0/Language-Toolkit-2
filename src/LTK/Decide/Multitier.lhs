@@ -68,13 +68,18 @@
 > isMTFM s = isMTDefM s && isMTRDefM s
 
 > -- |True iff the monoid satisfies
-> -- \((xyz)^{\omega}uyv(xyz)^{\omega}=(xyz)^{\omega}uv(xyz)^{\omega}\).
+> -- \((xyz)^{\omega}uyv(xyz)^{\omega}=(xyz)^{\omega}uv(xyz)^{\omega}\)
+> -- and \(a^{\omega}b^{\omega}=(a^{\omega}b^{\omega})^{\omega}\).
 > isMTGDM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isMTGDM s = and [f u v y e
 >                 | u <- q, v <- q, y <- q, e <- Set.toList (g y)]
->     where g y = primitiveIdeal2 s y `Set.intersection` idempotents s
+>             && and [idp x y | x <- lids, y <- lids]
+>     where g y = primitiveIdeal2 s y `Set.intersection` ids
+>           ids = idempotents s
+>           lids = Set.toList ids
 >           q = Set.toList $ states s
 >           q0 = fst . choose $ initials s
+>           idp x y = follow s (h y) x == follow s (concatMap h [y,x,y]) x
 >           f u v y e
 >               | Set.null eu = True
 >               | otherwise   = follow s (concatMap h [y,v,e]) eu'
