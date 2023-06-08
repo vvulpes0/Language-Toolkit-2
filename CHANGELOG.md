@@ -24,6 +24,7 @@
   + `:cequal` and `:cimplies` to account for the semantics
   + `:eggbox` (display the egg-box)
   + `:synord` (display syntactic order)
+* Plebby configuration file
 ### Changed
 * bugfix: omega function works in properly regular semigroups
 * performance enhancement: faster FO2(S) test

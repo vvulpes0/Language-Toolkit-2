@@ -19,10 +19,14 @@
 >                                 , runInputT
 >                                 )
 > import System.Environment (getEnvironment)
-> import System.Directory ( createDirectoryIfMissing
+> import System.Directory ( XdgDirectory(XdgConfig)
+>                         , createDirectoryIfMissing
+>                         , doesFileExist
 >                         , getHomeDirectory
+>                         , getXdgDirectory
 >                         )
-> import System.FilePath ( isPathSeparator
+> import System.FilePath ( (</>)
+>                        , isPathSeparator
 >                        , joinPath
 >                        , splitDirectories
 >                        , takeDirectory
@@ -105,8 +109,39 @@
 >                       , waitForProcess
 >                       )
 
+> data PlebConfig = PlebConfig
+>     { dotProg :: (String, [String])
+>     , displayProg :: (String, [String])
+>     } deriving (Eq, Ord, Read, Show)
+
 > main :: IO ()
-> main = runInputT defaultSettings $ processLines (empty, empty, Nothing)
+> main = do
+>   pc <- getConfig
+>   runInputT defaultSettings $ processLines pc (empty, empty, Nothing)
+
+> getConfig :: IO PlebConfig
+> getConfig = do
+>   xdgPath <- (</> "config.ini") <$> getXdgDirectory XdgConfig "plebby"
+>   homePath <- (</> ".plebby") <$> getHomeDirectory
+>   xdgExists <- doesFileExist xdgPath
+>   homeExists <- doesFileExist homePath
+>   if xdgExists
+>   then parseConfig base <$> readFile xdgPath
+>   else if homeExists
+>        then parseConfig base <$> readFile homePath
+>        else return base
+>       where base = PlebConfig { dotProg = ("dot", ["-Tpng"])
+>                               , displayProg = ("display", [])
+>                               }
+
+> parseConfig :: PlebConfig -> String -> PlebConfig
+> parseConfig pc s = foldr go pc
+>                    . map (\(a,b) -> (words a, words $ drop 1 b))
+>                    . filter (not . null . snd) . map (break (== '='))
+>                    $ lines s
+>     where go (["dot"],(x:xs)) c = c { dotProg = (x, xs) }
+>           go (["display"],(x:xs)) c = c { displayProg = (x, xs) }
+>           go _ c = c
 
 > prompt :: String
 > prompt = "> "
@@ -202,14 +237,14 @@
 > data VType = VTStar | VTPlus | VTTier
 >              deriving (Eq, Ord, Read, Show)
 
-> processLines :: Env -> InputT IO ()
-> processLines e = f =<< getInputLine prompt
+> processLines :: PlebConfig -> Env -> InputT IO ()
+> processLines pc e = f =<< getInputLine prompt
 >     where f minput
 >               = case minput
 >                 of Nothing       ->  return ()
 >                    Just ":quit"  ->  return ()
->                    Just line     ->  lift (act e (processLine e line)) >>=
->                                      processLines
+>                    Just line     ->  go line >>= processLines pc
+>           go line = lift (act pc e (processLine e line))
 
 Always use "modwords" when FilePath objects are at issue,
 so that file names can be quoted or escaped
@@ -705,8 +740,8 @@ in order to deal with spaces or other special characters.
 >                   )
 >                 ]
 
-> doCommand :: Env -> Command -> IO Env
-> doCommand e@(dict, subexprs, ex) c
+> doCommand :: PlebConfig -> Env -> Command -> IO Env
+> doCommand pc e@(dict, subexprs, ex) c
 >     = case c
 >       of Bindings
 >              -> putStrLn "# Symbol aliases:"
@@ -718,13 +753,13 @@ in order to deal with spaces or other special characters.
 >                 >> putStrLn (formatSet $ tmap fst subexprs)
 >                 >> return e
 >          Display expr -> disp id expr
->          D_EB expr -> disp' display' (to EggBox) expr
+>          D_EB expr -> disp' (display' pc) (to EggBox) expr
 >          D_JE expr -> disp (renameStatesBy (formatSet . tmap f)
 >                             . minimizeOver jEquivalence
 >                             . syntacticMonoid) expr
 >          D_PSG expr -> disp (renameStatesBy formatSet . powersetGraph) expr
 >          D_SM expr -> disp (renameStatesBy f . syntacticMonoid) expr
->          D_SO expr -> disp' display' (to SyntacticOrder) expr
+>          D_SO expr -> disp' (display' pc) (to SyntacticOrder) expr
 >          Dotify expr -> dot id expr
 >          DT_PSG expr -> dot (renameStatesBy formatSet . powersetGraph) expr
 >          DT_SM expr -> dot (renameStatesBy f . syntacticMonoid) expr
@@ -732,7 +767,8 @@ in order to deal with spaces or other special characters.
 >          Help xs -> lessHelp xs >> return e
 >          Import file
 >              -> catchIOError
->                 (importScript e . lines =<< readFileWithExpansion file)
+>                 (importScript pc e . lines
+>                  =<< readFileWithExpansion file)
 >                 (const
 >                  $  hPutStrLn stderr
 >                     ("failed to read \"" ++ file ++ "\"")
@@ -857,7 +893,7 @@ in order to deal with spaces or other special characters.
 >                    return e
 >     where disp :: (Ord n, Show n) =>
 >                   (FSA Integer String -> FSA n String) -> Expr -> IO Env
->           disp = disp' display
+>           disp = disp' (display pc)
 >           disp' how x expr
 >               = maybe err (how . x . normalize . desemantify)
 >                 (makeAutomaton (dict, subexprs, Just expr))
@@ -1030,16 +1066,17 @@ in order to deal with spaces or other special characters.
 >                    in f (g $ semanticallyExtendAlphabetTo ss x)
 >                         (g $ semanticallyExtendAlphabetTo ss y)
 
-> act :: Env -> Trither Command Relation Env -> IO Env
-> act d = trither
->         (doCommand d)
->         (\r -> maybe err print (doRelation d r) >> return d)
->         return
+> act :: PlebConfig ->  Env -> Trither Command Relation Env -> IO Env
+> act pc d = trither
+>            (doCommand pc d)
+>            (\r -> maybe err print (doRelation d r) >> return d)
+>            return
 >     where err = hPutStrLn stderr "could not parse relation"
 
-> importScript :: Env -> [String] -> IO Env
-> importScript e [] = return e
-> importScript e (a:as) = flip importScript as =<< act e (processLine e a)
+> importScript :: PlebConfig -> Env -> [String] -> IO Env
+> importScript _ e [] = return e
+> importScript pc e (a:as)
+>     = flip (importScript pc) as =<< act pc e (processLine e a)
 
 
 
@@ -1052,12 +1089,13 @@ in order to deal with spaces or other special characters.
 > deescape (x:xs)  =  x : deescape xs
 > deescape _       =  []
 
-> display :: (Ord n, Ord e, Show n, Show e) => FSA n e -> IO ()
-> display = display' . to Dot
+> display :: (Ord n, Ord e, Show n, Show e) =>
+>            PlebConfig -> FSA n e -> IO ()
+> display pc = display' pc . to Dot
 
-> display' :: String -> IO ()
-> display' s = do
->   let dotP = (proc "dot" ["-Tpng"])
+> display' :: PlebConfig -> String -> IO ()
+> display' pc s = do
+>   let dotP = (uncurry proc $ dotProg pc)
 >              { std_in = CreatePipe
 >              , std_out = CreatePipe
 >              , std_err = CreatePipe
@@ -1065,7 +1103,7 @@ in order to deal with spaces or other special characters.
 >   (Just p_stdin, Just pipe, Just p_stderr, dot_ph) <- createProcess dotP
 >   _ <- hGetContents p_stderr
 >   hSetBinaryMode pipe True
->   let displayP = (proc "display" [])
+>   let displayP = (uncurry proc $ displayProg pc)
 >                  { std_in = UseHandle pipe
 >                  , std_out = CreatePipe
 >                  , std_err = CreatePipe
