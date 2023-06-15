@@ -137,7 +137,8 @@
 > parseConfig :: PlebConfig -> String -> PlebConfig
 > parseConfig pc s = foldr go pc
 >                    . map (\(a,b) -> (words a, words $ drop 1 b))
->                    . filter (not . null . snd) . map (break (== '='))
+>                    . filter (not . null . snd)
+>                    . map (break (== '=') . fst . break (== '#'))
 >                    $ lines s
 >     where go (["dot"],(x:xs)) c = c { dotProg = (x, xs) }
 >           go (["display"],(x:xs)) c = c { displayProg = (x, xs) }
