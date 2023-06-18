@@ -7,6 +7,8 @@
 > This module provides a mechanism to display the egg-box representation
 > for a syntactic monoid.  This is an export-only format, as information
 > is lost.
+>
+> @since 1.1
 > -}
 > module LTK.Porters.EggBox ( exportEggBox ) where
 

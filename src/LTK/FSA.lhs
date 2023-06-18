@@ -481,6 +481,8 @@ of parallelism if possible.
 > -- An empty shuffle is defined as the singleton language over
 > -- an empty alphabet containing only the empty string.
 > -- Intermediate results are evaluated to normal form.
+> --
+> -- @since 1.1
 > flatShuffle :: (Enum n, Ord n, NFData n, Ord e, NFData e) =>
 >                [FSA n e] -> FSA n e
 > flatShuffle []  =  singletonLanguage []
@@ -492,6 +494,8 @@ of parallelism if possible.
 > -- An empty infiltration is defined as the singleton language over
 > -- an empty alphabet containing only the empty string.
 > -- Intermediate results are evaluated to normal form.
+> --
+> -- @since 1.1
 > flatInfiltration :: (Enum n, Ord n, NFData n, Ord e, NFData e) =>
 >                [FSA n e] -> FSA n e
 > flatInfiltration []  =  singletonLanguage []
@@ -569,6 +573,8 @@ function `delta` from an FSA, a symbol, and a state to a set of states:
 
 > -- |Returns whether the given 'FSA' lands in a final state
 > -- after processing the given sequence.
+> --
+> -- @since 1.1
 > accepts :: (Ord e, Ord n) => FSA n e -> [e] -> Bool
 > accepts fsa = anyS (isIn (finals fsa)) . tmap state
 >               . compute fsa . tmap Symbol
@@ -786,6 +792,8 @@ advantage over the naive implementation (A & not B).
 
 > -- |Returns an 'FSA' accepting all and only those strings
 > -- accepted by the first input but rejected by the second.
+> --
+> -- @since 1.1
 > autDifference :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e ->
 >                  FSA (Maybe n1, Maybe (Set n2)) e
 > autDifference = fmap (. complement) autIntersection
@@ -850,6 +858,8 @@ Thus rather than one out-edge per symbol per state,
 there are two.
 
 > -- |Returns the shuffle product of its two input autamata.
+> --
+> -- @since 1.1
 > autShuffle :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e
 >            -> FSA (Maybe n1, Maybe n2) e
 > autShuffle = pairTrace False True (&&)
@@ -859,6 +869,8 @@ in which an edge may follow its labeling symbol
 in one source, the other, or both simultaneously.
 
 > -- |Returns the infiltration product of its two input autamata.
+> --
+> -- @since 1.1
 > autInfiltration :: (Ord e, Ord n1, Ord n2) => FSA n1 e -> FSA n2 e
 >                 -> FSA (Maybe n1, Maybe n2) e
 > autInfiltration = pairTrace True True (&&)
@@ -1499,6 +1511,8 @@ alphabets unified.
 
 > -- |Add self-loops on all symbols to all edges to compute
 > -- an upward closure.
+> --
+> -- @since 1.1
 > loopify :: (Ord a, Ord b) => FSA a b -> FSA a b
 > loopify fsa = fsa { transitions = Set.union (transitions fsa) trs
 >                   , isDeterministic = False
@@ -1540,6 +1554,8 @@ Tierify:
 
 > -- |Allow a given set of symbols to be freely inserted or deleted.
 > -- In other words, make those symbols neutral.
+> --
+> -- @since 1.1
 > neutralize :: (Ord a, Ord b) => Set b -> FSA a b -> FSA a b
 > neutralize t fsa = fsa
 >                    { sigma = Set.union t $ alphabet fsa

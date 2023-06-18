@@ -6,6 +6,8 @@
 
 > This module implements an algorithm to decide whether a given FSA
 > is Tier-Based Locally Acom (TLAcom) by my own algorithm.
+>
+> @since 1.1
 > -}
 > module LTK.Decide.TLAcom (isTLAcom, isTLAcomM) where
 

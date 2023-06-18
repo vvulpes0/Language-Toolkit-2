@@ -1,8 +1,8 @@
 # Changelog
 
-## Version NEXT
+## Version 1.1 — 2023-06-18
 ### Added
-* French translation of manual pages
+* preliminary French translation of manual pages
 * basic Emacs mode for syntax highlighting
 * classification procedures
   + isAcom (aperiodic and commutative)

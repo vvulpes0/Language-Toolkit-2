@@ -116,8 +116,13 @@
 
 > main :: IO ()
 > main = do
+>   putStrLn (name ++ ", version " ++ version ++ ": " ++ url)
+>   putStrLn ":help for help"
 >   pc <- getConfig
 >   runInputT defaultSettings $ processLines pc (empty, empty, Nothing)
+>       where name = "plebby"
+>             version = "1.1"
+>             url = "https://hackage.haskell.org/package/language-toolkit"
 
 > getConfig :: IO PlebConfig
 > getConfig = do

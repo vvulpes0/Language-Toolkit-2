@@ -7,6 +7,8 @@
 > This module implements an algorithm to decide whether a given FSA
 > has a syntactic semigroup which is Locally Commutative and Aperiodic,
 > a near superclass of the Locally Threshold Testable languages.
+>
+> @since 1.1
 > -}
 > module LTK.Decide.LAcom (isLAcom, isLAcomM) where
 

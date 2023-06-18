@@ -10,6 +10,8 @@
 > One parses the collection of equations,
 > quantifies universally over the bound variables,
 > and determines whether all specified relationships hold.
+>
+> @since 1.1
 > -}
 
 > module LTK.Decide.Variety ( -- * Documentation
