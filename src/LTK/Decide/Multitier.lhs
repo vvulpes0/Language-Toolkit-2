@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.Multitier
-> Copyright : (c) 2022 Dakotah Lambert
+> Copyright : (c) 2022-2023 Dakotah Lambert
 > License   : MIT
 
 > The Boolean closure of tier-based locally V is a subclass
@@ -14,6 +14,8 @@
 > "Finite Semigroups and Universal Algebra"
 > https://doi.org/10.1142/2481
 > as they are simpler than the equivalent ones I had found independently.
+>
+> @since 1.1
 > -}
 > module LTK.Decide.Multitier
 >     ( isMTF, isMTDef, isMTRDef, isMTGD

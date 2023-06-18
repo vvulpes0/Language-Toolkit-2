@@ -116,10 +116,14 @@ is in MeDA.
 > -- representable in \(\mathrm{FO}^{2}[<,\mathrm{betfac}]\).
 > -- This is like \(\mathrm{FO}^{2}[<,\mathrm{bet}]\)
 > -- except betweenness is of entire factors.
+> --
+> -- @since 1.1
 > isFO2BF :: (Ord n, Ord e) => FSA n e -> Bool
 > isFO2BF = isFO2BFM . syntacticMonoid
 
 > -- |True iff the monoid lies in MeDA*D
+> --
+> -- @since 1.1
 > isFO2BFM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isFO2BFM = isFO2BM . emblock
 

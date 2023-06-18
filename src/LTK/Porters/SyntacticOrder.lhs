@@ -7,6 +7,8 @@
 > This module provides a mechanism to display the syntactic order
 > of a syntactic monoid.  This is an export-only format, as information
 > is lost.
+>
+> @since 1.1
 > -}
 > module LTK.Porters.SyntacticOrder ( exportSyntacticOrder ) where
 

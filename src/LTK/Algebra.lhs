@@ -124,6 +124,8 @@ if it does not appear in the syntactic semigroup.
 > -- |Construct a monoid based on the idempotent paths
 > -- as described by Straubing (1985).  Elements are of the form
 > -- \((e,esf,f)\) for idempotents \(e\) and \(f\) and arbitrary \(s\).
+> --
+> -- @since 1.1
 > emblock :: (Ord n, Ord e) => SynMon n e -> SynMon Integer Integer
 > emblock = syntacticMonoid . renameStates . renameSymbols . emblock'
 >     where renameSymbols f = renameSymbolsBy index f
@@ -185,6 +187,8 @@ The initial state is the identity and the finals are the finals.
 > -- |Returns a machine whose states represent monoid elements
 > -- and where a transition exists from \(p\) to \(q\)
 > -- if and only if \(p\leq q\).
+> --
+> -- @since 1.1
 > syntacticOrder :: (Ord n, Ord e) => SynMon n e -> FSA [e] ()
 > syntacticOrder s = FSA
 >                    { sigma = Set.singleton ()

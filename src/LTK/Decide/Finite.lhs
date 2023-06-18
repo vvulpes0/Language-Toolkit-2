@@ -30,30 +30,42 @@
 
 > -- |True iff the syntactic monoid is nilpotent
 > -- and the sole idempotent is rejecting
+> --
+> -- @since 1.1
 > isFiniteM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isFiniteM s = isPTM s && (isize i == 1) && not (isSubsetOf (finals s) i)
 >     where i = idempotents s
 
 > -- |True iff the syntactic monoid is nilpotent
 > -- and the sole idempotent is accepting
+> --
+> -- @since 1.1
 > isCofiniteM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isCofiniteM s = isPTM s && (isize i == 1) && isSubsetOf (finals s) i
 >     where i = idempotents s
 
 > -- |True iff the automaton is finite on a tier.
+> --
+> -- @since 1.1
 > isTFinite :: (Ord n, Ord e) => FSA n e -> Bool
 > isTFinite = isFinite . project
 
 > -- |True iff the syntactic monoid is nilpotent without its identity,
 > -- and the sole other idempotent is rejecting
+> --
+> -- @since 1.1
 > isTFiniteM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isTFiniteM = isFiniteM . project
 
 > -- |True iff the automaton is cofinite on a tier.
+> --
+> -- @since 1.1
 > isTCofinite :: (Ord n, Ord e) => FSA n e -> Bool
 > isTCofinite = isCofinite . project
 
 > -- |True iff the syntactic monoid is nilpotent without its identity,
 > -- and the sole other idempotent is accepting
+> --
+> -- @since 1.1
 > isTCofiniteM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isTCofiniteM = isCofiniteM . project

@@ -93,8 +93,8 @@
 >     | Conjunction   [Expr]
 >     | Disjunction   [Expr]
 >     | Domination    [Expr]
->     | Infiltration  [Expr]
->     | Shuffle       [Expr]
+>     | Infiltration  [Expr] -- ^@since 1.1
+>     | Shuffle       [Expr] -- ^@since 1.1
 >     | QuotientL     [Expr] -- ^@since 1.0
 >     | QuotientR     [Expr] -- ^@since 1.0
 >       deriving (Eq, Ord, Read, Show)
@@ -104,10 +104,10 @@
 >     = DownClose Expr -- ^@since 1.0
 >     | Iteration Expr
 >     | Negation Expr
->     | Neutralize [SymSet] Expr
->     | Reversal Expr
+>     | Neutralize [SymSet] Expr -- ^@since 1.1
+>     | Reversal Expr -- ^@since 1.1
 >     | Tierify [SymSet] Expr
->     | UpClose Expr
+>     | UpClose Expr -- ^@since 1.1
 >       deriving (Eq, Ord, Read, Show)
 
 > -- |A subexpression representing a single Piecewise-Local factor.

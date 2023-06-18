@@ -107,7 +107,7 @@
 === instances for EggBox (in Dot format)
 
 > -- |The egg-box in GraphViz Dot format.
-> newtype EggBox = EggBox EggBox
+> newtype EggBox = EggBox EggBox -- ^@since 1.1
 
 > instance Exportable EggBox
 >     where fromFSA _ = exportEggBox . syntacticMonoid
@@ -115,6 +115,8 @@
 === instances for SyntacticOrder (in Dot format)
 
 > -- |A Hasse diagram of the syntactic order.
+> --
+> -- @since 1.1
 > newtype SyntacticOrder = SyntacticOrder SyntacticOrder
 > instance Exportable SyntacticOrder
 >     where fromFSA _ = exportSyntacticOrder . syntacticMonoid

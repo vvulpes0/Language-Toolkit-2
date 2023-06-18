@@ -9,6 +9,8 @@
 > the class that LTT localizes (Almeida, 1989).
 >
 > https://doi.org/10.1016/0022-4049(89)90124-2
+>
+> @since 1.1
 > -}
 > module LTK.Decide.Acom (isAcom, isAcomM, comTest) where
 
