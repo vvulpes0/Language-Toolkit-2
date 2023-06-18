@@ -7,7 +7,7 @@
 
 > {-|
 > Module : LTK.Porters.Jeff
-> Copyright : (c) 2016-2021 Dakotah Lambert
+> Copyright : (c) 2016-2019,2021,2023 Dakotah Lambert
 > LICENSE : MIT
 > 
 > This module provides methods to convert automata to and from
@@ -59,7 +59,8 @@ Then use that to parse a string in Jeff format and generate an FSA
 > -- The resulting @Int@ node labels may have nothing to do with the
 > -- node labels in the source.
 > readJeff :: String -> Either String (FSA Int String)
-> readJeff s = transliterate <$> renameStates <$> readJeffWithoutRelabeling s
+> readJeff s = transliterate . renameStates
+>              <$> readJeffWithoutRelabeling s
 
 > readJeffStateList :: [String] -> Either String (Set (State String))
 > readJeffStateList [] = Right empty
@@ -69,10 +70,9 @@ Then use that to parse a string in Jeff format and generate an FSA
 
 > readJeffTransitionList :: [String] ->
 >                           Either String (Set (Transition String String))
-> readJeffTransitionList []      = Right empty
-> readJeffTransitionList (a:as)  = insert <$>
->                                  readJeffTransition a <*>
->                                  readJeffTransitionList as
+> readJeffTransitionList
+>     = foldr (\a -> (<*>) (insert <$> readJeffTransition a))
+>             (Right empty)
 
 > readJeffTransition :: String -> Either String (Transition String String)
 > readJeffTransition s 
@@ -80,7 +80,7 @@ Then use that to parse a string in Jeff format and generate an FSA
 >     | length xs > 3  = parseFail "Transition" s "Too many components"
 >     | otherwise      = Right $
 >                        Transition (Symbol (xs!!2))
->                        (State (xs!!0)) (State (xs!!1))
+>                        (State $ head xs) (State (xs!!1))
 >     where xs = splitOn ',' s
 
 > readJeffWithoutRelabeling :: String -> Either String (FSA String String)
@@ -90,9 +90,9 @@ Then use that to parse a string in Jeff format and generate an FSA
 >                                   trans <*> inits <*> fins <*> Right False
 >     where initialParse  = tmap (keep (not . null) . splitOn '\n') $
 >                           splitOn '!' s
->           alpha         = unsymbols <$> tmap edgeLabel <$> trans
+>           alpha         = unsymbols . tmap edgeLabel <$> trans
 >           trans         = readJeffTransitionList $ initialParse!!1
->           inits         = readJeffStateList $ initialParse!!0
+>           inits         = readJeffStateList . head $ initialParse
 >           fins          = readJeffStateList $ initialParse!!2
 
 Sometimes users give us input that is not what we expect.  Tell them
@@ -100,8 +100,8 @@ that, and what we think may have gone wrong:
 
 > parseFail :: Show a => String -> a -> String -> Either String b
 > parseFail target input reason = Left message
->     where message = ("Failed to parse " ++ target ++ ": " ++
->                      show input ++ ".  " ++ reason ++ ".")
+>     where message = "Failed to parse " ++ target ++ ": "
+>                     ++ show input ++ ".  " ++ reason ++ "."
 
 Transliterating Jeff's FSAs into the form used by my compiler:
 
@@ -125,7 +125,7 @@ Transliterating Jeff's FSAs into the form used by my compiler:
 
 > mapEvenOdd :: (a -> b) -> (a -> b) -> [a] -> [b]
 > mapEvenOdd f g (a1:a2:xs)  =  f a1 : g a2 : mapEvenOdd f g xs
-> mapEvenOdd f _ (a1:[])     =  f a1 : []
+> mapEvenOdd f _ [a1]        =  [f a1]
 > mapEvenOdd _ _ []          =  []
 
 > -- |See 'transliterate'.  This function operates directly on the
@@ -159,7 +159,7 @@ Writing to Jeff's format
 
 > bangTerminate :: [String] -> [String]
 > bangTerminate []      =  []
-> bangTerminate (x:[])  =  [x ++ "!"]
+> bangTerminate [x]     =  [x ++ "!"]
 > bangTerminate (x:xs)  =  x : bangTerminate xs
 
 > exportJeffTransition :: (Show e, Show n) => Transition n e -> String

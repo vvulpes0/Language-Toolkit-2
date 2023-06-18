@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Learn.TSL.AugmentedSubsequences
-> Copyright : (c) 2019-2020 Dakotah Lambert
+> Copyright : (c) 2019-2020,2023 Dakotah Lambert
 > License   : MIT
 
 > This module implements a string extension learner for the TSL class.
@@ -77,12 +77,12 @@
 > instance Grammar TSLG
 >     where emptyG = TSLG empty False 0 emptyG emptyG empty
 >           augmentG g1 g2
->               = TSLG { tslgAlpha  =  union (alphabet g1) (alphabet g2)
+>               = TSLG { tslgAlpha  =  alphabet g1 `union` alphabet g2
 >                      , tslgInf    =  tslgInf g1 || tslgInf g2
 >                      , tslgK      =  max (tslgK g1) (tslgK g2)
 >                      , tslgF      =  augmentG (tslgF g1) (tslgF g2)
 >                      , tslgFp1    =  augmentG (tslgFp1 g1) (tslgFp1 g2)
->                      , tslg       =  union (tslg g1) (tslg g2)
+>                      , tslg       =  tslg g1 `union` tslg g2
 >                      }
 >           isSubGOf g1 g2 = isSubsetOf (tslg g1) (tslg g2)
 >           genFSA g = normalize . desemantify .
@@ -120,7 +120,7 @@
 
 > gSet :: (Ord a, Ord b, Ord x, Ord y) =>
 >         (a -> Set b) -> Set (x, a, y) -> Set (x, b, y)
-> gSet f = collapse (\w -> union (gDo f w)) empty
+> gSet f = collapse (union . gDo f) empty
 
 > gDo :: (Ord a, Ord b, Ord x, Ord y) =>
 >        (a -> Set b) -> (x, a, y) -> Set (x, b, y)

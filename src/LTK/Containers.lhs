@@ -16,7 +16,7 @@
 
 > {-|
 > Module      : LTK.Containers
-> Copyright   : (c) 2016-2021 Dakotah Lambert
+> Copyright   : (c) 2016-2023 Dakotah Lambert
 > License     : MIT
 > 
 > Containers: a uniform way to work with entities that may
@@ -136,10 +136,10 @@ are defined to allow such polymorphism.
 >           isNotIn c = not . isIn c
 >           contains = flip isIn
 >           doesNotContain = flip isNotIn
->           insert a c = union (singleton a) c
+>           insert a = union (singleton a)
 >           singleton a = insert a empty
 >           symmetricDifference a b
->               = union (difference a b) (difference b a)
+>               = difference a b `union` difference b a
 >           isSubsetOf a b = isEmpty (difference b a)
 >           isSupersetOf = flip isSubsetOf
 >           isProperSubsetOf a b = isSubsetOf a b
@@ -272,7 +272,7 @@ properties of each typeclass to build map and filter, here called
 
 > -- |Appy a function to each element of a 'Collapsible'.
 > tmap :: (Collapsible s, Container (s b1) b) => (a -> b) -> s a -> s b1
-> tmap f xs = collapse (insert . f) empty xs
+> tmap f = collapse (insert . f) empty
 > {-# INLINE[1] tmap #-}
 > {-# RULES
 > "tmap/[]"  tmap = map
@@ -282,7 +282,7 @@ properties of each typeclass to build map and filter, here called
 
 > -- |Retain only those elements that satisfy a predicate.
 > keep :: (Collapsible s, Container (s a) a) => (a -> Bool) -> s a -> s a
-> keep f xs = collapse maybeKeep empty xs
+> keep f = collapse maybeKeep empty
 >     where maybeKeep a as
 >               | f a        = insert a as
 >               | otherwise  = as
@@ -374,7 +374,7 @@ A Haskell list is a Collapsible Container:
 > instance Container [a] a
 >     where contains = elem
 >           union = interleave
->           intersection a b = filter (isIn a) b
+>           intersection a = filter (isIn a)
 >           difference a b = filter (isNotIn b) a
 >           empty = []
 >           isEmpty = null
@@ -440,14 +440,13 @@ lookup-time logarithmic in the number of distinct elements.
 
 > instance Linearizable Multiset
 >     where choose (Multiset xs)
->               | Set.null xs
->                   =  ( error
->                        "cannot choose from an empty multiset"
->                      , Multiset Set.empty)
->               | m == 1       =  (a, f as)
->               | otherwise    =  (a, f ((a, pred m) : as))
->               where ((a,m):as) = Set.toAscList xs
->                     f = Multiset . Set.fromDistinctAscList
+>               = case Set.toAscList xs of
+>                   ((a,1):as) -> (a, f as)
+>                   ((a,m):as) -> (a, f ((a, pred m) : as))
+>                   _          -> ( error
+>                                   "cannot choose from an empty multiset"
+>                                 , Multiset Set.empty)
+>               where f = Multiset . Set.fromDistinctAscList
 > instance Collapsible Multiset
 >     where size (Multiset xs) = fromIntegral . sum . map snd
 >                                $ Set.toList xs
@@ -483,12 +482,18 @@ lookup-time logarithmic in the number of distinct elements.
 
 #if MIN_VERSION_base(4,9,0)
 > instance Ord a => Semigroup (Multiset a)
->     where (<>) = mappend
+>     where (<>) = union
 #endif
 
 > instance Ord a => Monoid (Multiset a)
 >     where mempty = empty
+#if MIN_VERSION_base(4,11,0)
+> -- mappend will eventually be removed
+#elif MIN_VERSION_base(4,9,0)
+>           mappend = (<>)
+#else
 >           mappend = union
+#endif
 
 > instance Show a => Show (Multiset a)
 >     where showsPrec p m = showParen (p > 10) $
@@ -582,11 +587,11 @@ Miscellaneous functions
 > -- >>> tr "abcdefghijklmnopqrstuvwxyz" "nopqrstuvwxyzabcdefghijklm" "cat"
 > -- "png"
 > tr :: (Container (s a) a, Collapsible s, Eq a) => [a] -> [a] -> s a -> s a
-> tr search replace xs = tmap translate xs
+> tr search replace = tmap translate
 >     where translate x = snd . last . ((x, x) :) . keep ((== x) . fst) $
 >                         zip search (makeInfinite replace)
 >           makeInfinite []      =  []
->           makeInfinite (y:[])  =  repeat y
+>           makeInfinite [y]     =  repeat y
 >           makeInfinite (y:ys)  =  y : makeInfinite ys
 
 > -- |All possible sequences over a given alphabet,

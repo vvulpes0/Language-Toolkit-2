@@ -7,7 +7,7 @@
 
 > {-|
 > Module:    LTK.Porters.Pleb
-> Copyright: (c) 2018-2021 Dakotah Lambert
+> Copyright: (c) 2018-2023 Dakotah Lambert
 > License:   MIT
 
 > The (P)iecewise / (L)ocal (E)xpression (B)uilder.
@@ -73,7 +73,7 @@
 >     | isLetter x  =  uncurry (:) . mapfst TName . fmap tokenize $
 >                      break (\s -> s == ',' || isDelim s || isSpace s) (x:xs)
 >     | otherwise   =  TSymbol x : tokenize xs
->     where isDelim c = matchingDelimiter c /= c
+>     where isDelim c = matchingDelimiter c /= c || c == '|'
 
 > -- |The environment: defined sets of symbols, defined expressions, and
 > -- possibly a value for the special variable @(it)@.
@@ -93,6 +93,8 @@
 >     | Conjunction   [Expr]
 >     | Disjunction   [Expr]
 >     | Domination    [Expr]
+>     | Infiltration  [Expr] -- ^@since 1.1
+>     | Shuffle       [Expr] -- ^@since 1.1
 >     | QuotientL     [Expr] -- ^@since 1.0
 >     | QuotientR     [Expr] -- ^@since 1.0
 >       deriving (Eq, Ord, Read, Show)
@@ -102,7 +104,10 @@
 >     = DownClose Expr -- ^@since 1.0
 >     | Iteration Expr
 >     | Negation Expr
+>     | Neutralize [SymSet] Expr -- ^@since 1.1
+>     | Reversal Expr -- ^@since 1.1
 >     | Tierify [SymSet] Expr
+>     | UpClose Expr -- ^@since 1.1
 >       deriving (Eq, Ord, Read, Show)
 
 > -- |A subexpression representing a single Piecewise-Local factor.
@@ -183,13 +188,19 @@ Therefore, this cleanup step has been removed.
 >                    NAry (Conjunction es)    ->  f Conjunction es
 >                    NAry (Disjunction es)    ->  f Disjunction es
 >                    NAry (Domination es)     ->  f Domination es
+>                    NAry (Infiltration es)   ->  f Infiltration es
+>                    NAry (Shuffle es)        ->  f Shuffle es
 >                    NAry (QuotientL es)      ->  f QuotientL es
 >                    NAry (QuotientR es)      ->  f QuotientR es
 >                    Unary (DownClose ex)     ->  g DownClose ex
 >                    Unary (Iteration ex)     ->  g Iteration ex
 >                    Unary (Negation ex)      ->  g Negation ex
+>                    Unary (Neutralize ts ex)
+>                        -> g (Neutralize (tmap restrictUniverseS ts)) ex
+>                    Unary (Reversal ex)      ->  g Reversal ex
 >                    Unary (Tierify ts ex)
 >                        -> g (Tierify (tmap restrictUniverseS ts)) ex
+>                    Unary (UpClose ex)       ->  g UpClose ex
 >           f t es = NAry (t $ tmap restrictUniverseE es)
 >           g t e  = Unary (t $ restrictUniverseE e)
 >           fixFactor h t ps
@@ -201,11 +212,11 @@ Therefore, this cleanup step has been removed.
 > -- |Create an 'FSA' from an expression tree and environment,
 > -- complete with metadata regarding the constraint(s) it represents.
 > makeAutomaton :: Env -> Maybe (FSA Integer (Maybe String))
-> makeAutomaton (dict, _, e) = normalize <$>
->                              semanticallyExtendAlphabetTo symsets <$>
->                              automatonFromExpr <$> e
->     where symsets = either (const Set.empty) id $
->                     definition "universe" dict
+> makeAutomaton (dict, _, e) = normalize
+>                              . semanticallyExtendAlphabetTo symsets
+>                              . automatonFromExpr <$> e
+>     where symsets = either (const Set.empty) id
+>                     $ definition "universe" dict
 
 The properties of semantic automata are used here to prevent having to
 pass alphabet information to the individual constructors, which in turn
@@ -218,15 +229,18 @@ prevents having to descend through the tree to find this information.
 >     = case e
 >       of Automaton x             -> x
 >          Factor x                -> automatonFromPLFactor x
->          NAry (Concatenation es) -> f mconcat es
->          NAry (Conjunction es)   -> f flatIntersection es
->          NAry (Disjunction es)   -> f flatUnion es
+>          NAry (Concatenation es) -> f emptyStr mconcat es
+>          NAry (Conjunction es)   -> f univLang flatIntersection es
+>          NAry (Disjunction es)   -> f emptyLanguage flatUnion es
 >          NAry (Domination es)
->              -> f (mconcat .
->                    intersperse (totalWithAlphabet (singleton Nothing))
->                   ) es
->          NAry (QuotientL es)     -> f ql es
->          NAry (QuotientR es)     -> f qr es
+>              -> f emptyStr
+>                 (mconcat .
+>                  intersperse (totalWithAlphabet (singleton Nothing))
+>                 ) es
+>          NAry (Infiltration es)  -> f emptyStr flatInfiltration es
+>          NAry (Shuffle es)       -> f emptyStr flatShuffle es
+>          NAry (QuotientL es)     -> f emptyStr ql es
+>          NAry (QuotientR es)     -> f emptyStr qr es
 >          Unary (DownClose ex)
 >              -> renameStates . minimize . subsequenceClosure $
 >                 automatonFromExpr ex
@@ -235,12 +249,26 @@ prevents having to descend through the tree to find this information.
 >                 automatonFromExpr ex
 >          Unary (Negation ex)
 >              -> complementDeterministic $ automatonFromExpr ex
+>          Unary (Neutralize ts ex)
+>              -> renameStates . minimize
+>                 . neutralize (Set.mapMonotonic Just $ unionAll ts)
+>                 $ automatonFromExpr ex
+>          Unary (Reversal ex)
+>              -> renameStates . minimize . LTK.FSA.reverse
+>                 $ automatonFromExpr ex
 >          Unary (Tierify ts ex)
 >              -> tierify (unionAll ts) $ automatonFromExpr ex
->     where f tl = renameStates . minimize . tl . automata
+>          Unary (UpClose ex)
+>              -> renameStates . minimize . determinize . loopify $
+>                 automatonFromExpr ex
+>     where f z tl xs = case automata xs
+>                       of [] -> z
+>                          a -> renameStates . minimize $ tl a
 >           automata es
 >               =  let as = map automatonFromExpr es
 >                  in map (semanticallyExtendAlphabetTo $ bigAlpha as) as
+>           univLang = totalWithAlphabet (Set.singleton Nothing)
+>           emptyStr = totalWithAlphabet Set.empty
 >           bigAlpha = collapse (maybe id insert) Set.empty .
 >                      collapse (union . alphabet) Set.empty
 >           ql xs = if null xs
@@ -252,18 +280,20 @@ prevents having to descend through the tree to find this information.
 
 > automatonFromPLFactor :: PLFactor -> FSA Integer (Maybe String)
 > automatonFromPLFactor (PLFactor h t pieces)
->     | isEmpty pieces  =  bl (Substring [] h t)
->     | isEmpty ps      =  bl (Substring p  h t)
->     | isPF            =  bl (Subsequence (concat (p:ps)))
->     | otherwise       =  renameStates . minimize . mconcat $ map bl lfs
+>     = case tmap (tmap (tmap Just)) pieces of
+>         []      ->  bl (Substring [] h t)
+>         [p]     ->  bl (Substring p  h t)
+>         (p:ps)  ->  if isPF
+>                     then bl . Subsequence $ concat (p:ps)
+>                     else renameStates . minimize . mconcat
+>                          $ map bl lfs
+>                         where lfs  =  Substring p h False : lfs' ps
 >     where as           =  insert Nothing . tmap Just $
 >                           unionAll (unionAll pieces)
 >           bl           =  buildLiteral as . required
->           (p:ps)       =  tmap (tmap (tmap Just)) pieces
 >           isPF         =  not h && not t &&
 >                           all ((==) [()] . map (const ())) pieces
->           lfs          =  Substring p h False : lfs' ps
->           lfs' (x:[])  =  Substring x False t : lfs' []
+>           lfs' [x]     =  Substring x False t : lfs' []
 >           lfs' (x:xs)  =  Substring x False False : lfs' xs
 >           lfs' _       =  []
 
@@ -274,31 +304,36 @@ prevents having to descend through the tree to find this information.
 >                    Factor f     ->  usedSymbolsF f
 >                    NAry n       ->  usedSymbolsN n
 >                    Unary u      ->  usedSymbolsU u
->     where us es = collapse (union . usedSymbols) Set.empty $ es
+>     where us = collapse (union . usedSymbols) Set.empty
 >           usedSymbolsN (Concatenation es)  =  us es
 >           usedSymbolsN (Conjunction es)    =  us es
 >           usedSymbolsN (Disjunction es)    =  us es
 >           usedSymbolsN (Domination es)     =  us es
+>           usedSymbolsN (Infiltration es)   =  us es
+>           usedSymbolsN (Shuffle es)        =  us es
 >           usedSymbolsN (QuotientL es)      =  us es
 >           usedSymbolsN (QuotientR es)      =  us es
 >           usedSymbolsU (DownClose ex)      =  usedSymbols ex
 >           usedSymbolsU (Iteration ex)      =  usedSymbols ex
 >           usedSymbolsU (Negation ex)       =  usedSymbols ex
+>           usedSymbolsU (Neutralize ts ex)  =  Set.union
+>                                               (usedSymbols ex)
+>                                               (unionAll ts)
+>           usedSymbolsU (Reversal ex)       =  usedSymbols ex
 >           usedSymbolsU (Tierify ts _)      =  unionAll ts
+>           usedSymbolsU (UpClose ex)        =  usedSymbols ex
 >           usedSymbolsF (PLFactor _ _ ps)   =  unionAll $ unionAll ps
 
 > parseStatements :: Env -> Parse Env
 > parseStatements (dict, subexprs, prev)
->     = asum $
->       [ start >>
->         (f False <$> getName <*> (Just <$> parseExpr dict subexprs)) >>=
->         parseStatements
->       , start >> putFst <$>
->         (mkSyms <$> getName <*> parseSymExpr dict <*>
->          pure dict
->         ) >>=
->         parseStatements
->       , f True "it" <$> Just <$> parseExpr dict subexprs
+>     = asum
+>       [ start
+>         >> (f False <$> getName <*> (Just <$> parseExpr dict subexprs))
+>         >>= parseStatements
+>       , start >> putFst
+>         <$> (mkSyms <$> getName <*> parseSymExpr dict <*> pure dict)
+>         >>= parseStatements
+>       , f True "it" . Just <$> parseExpr dict subexprs
 >       , Parse $ \ts ->
 >         case ts
 >         of []  ->  Right ((dict, subexprs, prev), [])
@@ -320,7 +355,7 @@ prevents having to descend through the tree to find this information.
 >          mkSyms name value
 >              = define "universe"
 >                (if name /= "universe"
->                 then union universe value
+>                 then universe `union` value
 >                 else value
 >                ) . define name value
 >          f isL name me
@@ -338,38 +373,53 @@ prevents having to descend through the tree to find this information.
 > -- |Parse an expression from a 'Token' stream.
 > parseExpr :: Dictionary SymSet -> Dictionary Expr -> Parse Expr
 > parseExpr dict subexprs = asum
->                           [ NAry    <$>  parseNAryExpr dict subexprs
->                           , Unary   <$>  parseUnaryExpr dict subexprs
+>                           [ parseNAryExpr dict subexprs
+>                           , parseUnaryExpr dict subexprs
 >                           , Factor  <$>  parsePLFactor dict subexprs
 >                           , Parse expandVar
 >                           ]
 >     where expandVar (TName n : ts)
->               = fmap (flip (,) ts) $ definition n subexprs
+>               = flip (,) ts <$> definition n subexprs
 >           expandVar _ = Left "not a variable"
 
-> parseNAryExpr :: Dictionary SymSet -> Dictionary Expr -> Parse NAryExpr
+> parseNAryExpr :: Dictionary SymSet -> Dictionary Expr -> Parse Expr
 > parseNAryExpr dict subexprs
 >     = makeLifter
->       [ (["⋀", "⋂", "∧", "∩", "/\\"],  Conjunction)
->       , (["⋁", "⋃", "∨", "∪", "\\/"],  Disjunction)
->       , (["\\\\"], QuotientL)
->       , (["//"], QuotientR)
->       , (["∙∙", "@@"],       Domination)
->       , (["∙" , "@" ],       Concatenation)
->       ] <*>
->       parseDelimited ['(', '{']
->       (parseSeparated "," (parseExpr dict subexprs))
+>       [ (["⋀", "⋂", "∧", "∩", "/\\"],  NAry . Conjunction)
+>       , (["⋁", "⋃", "∨", "∪", "\\/"],  NAry . Disjunction)
+>       , (["\\\\"],                     NAry . QuotientL)
+>       , (["//"],                       NAry . QuotientR)
+>       , (["∙∙", "@@"],                 NAry . Domination)
+>       , (["∙" , "@" ],                 NAry . Concatenation)
+>       , (["⧢", "|_|_|"],               NAry . Shuffle)
+>       , (["⇑", ".^."],                 NAry . Infiltration)
+>       ] <*> pd
+>     where pd = parseEmpty
+>                <|> parseDelimited ['(', '{']
+>                    (parseSeparated "," $ parseExpr dict subexprs)
+>           parseEmpty = Parse $ \xs ->
+>                        case xs of
+>                          (TSymbol '(':TSymbol ')':ts) -> Right ([], ts)
+>                          (TSymbol '{':TSymbol '}':ts) -> Right ([], ts)
+>                          _ -> Left "not an empty expr"
 
-> parseUnaryExpr :: Dictionary SymSet -> Dictionary Expr -> Parse UnaryExpr
+> parseUnaryExpr :: Dictionary SymSet -> Dictionary Expr -> Parse Expr
 > parseUnaryExpr dict subexprs
 >     = (makeLifter
->        [ (["↓", "$"],       DownClose)
->        , (["*", "∗"],       Iteration)
->        , (["¬", "~", "!"],  Negation)
+>        [ (["↓", "$"],       Unary . DownClose)
+>        , (["↑", "^"],       Unary . UpClose)
+>        , (["*", "∗"],       Unary . Iteration)
+>        , (["+"],            NAry  . plus)
+>        , (["¬", "~", "!"],  Unary . Negation)
+>        , (["⇄", "-"],       Unary . Reversal)
 >        ] <*> parseExpr dict subexprs
->       ) <|> (Tierify <$> pt <*> parseExpr dict subexprs)
+>       ) <|> (Unary <$> (Tierify <$> pt <*> parseExpr dict subexprs))
+>         <|> (Unary <$> (Neutralize <$> pn <*> parseExpr dict subexprs))
 >     where pt = parseDelimited ['[']
 >                (parseSeparated "," (parseSymExpr dict))
+>           pn = parseDelimited ['|']
+>                (parseSeparated "," (parseSymExpr dict))
+>           plus e = Concatenation [e, Unary $ Iteration e]
 
 > parsePLFactor :: Dictionary SymSet -> Dictionary Expr -> Parse PLFactor
 > parsePLFactor dict subexprs
@@ -380,8 +430,7 @@ prevents having to descend through the tree to find this information.
 >     where combine s f = eat s (foldr1 f) <*>
 >                         parseDelimited ['<', '⟨']
 >                         (parseSeparated "," pplf)
->           pplf = parseBasicPLFactor dict <|>
->                  (Parse expandVar)
+>           pplf = parseBasicPLFactor dict <|> Parse expandVar
 >           expandVar (TName n : ts)
 >               = case v
 >                 of Right (Factor x) -> Right (x, ts)
@@ -396,22 +445,20 @@ prevents having to descend through the tree to find this information.
 >       , (["⋊", "%|"], PLFactor True False)
 >       , (["⋉", "|%"], PLFactor False True)
 >       , ([""], PLFactor False False)
->       ] <*>
->       (parseDelimited ['<', '⟨']
->        (parseSeparated "," (some (parseSymExpr dict)) <|>
->         Parse (\ts -> Right ([], ts))))
+>       ]
+>       <*> parseDelimited ['<', '⟨']
+>           (parseSeparated "," $ some (parseSymExpr dict)
+>            <|> Parse (\ts -> Right ([], ts)))
 
 > parseSymExpr :: Dictionary SymSet -> Parse SymSet
 > parseSymExpr dict
->     = ((fmap Set.unions
+>     = (fmap Set.unions
 >        . parseDelimited ['{', '(']
 >        $ parseSeparated "," (parseSymExpr dict))
->       <|>
->        (fmap (foldr1 Set.intersection)
->        . parseDelimited ['[']
->        $ parseSeparated "," (parseSymExpr dict))
->       <|>
->        parseSymSet dict)
+>       <|> ( fmap (foldr1 Set.intersection)
+>           . parseDelimited ['[']
+>           $ parseSeparated "," (parseSymExpr dict))
+>       <|> parseSymSet dict
 
 > parseSymSet :: Dictionary SymSet -> Parse SymSet
 > parseSymSet dict
@@ -428,14 +475,14 @@ prevents having to descend through the tree to find this information.
 
 > makeLifter :: [([String], a)] -> Parse a
 > makeLifter = asum . concatMap (map (uncurry eat) . f)
->     where f ([], _)      =  []
->           f ((x:xs), g)  =  (x, g) : f (xs, g)
+>     where f ([], _)    =  []
+>           f (x:xs, g)  =  (x, g) : f (xs, g)
 
 > eat :: String -> a -> Parse a
 > eat str f = Parse $ \ts ->
 >             if isPrefixOf ts (tmap TSymbol str)
 >             then Right (f, drop (length str) ts)
->             else Left $ ""
+>             else Left ""
 
 > parseDelimited :: [Char] -> Parse [a] -> Parse [a]
 > parseDelimited ds pl = parseOpeningDelimiter ds >>= f
@@ -461,10 +508,10 @@ prevents having to descend through the tree to find this information.
 
 > plCatenate :: PLFactor -> PLFactor -> PLFactor
 > plCatenate (PLFactor h _ xs) (PLFactor _ t ys) = PLFactor h t (pc xs ys)
->     where pc [] bs          =  bs
->           pc (a:[]) []      =  [a]
->           pc (a:[]) (b:bs)  =  (a ++ b) : bs
->           pc (a:as) bs      =  a : pc as bs
+>     where pc [] bs       =  bs
+>           pc [a] []      =  [a]
+>           pc [a] (b:bs)  =  (a ++ b) : bs
+>           pc (a:as) bs   =  a : pc as bs
 
 > plGap :: PLFactor -> PLFactor -> PLFactor
 > plGap (PLFactor h _ xs) (PLFactor _ t ys) = PLFactor h t (xs ++ ys)
@@ -494,10 +541,10 @@ prevents having to descend through the tree to find this information.
 >     where fmap g (Parse f) = Parse (fmap (mapfst g) . f)
 
 > instance Applicative Parse
->     where pure x   =  Parse (Right . (,) x . id)
+>     where pure     =  Parse <$> fmap Right . (,)
 >           f <*> x  =  Parse $ \s0 ->
->                       let h (g, s1) = fmap (mapfst g) $ doParse x s1
->                       in either Left h $ doParse f s0
+>                       let h (g, s1) = mapfst g <$> doParse x s1
+>                       in h =<< doParse f s0
 
 > instance Alternative Parse
 >     where empty    =  Parse . const $ Left ""
@@ -509,10 +556,12 @@ prevents having to descend through the tree to find this information.
 >                       in either h Right $ doParse p ts
 
 > instance Monad Parse
->     where return x  =  Parse $ Right . (,) x . id
->           p >>= f   =  Parse $ \s0 ->
+>     where p >>= f   =  Parse $ \s0 ->
 >                        let h (a, s1) = doParse (f a) s1
->                        in either Left h $ doParse p s0
+>                        in h =<< doParse p s0
+#if !MIN_VERSION_base(4,8,0)
+>           return    =  pure
+#endif
 
 
 
@@ -552,4 +601,5 @@ prevents having to descend through the tree to find this information.
 >                 , ('(', ')')
 >                 , ('[', ']')
 >                 , ('{', '}')
+>                 , ('|', '|')
 >                 ]

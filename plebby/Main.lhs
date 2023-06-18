@@ -12,17 +12,21 @@
 #endif
 > import Control.Monad.Trans.Class (lift)
 > import Data.Char (isSpace, toLower)
-> import Data.List (intercalate)
+> import Data.Maybe (fromMaybe)
 > import System.Console.Haskeline ( InputT
 >                                 , defaultSettings
 >                                 , getInputLine
 >                                 , runInputT
 >                                 )
 > import System.Environment (getEnvironment)
-> import System.Directory ( createDirectoryIfMissing
+> import System.Directory ( XdgDirectory(XdgConfig)
+>                         , createDirectoryIfMissing
+>                         , doesFileExist
 >                         , getHomeDirectory
+>                         , getXdgDirectory
 >                         )
-> import System.FilePath ( isPathSeparator
+> import System.FilePath ( (</>)
+>                        , isPathSeparator
 >                        , joinPath
 >                        , splitDirectories
 >                        , takeDirectory
@@ -47,26 +51,32 @@
 >                         , isLPT, isTLPT
 >                         , isSP
 >                         , isPT
->                         , isFO2, isFO2B, isFO2S
+>                         , isFO2, isFO2B, isFO2BF, isFO2S
 >                         , isSF
 >                         , isGLT, isGLPT
 >                         , isFinite
 >                         , isGD
 >                         , isTGD
 >                         , isCB
+>                         , isAcom, isLAcom, isTLAcom
 >                         , isB, isLB, isTLB
 >                         , isDef
 >                         , isRDef
 >                         , isTDef
 >                         , isTRDef
 >                         , isTrivial
+>                         , isMTF, isMTDef, isMTRDef, isMTGD
+>                         , isVariety
 >                         )
 > import LTK.FSA
 > import LTK.Learn.SL  (fSL)
 > import LTK.Learn.SP  (fSP)
 > import LTK.Learn.TSL (fTSL)
 > import LTK.Learn.StringExt (Grammar(..), learn)
-> import LTK.Porters      ( ATT(ATT), ATTO(ATTO), Dot(Dot), Jeff(Jeff)
+> import LTK.Porters      ( ATT(ATT), ATTO(ATTO), Dot(Dot)
+>                         , EggBox(EggBox)
+>                         , SyntacticOrder(SyntacticOrder)
+>                         , Jeff(Jeff)
 >                         , formatSet, fromE, to
 >                         )
 > import LTK.Porters.ATT  (embedSymbolsATT, extractSymbolsATT)
@@ -84,12 +94,13 @@
 >                         , restrictUniverse
 >                         , tokenize
 >                         )
+> import LTK.Tiers     (project)
 
 
 #if !MIN_VERSION_base(4,4,0)
 > catchIOError :: IO a -> (IOError -> IO a) -> IO a
 > catchIOError = catch
-# endif
+#endif
 
 > import System.Process ( CreateProcess(std_err, std_in, std_out)
 >                       , StdStream(CreatePipe, UseHandle)
@@ -98,8 +109,45 @@
 >                       , waitForProcess
 >                       )
 
+> data PlebConfig = PlebConfig
+>     { dotProg :: (String, [String])
+>     , displayProg :: (String, [String])
+>     } deriving (Eq, Ord, Read, Show)
+
 > main :: IO ()
-> main = runInputT defaultSettings $ processLines (empty, empty, Nothing)
+> main = do
+>   putStrLn (name ++ ", version " ++ version ++ ": " ++ url)
+>   putStrLn ":help for help"
+>   pc <- getConfig
+>   runInputT defaultSettings $ processLines pc (empty, empty, Nothing)
+>       where name = "plebby"
+>             version = "1.1"
+>             url = "https://hackage.haskell.org/package/language-toolkit"
+
+> getConfig :: IO PlebConfig
+> getConfig = do
+>   xdgPath <- (</> "config.ini") <$> getXdgDirectory XdgConfig "plebby"
+>   homePath <- (</> ".plebby") <$> getHomeDirectory
+>   xdgExists <- doesFileExist xdgPath
+>   homeExists <- doesFileExist homePath
+>   if xdgExists
+>   then parseConfig base <$> readFile xdgPath
+>   else if homeExists
+>        then parseConfig base <$> readFile homePath
+>        else return base
+>       where base = PlebConfig { dotProg = ("dot", ["-Tpng"])
+>                               , displayProg = ("display", [])
+>                               }
+
+> parseConfig :: PlebConfig -> String -> PlebConfig
+> parseConfig pc s = foldr go pc
+>                    . map (\(a,b) -> (words a, words $ drop 1 b))
+>                    . filter (not . null . snd)
+>                    . map (break (== '=') . fst . break (== '#'))
+>                    $ lines s
+>     where go (["dot"],(x:xs)) c = c { dotProg = (x, xs) }
+>           go (["display"],(x:xs)) c = c { displayProg = (x, xs) }
+>           go _ c = c
 
 > prompt :: String
 > prompt = "> "
@@ -112,13 +160,16 @@
 > data ArgType = ArgE
 >              | ArgF
 >              | ArgI
+>              | ArgS
 >              | ArgV
 >                deriving (Eq, Ord, Read, Show)
 
 > data Command = Bindings
+>              | D_EB Expr -- Display EggBox
 >              | D_JE Expr -- Display J-minimized Form
 >              | D_PSG Expr -- Display Powerset Graph
 >              | D_SM Expr -- Display Syntactic Monoid
+>              | D_SO Expr -- Display Syntactic Order
 >              | Display Expr
 >              | Dotify Expr
 >              | DT_PSG Expr -- Dotify Powerset Graph
@@ -145,21 +196,30 @@
 >              | WriteATT FilePath FilePath FilePath Expr
 >                deriving (Eq, Read, Show)
 
-> data Relation = Equal Expr Expr
+> data Relation = CEqual Expr Expr
+>               | CImply Expr Expr
+>               | Equal Expr Expr
+>               | IsAcom Expr
 >               | IsB Expr
 >               | IsCB Expr
 >               | IsDef Expr
 >               | IsFin Expr
 >               | IsFO2 Expr
 >               | IsFO2B Expr
+>               | IsFO2BF Expr
 >               | IsFO2S Expr
 >               | IsGD Expr
 >               | IsGLPT Expr
 >               | IsGLT Expr
+>               | IsLAcom Expr
 >               | IsLB Expr
 >               | IsLT Expr
 >               | IsLPT Expr
 >               | IsLTT Expr
+>               | IsMTDef Expr
+>               | IsMTF Expr
+>               | IsMTGD Expr
+>               | IsMTRDef Expr
 >               | IsPT Expr
 >               | IsRDef Expr
 >               | IsSF Expr
@@ -167,6 +227,7 @@
 >               | IsSP Expr
 >               | IsTDef Expr
 >               | IsTGD Expr
+>               | IsTLAcom Expr
 >               | IsTLB Expr
 >               | IsTLT Expr
 >               | IsTLPT Expr
@@ -174,18 +235,22 @@
 >               | IsTRDef Expr
 >               | IsTrivial Expr
 >               | IsTSL Expr
+>               | IsVariety VType String Expr
 >               | Subset Expr Expr
 >               | SSubset Expr Expr -- Strict Subset
 >                 deriving (Eq, Read, Show)
 
-> processLines :: Env -> InputT IO ()
-> processLines e = f =<< getInputLine prompt
+> data VType = VTStar | VTPlus | VTTier
+>              deriving (Eq, Ord, Read, Show)
+
+> processLines :: PlebConfig -> Env -> InputT IO ()
+> processLines pc e = f =<< getInputLine prompt
 >     where f minput
 >               = case minput
 >                 of Nothing       ->  return ()
 >                    Just ":quit"  ->  return ()
->                    Just line     ->  lift (act e (processLine e line)) >>=
->                                      processLines
+>                    Just line     ->  go line >>= processLines pc
+>           go line = lift (act pc e (processLine e line))
 
 Always use "modwords" when FilePath objects are at issue,
 so that file names can be quoted or escaped
@@ -195,92 +260,119 @@ in order to deal with spaces or other special characters.
 > processLine d@(dict, subexprs, _) str
 >     | null str = R d
 >     | not (isPrefixOf str ":") = R $ doStatements d str
+>     | isStartOf str ":isvarietym"
+>         = case words str
+>           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
+>                            in g (M . IsVariety VTStar u <$> pe) v
+>              _         ->  R d
+>     | isStartOf str ":isvarietys"
+>         = case words str
+>           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
+>                            in g (M . IsVariety VTPlus u <$> pe) v
+>              _         ->  R d
+>     | isStartOf str ":isvarietyt"
+>         = case words str
+>           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
+>                            in g (M . IsVariety VTTier u <$> pe) v
+>              _         ->  R d
 >     | isStartOf str ":import"
 >         = case modwords str
->           of (_:a:[])  ->  L (Import a)
->              _         ->  R d
+>           of [_,a]  ->  L (Import a)
+>              _      ->  R d
 >     | isStartOf str ":learnsl"
 >         = case modwords str
->           of (_:a:b:[])  ->  if all (isIn "0123456789") a
->                              then L (LearnSL (read a) b)
->                              else R d
->              _           ->  R d
+>           of [_,a,b]  ->  if all (isIn "0123456789") a
+>                           then L (LearnSL (read a) b)
+>                           else R d
+>              _        ->  R d
 >     | isStartOf str ":learnsp"
 >         = case modwords str
->           of (_:a:b:[])  ->  if all (isIn "0123456789") a
->                              then L (LearnSP (read a) b)
->                              else R d
->              _           ->  R d
+>           of [_,a,b]  ->  if all (isIn "0123456789") a
+>                           then L (LearnSP (read a) b)
+>                           else R d
+>              _        ->  R d
 >     | isStartOf str ":learntsl"
 >         = case modwords str
->           of (_:a:b:[])  ->  if all (isIn "0123456789") a
->                              then L (LearnTSL (read a) b)
->                              else R d
->              _           ->  R d
+>           of [_,a,b]  ->  if all (isIn "0123456789") a
+>                           then L (LearnTSL (read a) b)
+>                           else R d
+>              _        ->  R d
 >     | isStartOf str ":loadstate"
 >         = case modwords str
->           of (_:a:[])  ->  L (Loadstate a)
->              _         ->  R d
+>           of [_,a]  ->  L (Loadstate a)
+>              _      ->  R d
 >     | isStartOf str ":readatto"
 >         = case modwords str
->           of (_:a:b:c:[])  ->  L (ReadATTO a b c)
->              _             ->  R d
+>           of [_,a,b,c]  ->  L (ReadATTO a b c)
+>              _          ->  R d
 >     | isStartOf str ":readatt"
 >         = case modwords str
->           of (_:a:b:c:[])  ->  L (ReadATT a b c)
->              _             ->  R d
+>           of [_,a,b,c]  ->  L (ReadATT a b c)
+>              _          ->  R d
 >     | isStartOf str ":readbin"
 >         = case modwords str
->           of (_:a:[])  ->  L (ReadBin a)
->              _         ->  R d
+>           of [_,a]  ->  L (ReadBin a)
+>              _       ->  R d
 >     | isStartOf str ":readjeff"
 >         = case modwords str
->           of (_:a:[])  ->  L (ReadJeff a)
->              _         ->  R d
+>           of [_,a]  ->  L (ReadJeff a)
+>              _       ->  R d
 >     | isStartOf str ":read"
 >         = case modwords str
->           of (_:a:[])  ->  L (Read a)
->              _         ->  R d
+>           of [_,a]  ->  L (Read a)
+>              _      ->  R d
 >     | isStartOf str ":savestate"
 >         = case modwords str
->           of (_:a:[])  ->  L (Savestate a)
->              _         ->  R d
+>           of [_,a]  ->  L (Savestate a)
+>              _      ->  R d
 >     | isStartOf str ":show"
 >         = case words str
 >           of (_:a:as) -> L (Show (unwords (a:as)))
 >              _        -> R d
 >     | isStartOf str ":unset"
 >         = case words str of
->             (_:a:[]) -> L (Unset a)
->             _        -> R d
+>             [_,a]  -> L (Unset a)
+>             _      -> R d
 >     | isStartOf str ":writeatt"
 >         =  case modwords str
->            of (_:a:b:c:as) -> g ((L . WriteATT a b c) <$> pe) (unwords as)
+>            of (_:a:b:c:as) -> g (L . WriteATT a b c <$> pe) (unwords as)
 >               _            -> R d
 >     | isStartOf str ":write"
 >         = case modwords str
->           of (_:a:as) -> g ((L . Write a) <$> pe) (unwords as)
+>           of (_:a:as) -> g (L . Write a <$> pe) (unwords as)
 >              _        -> R d
 >     | otherwise =  doOne . filter (isStartOf str . fst) $ p12 commands
 >     where pe        =  parseExpr dict subexprs
 >           p2e       =  (,) <$> pe <*> pe
 >           f (s, p)  =  g p (drop (length s) str)
 >           g p x     =  either (L . err) fst . doParse p $ tokenize x
+>           getVDesc  =  (\(a,b) -> (a ++ take 1 b, drop 1 b))
+>                        . break (== ']')
 >           p12       =  map (\(a,b,_,_) -> (a,b))
 >           p134      =  map (\(w,_,y,z) -> (w,y,z))
 >           doOne xs  =  case xs
 >                        of (x:_)  ->  f x
 >                           _      ->  L . ErrorMsg $
 >                                      "unknown interpreter command\n"
->           err x     =  ErrorMsg x -- "failed to evaluate"
+>           err       =  ErrorMsg -- "failed to evaluate"
 >           isStartOf xs x
->               = (isPrefixOf (map toLower xs) (map toLower x)) &&
->                 (all isSpace . take 1 $ drop (length x) xs)
+>               = isPrefixOf (map toLower xs) (map toLower x)
+>                 && (all isSpace . take 1 $ drop (length x) xs)
 >           commands
 >               = [ ( ":bindings"
 >                   , pure $ L Bindings
 >                   , []
 >                   , "print list of variables and their bindings"
+>                   )
+>                 , ( ":cequal"
+>                   , M . uncurry CEqual <$> p2e
+>                   , [ArgE, ArgE]
+>                   , "compare two exprs for logical equivalence"
+>                   )
+>                 , ( ":cimplies"
+>                   , M . uncurry CImply <$> p2e
+>                   , [ArgE, ArgE]
+>                   , "determine if expr1 logically implies expr2"
 >                   )
 >                 , ( ":compile"
 >                   , pure . R $ compileEnv d
@@ -288,27 +380,32 @@ in order to deal with spaces or other special characters.
 >                   , "convert all expr variables to automata"
 >                   )
 >                 , ( ":display"
->                   , (L . Display) <$> pe
+>                   , L . Display <$> pe
 >                   , [ArgE]
 >                   , "show expr graphically via external display program"
 >                   )
 >                 , ( ":dot-psg"
->                   , (L . DT_PSG) <$> pe
+>                   , L . DT_PSG <$> pe
 >                   , [ArgE]
 >                   , ":dot the powerset graph of expr"
 >                   )
 >                 , ( ":dot-synmon"
->                   , (L . DT_SM) <$> pe
+>                   , L . DT_SM <$> pe
 >                   , [ArgE]
 >                   , ":dot the syntactic monoid of expr"
 >                   )
 >                 , ( ":dot"
->                   , (L . Dotify) <$> pe
+>                   , L . Dotify <$> pe
 >                   , [ArgE]
 >                   , "print a Dot file of expr"
 >                   )
+>                 , ( ":eggbox"
+>                   , L . D_EB <$> pe
+>                   , [ArgE]
+>                   , "show egg-box of expr via external display program"
+>                   )
 >                 , ( ":equal"
->                   , (M . uncurry Equal) <$> p2e
+>                   , M . uncurry Equal <$> p2e
 >                   , [ArgE, ArgE]
 >                   , "compare two exprs for set-equality"
 >                   )
@@ -323,157 +420,212 @@ in order to deal with spaces or other special characters.
 >                   , "print this help"
 >                   )
 >                 , ( ":implies"
->                   , (M . uncurry Subset) <$> p2e
+>                   , M . uncurry Subset <$> p2e
 >                   , [ArgE, ArgE]
->                   , "determine if expr1 implies expr2"
+>                   , "synonym for :subset"
 >                   )
 >                 , ( ":import"
 >                   , error ":import not defined here"
 >                   , [ArgF]
 >                   , "read file as plebby script"
 >                   )
+>                 , ( ":isAcom"
+>                   , M . IsAcom <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is k,1-LTT"
+>                   )
 >                 , ( ":isB"
->                   , (M . IsB) <$> pe
+>                   , M . IsB <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is a band"
 >                   )
 >                 , ( ":isCB"
->                   , (M . IsCB) <$> pe
+>                   , M . IsCB <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is a semilattice language"
 >                   )
 >                 , ( ":isDef"
->                   , (M . IsDef) <$> pe
+>                   , M . IsDef <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is a definite language"
 >                   )
 >                 , ( ":isFinite"
->                   , (M . IsFin) <$> pe
+>                   , M . IsFin <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is finite"
 >                   )
 >                 , ( ":isFO2"
->                   , (M . IsFO2) <$> pe
+>                   , M . IsFO2 <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is FO2[<]-definable"
 >                   )
 >                 , ( ":isFO2B"
->                   , (M . IsFO2B) <$> pe
+>                   , M . IsFO2B <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is FO2[<,bet]-definable"
 >                   )
+>                 , ( ":isFO2BF"
+>                   , M . IsFO2BF <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is FO2[<,betfac]-definable"
+>                   )
 >                 , ( ":isFO2S"
->                   , (M . IsFO2S) <$> pe
+>                   , M . IsFO2S <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is FO2[<,+1]-definable"
 >                   )
 >                 , ( ":isGD"
->                   , (M . IsGD) <$> pe
+>                   , M . IsGD <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Generalized Definite"
 >                   )
 >                 , ( ":isGLPT"
->                   , (M . IsGLPT) <$> pe
+>                   , M . IsGLPT <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Generalized Locally PT"
 >                   )
 >                 , ( ":isGLT"
->                   , (M . IsGLT) <$> pe
+>                   , M . IsGLT <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Generalized Locally Testable"
 >                   )
+>                 , ( ":isLAcom"
+>                   , M . IsLAcom <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is locally Acom"
+>                   )
 >                 , ( ":isLB"
->                   , (M . IsLB) <$> pe
+>                   , M . IsLB <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is locally a band"
 >                   )
 >                 , ( ":isLPT"
->                   , (M . IsLPT) <$> pe
+>                   , M . IsLPT <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is locally Piecewise Testable"
 >                   )
 >                 , ( ":isLT"
->                   , (M . IsLT) <$> pe
+>                   , M . IsLT <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Locally Testable"
 >                   )
 >                 , ( ":isLTT"
->                   , (M . IsLTT) <$> pe
+>                   , M . IsLTT <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Locally Threshold Testable"
 >                   )
+>                 , ( ":isMTDef"
+>                   , M . IsMTDef <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is a combination of TDef things"
+>                   )
+>                 , ( ":isMTF"
+>                   , M . IsMTF <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is a combination of tier-(co)finite things"
+>                   )
+>                 , ( ":isMTGD"
+>                   , M . IsMTGD <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is a combination of TGD things"
+>                   )
+>                 , ( ":isMTRDef"
+>                   , M . IsMTRDef <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is a combination of TRDef things"
+>                   )
 >                 , ( ":isPT"
->                   , (M . IsPT) <$> pe
+>                   , M . IsPT <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Piecewise Testable"
 >                   )
 >                 , ( ":isRDef"
->                   , (M . IsRDef) <$> pe
+>                   , M . IsRDef <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is a reverse definite language"
 >                   )
 >                 , ( ":isSF"
->                   , (M . IsSF) <$> pe
+>                   , M . IsSF <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Star-Free"
 >                   )
 >                 , ( ":isSL"
->                   , (M . IsSL) <$> pe
+>                   , M . IsSL <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Strictly Local"
 >                   )
 >                 , ( ":isSP"
->                   , (M . IsSP) <$> pe
+>                   , M . IsSP <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Strictly Piecewise"
 >                   )
 >                 , ( ":isTDef"
->                   , (M . IsTDef) <$> pe
+>                   , M . IsTDef <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is definite on a tier"
 >                   )
 >                 , ( ":isTGD"
->                   , (M . IsTGD) <$> pe
+>                   , M . IsTGD <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Generalized Definite on a tier"
 >                   )
+>                 , ( ":isTLAcom"
+>                   , M . IsTLAcom <$> pe
+>                   , [ArgE]
+>                   , "determine if expr is tier-locally Acom"
+>                   )
 >                 , ( ":isTLB"
->                   , (M . IsTLB) <$> pe
+>                   , M . IsTLB <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is tier-locally a band"
 >                   )
 >                 , ( ":isTLPT"
->                   , (M . IsTLPT) <$> pe
+>                   , M . IsTLPT <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is tier-locally Piecewise Testable"
 >                   )
 >                 , ( ":isTLT"
->                   , (M . IsTLT) <$> pe
+>                   , M . IsTLT <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Tier-Locally Testable"
 >                   )
 >                 , ( ":isTLTT"
->                   , (M . IsTLTT) <$> pe
+>                   , M . IsTLTT <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Tier-LTT"
 >                   )
 >                 , ( ":isTRDef"
->                   , (M . IsTRDef) <$> pe
+>                   , M . IsTRDef <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is reverse definite on a tier"
 >                   )
 >                 , ( ":isTrivial"
->                   , (M . IsTrivial) <$> pe
+>                   , M . IsTrivial <$> pe
 >                   , [ArgE]
 >                   , "determine if expr has only a single state"
 >                   )
 >                 , ( ":isTSL"
->                   , (M . IsTSL) <$> pe
+>                   , M . IsTSL <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is Strictly Tier-Local"
 >                   )
+>                 , ( ":isVarietyM"
+>                   , error ":isVarietyM not defined here"
+>                   , [ArgS, ArgE]
+>                   , "determine if expr is in the *-variety"
+>                   )
+>                 , ( ":isVarietyS"
+>                   , error ":isVarietyS not defined here"
+>                   , [ArgS, ArgE]
+>                   , "determine if expr is in the +-variety"
+>                   )
+>                 , ( ":isVarietyT"
+>                   , error ":isVarietyT not defined here"
+>                   , [ArgS, ArgE]
+>                   , "determine if expr is in the +-variety on a tier"
+>                   )
 >                 , ( ":Jmin"
->                   , (L . D_JE) <$> pe
+>                   , L . D_JE <$> pe
 >                   , [ArgE]
 >                   , ":display the J-minimized version of expr"
 >                   )
@@ -498,7 +650,7 @@ in order to deal with spaces or other special characters.
 >                   , "restore state from file"
 >                   )
 >                 , ( ":psg"
->                   , (L . D_PSG) <$> pe
+>                   , L . D_PSG <$> pe
 >                   , [ArgE]
 >                   , ":display the powerset graph of expr"
 >                   )
@@ -558,19 +710,24 @@ in order to deal with spaces or other special characters.
 >                   , "print meaning(s) of var"
 >                   )
 >                 , ( ":strict-subset"
->                   , (M . uncurry SSubset) <$> p2e
+>                   , M . uncurry SSubset <$> p2e
 >                   , [ArgE, ArgE]
 >                   , "determine if expr1 is a strict subset of expr2"
 >                   )
 >                 , ( ":subset"
->                   , (M . uncurry Subset) <$> p2e
+>                   , M . uncurry Subset <$> p2e
 >                   , [ArgE, ArgE]
 >                   , "determine if expr1 is a subset of expr2"
 >                   )
 >                 , ( ":synmon"
->                   , (L . D_SM) <$> pe
+>                   , L . D_SM <$> pe
 >                   , [ArgE]
 >                   , ":display the syntactic monoid of expr"
+>                   )
+>                 , ( ":synord"
+>                   , L . D_SO <$> pe
+>                   , [ArgE]
+>                   , "display teh syntactic order of expr"
 >                   )
 >                 , ( ":unset"
 >                   , error ":unset not defined here"
@@ -589,24 +746,26 @@ in order to deal with spaces or other special characters.
 >                   )
 >                 ]
 
-> doCommand :: Env -> Command -> IO Env
-> doCommand e@(dict, subexprs, ex) c
+> doCommand :: PlebConfig -> Env -> Command -> IO Env
+> doCommand pc e@(dict, subexprs, ex) c
 >     = case c
 >       of Bindings
->              -> putStrLn "# Symbol aliases:" >>
->                 mapM_ (\(n, s) ->
->                        putStrLn
->                        (n ++ " <- " ++ deescape (formatSet s))
->                       ) dict >>
->                 putStrLn "# Expression aliases:" >>
->                 putStrLn (formatSet $ tmap fst subexprs) >>
->                 return e
+>              -> putStrLn "# Symbol aliases:"
+>                 >> mapM_ (\(n, s) ->
+>                           putStrLn
+>                           (n ++ " <- " ++ deescape (formatSet s))
+>                          ) dict
+>                 >> putStrLn "# Expression aliases:"
+>                 >> putStrLn (formatSet $ tmap fst subexprs)
+>                 >> return e
 >          Display expr -> disp id expr
+>          D_EB expr -> disp' (display' pc) (to EggBox) expr
 >          D_JE expr -> disp (renameStatesBy (formatSet . tmap f)
 >                             . minimizeOver jEquivalence
 >                             . syntacticMonoid) expr
 >          D_PSG expr -> disp (renameStatesBy formatSet . powersetGraph) expr
 >          D_SM expr -> disp (renameStatesBy f . syntacticMonoid) expr
+>          D_SO expr -> disp' (display' pc) (to SyntacticOrder) expr
 >          Dotify expr -> dot id expr
 >          DT_PSG expr -> dot (renameStatesBy formatSet . powersetGraph) expr
 >          DT_SM expr -> dot (renameStatesBy f . syntacticMonoid) expr
@@ -614,28 +773,29 @@ in order to deal with spaces or other special characters.
 >          Help xs -> lessHelp xs >> return e
 >          Import file
 >              -> catchIOError
->                 (importScript e =<< lines <$> readFileWithExpansion file)
->                 (const $
->                  hPutStrLn stderr
->                  ("failed to read \"" ++ file ++ "\"") >>
->                  return e
+>                 (importScript pc e . lines
+>                  =<< readFileWithExpansion file)
+>                 (const
+>                  $  hPutStrLn stderr
+>                     ("failed to read \"" ++ file ++ "\"")
+>                  >> return e
 >                 )
 >          LearnSL k file -> selearn (fSL k) file
 >          LearnSP k file -> selearn (fSP k) file
 >          LearnTSL k file -> selearn (fTSL k) file
 >          Loadstate file
 >              -> catchIOError (read <$> readFileWithExpansion file)
->                 (const $
->                  hPutStrLn stderr
->                  ("failed to read \"" ++ file ++ "\"") >>
->                  return e
+>                 (const
+>                  $  hPutStrLn stderr
+>                     ("failed to read \"" ++ file ++ "\"")
+>                  >> return e
 >                 )
 >          Read file
 >              -> catchIOError (doStatements e <$> readFileWithExpansion file)
->                 (const $
->                  hPutStrLn stderr
->                  ("failed to read \"" ++ file ++ "\"") >>
->                  return e
+>                 (const
+>                  $  hPutStrLn stderr
+>                     ("failed to read \"" ++ file ++ "\"")
+>                  >> return e
 >                 )
 >          ReadATT f1 f2 f3 -> ratt f1 f2 f3 ATT
 >          ReadATTO f1 f2 f3 -> ratt f1 f2 f3 ATTO
@@ -646,29 +806,29 @@ in order to deal with spaces or other special characters.
 >                   "input not a binary automaton, environment unchanged" >>
 >                   return e
 >                  )
->                  (return . insertExpr e . fromSemanticAutomaton) =<<
->                  readMaybe <$> readFileWithExpansion file
+>                  (return . insertExpr e . fromSemanticAutomaton)
+>                  . readMaybe =<< readFileWithExpansion file
 >                 )
->                 (const $
->                  hPutStrLn stderr
->                  ("failed to read \"" ++ file ++ "\"") >>
->                  return e
+>                 (const
+>                  $  hPutStrLn stderr
+>                     ("failed to read \"" ++ file ++ "\"")
+>                  >> return e
 >                 )
 >          ReadJeff file
 >              -> catchIOError
 >                 (either
->                  (const $
->                   hPutStrLn stderr
->                   "input not a Jeff, environment unchanged" >>
->                   return e
+>                  (const
+>                   $  hPutStrLn stderr
+>                      "input not a Jeff, environment unchanged"
+>                   >> return e
 >                  )
->                  (return . insertExpr e . fromAutomaton) =<<
->                  fromE Jeff <$> readFileWithExpansion file
+>                  (return . insertExpr e . fromAutomaton)
+>                  . fromE Jeff =<< readFileWithExpansion file
 >                 )
->                 (const $
->                  hPutStrLn stderr
->                  ("failed to read \"" ++ file ++ "\"") >>
->                  return e
+>                 (const
+>                  $  hPutStrLn stderr
+>                     ("failed to read \"" ++ file ++ "\"")
+>                  >> return e
 >                 )
 >          Reset -> return (empty, empty, Nothing)
 >          --
@@ -686,7 +846,7 @@ in order to deal with spaces or other special characters.
 >                    (tmap
 >                     (\(a, _) ->
 >                      "= " ++ a ++ " { " ++ a ++ " } "
->                     ) $ d'
+>                     ) d'
 >                    )
 >                    (tmap (\(a, _) -> "= " ++ a ++ " " ++ a) subexprs)
 >          RestrictUniverse -> return (restrictUniverse e)
@@ -697,22 +857,21 @@ in order to deal with spaces or other special characters.
 >                  ("failed to write \"" ++ file ++ "\"")
 >                 ) >> return e
 >          Show name
->              -> if (both
->                     (isNotIn (tmap fst subexprs))
->                     (isNotIn (tmap fst dict))
->                     name
->                    )
->                 then putStrLn ("undefined variable \"" ++ name ++ "\"") >>
->                      return e
+>              -> if both
+>                    (isNotIn (tmap fst subexprs))
+>                    (isNotIn (tmap fst dict))
+>                    name
+>                 then putStrLn ("undefined variable \"" ++ name ++ "\"")
+>                      >> return e
 >                 else mapM_
 >                      (\(_,a) ->
 >                       putStrLn (name ++ " <- " ++ show a)
->                      ) (keep ((== name) . fst) subexprs) >>
->                      mapM_
+>                      ) (keep ((== name) . fst) subexprs)
+>                      >> mapM_
 >                      (\(_,s) ->
 >                       putStrLn (name ++ " <- " ++ deescape (formatSet s))
->                      ) (keep ((== name) . fst) dict) >>
->                      return e
+>                      ) (keep ((== name) . fst) dict)
+>                      >> return e
 >          Unset name
 >              -> return ( keep ((/= name) . fst) dict
 >                        , keep ((/= name) . fst) subexprs
@@ -724,7 +883,7 @@ in order to deal with spaces or other special characters.
 >              -> let aut = makeAutomaton $ insertExpr e expr
 >                 in maybe
 >                    (hPutStrLn stderr "could not make automaton")
->                    (\a -> werr file (unlines $ [show a]))
+>                    (\a -> werr file (unlines [show a]))
 >                    aut >> return e
 >          WriteATT f1 f2 f3 expr
 >              -> let aut  =  fmap desemantify . makeAutomaton $
@@ -740,16 +899,16 @@ in order to deal with spaces or other special characters.
 >                    return e
 >     where disp :: (Ord n, Show n) =>
 >                   (FSA Integer String -> FSA n String) -> Expr -> IO Env
->           disp = disp' display
+>           disp = disp' (display pc)
 >           disp' how x expr
->               = (maybe err (how . x . normalize . desemantify) $
->                  makeAutomaton (dict, subexprs, Just expr)
->                 ) >> return e
+>               = maybe err (how . x . normalize . desemantify)
+>                 (makeAutomaton (dict, subexprs, Just expr))
+>                 >> return e
 >           dot :: (Ord n, Show n) =>
 >                  (FSA Integer String -> FSA n String) -> Expr -> IO Env
 >           dot = disp' (putStr . to Dot)
 >           err = hPutStrLn stderr "could not parse expression"
->           f (_, xs) = '<' : intercalate " " (map f' xs) ++ ">"
+>           f (_, xs) = '<' : unwords (map f' xs) ++ ">"
 >           f' Epsilon = "ε"
 >           f' (Symbol x) = x
 >           werr ofile s
@@ -757,7 +916,7 @@ in order to deal with spaces or other special characters.
 >                 (const $
 >                  hPutStrLn stderr
 >                  ("failed to write \"" ++ ofile ++
->                   if (any isPathSeparator ofile)
+>                   if any isPathSeparator ofile
 >                   then "\nDoes the directory exist?"
 >                   else ""
 >                  )
@@ -765,15 +924,15 @@ in order to deal with spaces or other special characters.
 >           selearn :: Grammar g => ([String] -> g String) -> FilePath -> IO Env
 >           selearn method file
 >               = catchIOError
->                 (insertExpr e <$> fromAutomaton <$> genFSA
->                  <$> learn method
->                  <$> map (Just . words) <$> lines
+>                 (insertExpr e . fromAutomaton . genFSA
+>                  . learn method
+>                  . map (Just . words) . lines
 >                  <$> readFileWithExpansion file
 >                 )
->                 (const $
->                  hPutStrLn stderr
->                  ("failed to read \"" ++ file ++ "\"") >>
->                  return e
+>                 (const
+>                  $  hPutStrLn stderr
+>                     ("failed to read \"" ++ file ++ "\"")
+>                  >> return e
 >                 )
 >           ratt f1 f2 f3 typ
 >               = catchIOError
@@ -784,24 +943,24 @@ in order to deal with spaces or other special characters.
 >                    return e
 >                   )
 >                  )
->                  (return . insertExpr e . fromAutomaton) =<<
->                  fromE typ <$>
->                  (embedSymbolsATT <$>
->                   readFileWithExpansion f1 <*>
->                   (if f2 == "_"
->                    then mempty
->                    else Just <$> readFileWithExpansion f2
->                   ) <*>
->                   (if f3 == "_"
->                    then mempty
->                    else Just <$> readFileWithExpansion f3
->                   )
+>                  (return . insertExpr e . fromAutomaton)
+>                  . fromE typ
+>                  =<< (embedSymbolsATT
+>                       <$> readFileWithExpansion f1
+>                       <*> (if f2 == "_"
+>                            then mempty
+>                            else Just <$> readFileWithExpansion f2
+>                           )
+>                       <*> (if f3 == "_"
+>                            then mempty
+>                            else Just <$> readFileWithExpansion f3
+>                           )
 >                  )
 >                 )
->                 (const $
->                  hPutStrLn stderr
->                  "failed to read input files" >>
->                  return e
+>                 (const
+>                  $  hPutStrLn stderr
+>                     "failed to read input files"
+>                  >> return e
 >                 )
 
 
@@ -809,10 +968,11 @@ in order to deal with spaces or other special characters.
 > doHelp xs = showArg ArgE ++ " = expression, "  ++
 >             showArg ArgF ++ " = file, "        ++
 >             showArg ArgI ++ " = int, "         ++
+>             showArg ArgS ++ " = string, "      ++
 >             showArg ArgV ++ " = variable\n\n"  ++
 >             unlines s2
->     where cs = zipWith (\a b -> a ++ b) (p1 xs) (map showArgs (p2 xs))
->           s1 = let l = foldr max 0 $ map length cs
+>     where cs = zipWith (++) (p1 xs) (map showArgs (p2 xs))
+>           s1 = let l = foldr (max . length) 0 cs
 >                in map (alignl (l + 2) . alignr l) cs
 >           s2 = zipWith (++) s1 (p3 xs)
 >           alignr l s = take (l - length s) (cycle " ") ++ s
@@ -820,6 +980,7 @@ in order to deal with spaces or other special characters.
 >           showArg ArgE  =  "<e>"
 >           showArg ArgF  =  "<f>"
 >           showArg ArgI  =  "<i>"
+>           showArg ArgS  =  "<s>"
 >           showArg _     =  "<v>"
 >           showArgs = concatMap ((' ':) . showArg)
 >           p1 = map (\(a,_,_) -> a)
@@ -830,7 +991,9 @@ in order to deal with spaces or other special characters.
 > lessHelp xs = do
 >   mpager <- fmap (map snd . filter ((==) "PAGER" . fst)) getEnvironment
 >   let ps     =  words $ head (mpager ++ ["less"])
->       (p:s)  =  if null ps then ["less"] else ps
+>       (p,s)  =  case ps of
+>                   (y:ys) -> (y,ys)
+>                   _ -> ("less",[])
 >       lessP  =  (proc p s)
 >                 { std_in = CreatePipe
 >                 , std_out = UseHandle stdout
@@ -846,21 +1009,30 @@ in order to deal with spaces or other special characters.
 > doRelation :: Env -> Relation -> Maybe Bool
 > doRelation e r
 >     = case r
->       of Equal p1 p2    ->  relate e (==) p1 p2
+>       of CEqual p1 p2   ->  relate id e (==) p1 p2
+>          Equal p1 p2    ->  relate desemantify e (==) p1 p2
+>          CImply p1 p2   ->  relate id e isSupersetOf p1 p2
+>          IsAcom p       ->  check isAcom p
 >          IsB p          ->  check isB p
 >          IsCB p         ->  check isCB p
 >          IsDef p        ->  check isDef p
 >          IsFin p        ->  check isFinite p
 >          IsFO2 p        ->  check isFO2 p
 >          IsFO2B p       ->  check isFO2B p
+>          IsFO2BF p      ->  check isFO2BF p
 >          IsFO2S p       ->  check isFO2S p
 >          IsGD p         ->  check isGD p
 >          IsGLPT p       ->  check isGLPT p
 >          IsGLT p        ->  check isGLT p
+>          IsLAcom p      ->  check isLAcom p
 >          IsLB p         ->  check isLB p
 >          IsLPT p        ->  check isLPT p
 >          IsLT p         ->  check isLT p
 >          IsLTT p        ->  check isLTT p
+>          IsMTDef p      ->  check isMTDef p
+>          IsMTF p        ->  check isMTF p
+>          IsMTGD p       ->  check isMTGD p
+>          IsMTRDef p     ->  check isMTRDef p
 >          IsPT p         ->  check isPT p
 >          IsRDef p       ->  check isRDef p
 >          IsSF p         ->  check isSF p
@@ -868,6 +1040,7 @@ in order to deal with spaces or other special characters.
 >          IsSP p         ->  check isSP p
 >          IsTDef p       ->  check isTDef p
 >          IsTGD p        ->  check isTGD p
+>          IsTLAcom p     ->  check isTLAcom p
 >          IsTLB p        ->  check isTLB p
 >          IsTLT p        ->  check isTLT p
 >          IsTLPT p       ->  check isTLPT p
@@ -875,32 +1048,41 @@ in order to deal with spaces or other special characters.
 >          IsTRDef p      ->  check isTRDef p
 >          IsTrivial p    ->  check isTrivial p
 >          IsTSL p        ->  check isTSL p
->          Subset p1 p2   ->  relate e isSupersetOf p1 p2
->          SSubset p1 p2  ->  relate e isProperSupersetOf p1 p2
->     where check f p = fmap f . fmap normalize . fmap desemantify .
->                       makeAutomaton $ (\(a, b, _) -> (a, b, Just p)) e
+>          IsVariety t s p
+>              -> case t of
+>                   VTStar -> check (isV True s) p
+>                   VTPlus -> check (isV False s) p
+>                   VTTier -> check (isV False s . project) p
+>          Subset p1 p2   ->  relate desemantify e isSupersetOf p1 p2
+>          SSubset p1 p2  ->  relate desemantify e isProperSupersetOf p1 p2
+>     where check f p = fmap (f . normalize . desemantify)
+>                       . makeAutomaton
+>                       $ (\(a, b, _) -> (a, b, Just p)) e
+>           isV a b = fromMaybe False . isVariety a b
 
-> relate :: Env ->
->           (FSA Integer String -> FSA Integer String -> a) -> Expr -> Expr ->
+> relate :: (FSA Integer (Maybe String) -> x) ->
+>           Env ->
+>           (x -> x -> a) -> Expr -> Expr ->
 >           Maybe a
-> relate (a,b,_) f p1 p2 = f' <$> makeAutomaton e1 <*> makeAutomaton e2
+> relate g (a,b,_) f p1 p2 = f' <$> makeAutomaton e1 <*> makeAutomaton e2
 >     where e1 = (a, b, Just p1)
 >           e2 = (a, b, Just p2)
 >           f' x y = let ss = collapse (maybe id insert) empty $
 >                             union (alphabet x) (alphabet y)
->                    in f (desemantify $ semanticallyExtendAlphabetTo ss x)
->                         (desemantify $ semanticallyExtendAlphabetTo ss y)
+>                    in f (g $ semanticallyExtendAlphabetTo ss x)
+>                         (g $ semanticallyExtendAlphabetTo ss y)
 
-> act :: Env -> Trither Command Relation Env -> IO Env
-> act d = trither
->         (doCommand d)
->         (\r -> maybe err print (doRelation d r) >> return d)
->         return
+> act :: PlebConfig ->  Env -> Trither Command Relation Env -> IO Env
+> act pc d = trither
+>            (doCommand pc d)
+>            (\r -> maybe err print (doRelation d r) >> return d)
+>            return
 >     where err = hPutStrLn stderr "could not parse relation"
 
-> importScript :: Env -> [String] -> IO Env
-> importScript e [] = return e
-> importScript e (a:as) = flip importScript as =<< act e (processLine e a)
+> importScript :: PlebConfig -> Env -> [String] -> IO Env
+> importScript _ e [] = return e
+> importScript pc e (a:as)
+>     = flip (importScript pc) as =<< act pc e (processLine e a)
 
 
 
@@ -913,9 +1095,13 @@ in order to deal with spaces or other special characters.
 > deescape (x:xs)  =  x : deescape xs
 > deescape _       =  []
 
-> display :: (Ord n, Ord e, Show n, Show e) => FSA n e -> IO ()
-> display fsa = do
->   let dotP = (proc "dot" ["-Tpng"])
+> display :: (Ord n, Ord e, Show n, Show e) =>
+>            PlebConfig -> FSA n e -> IO ()
+> display pc = display' pc . to Dot
+
+> display' :: PlebConfig -> String -> IO ()
+> display' pc s = do
+>   let dotP = (uncurry proc $ dotProg pc)
 >              { std_in = CreatePipe
 >              , std_out = CreatePipe
 >              , std_err = CreatePipe
@@ -923,7 +1109,7 @@ in order to deal with spaces or other special characters.
 >   (Just p_stdin, Just pipe, Just p_stderr, dot_ph) <- createProcess dotP
 >   _ <- hGetContents p_stderr
 >   hSetBinaryMode pipe True
->   let displayP = (proc "display" [])
+>   let displayP = (uncurry proc $ displayProg pc)
 >                  { std_in = UseHandle pipe
 >                  , std_out = CreatePipe
 >                  , std_err = CreatePipe
@@ -931,7 +1117,7 @@ in order to deal with spaces or other special characters.
 >   (_, Just d_stdout, Just d_stderr, _)  <- createProcess displayP
 >   _ <- hGetContents d_stdout
 >   _ <- hGetContents d_stderr
->   hPutStr p_stdin (to Dot fsa)
+>   hPutStr p_stdin s
 >   hClose p_stdin
 >   _ <- waitForProcess dot_ph
 >   return ()
@@ -959,7 +1145,7 @@ in order to deal with spaces or other special characters.
 > modwords s = modwords' s ""
 
 > modwords' :: String -> String -> [String]
-> modwords' [] partial = if null partial then [] else [partial]
+> modwords' [] partial = [partial | not $ null partial]
 > modwords' (a:xs) partial
 >     | isSpace a = g $ modwords (dropWhile isSpace xs)
 >     | a == '\\' = modwords' (drop 1 xs) (partial ++ take 1 xs)
@@ -997,7 +1183,7 @@ in order to deal with spaces or other special characters.
 > expand :: FilePath -> IO FilePath
 > expand fp
 >     = case parts of
->         ("~":xs) -> joinPath <$> (:xs)
+>         ("~":xs) -> joinPath . (:xs)
 >                     <$> catchIOError getHomeDirectory (const (pure "~"))
 >         _ -> pure fp
 >     where parts = splitDirectories fp

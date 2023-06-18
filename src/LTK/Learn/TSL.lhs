@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Learn.TSL
-> Copyright : (c) 2020 Dakotah Lambert
+> Copyright : (c) 2019-2020 Dakotah Lambert
 > License   : MIT
 
 > A learner for tier-based strictly local stringsets.

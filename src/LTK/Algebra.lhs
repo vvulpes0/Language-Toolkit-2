@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Algebra
-> Copyright : (c) 2021 Dakotah Lambert
+> Copyright : (c) 2021-2023 Dakotah Lambert
 > License   : MIT
 
 > This module centralizes definitions of some commonly used
@@ -19,6 +19,9 @@
 >     , me
 >     , emee
 >     , ese
+>       -- * Other generation
+>     , syntacticOrder
+>     , emblock
 >       -- *Powers
 >     , idempotents
 >     , omega
@@ -74,8 +77,7 @@ ese is e*S*e: first go wherever you can from e, then take another e.
 > -- |The semigroup multiplied on the left and right
 > -- by the given idempotent.
 > ese :: (Ord n, Ord e) => FSA (S n e) e -> T n e -> Set (T n e)
-> ese sg e = collapse (union . follow sg (s e)) empty
->            $ es
+> ese sg e = collapse (union . follow sg (s e)) empty es
 >     where es = primitiveIdealR sg e
 >           s = snd . nodeLabel
 
@@ -103,7 +105,7 @@ Here we use the syntactic monoid and simply exclude the identity
 if it does not appear in the syntactic semigroup.
 
 > -- |All elements \(e\) of the given monoid such that \(e*e=e\).
-> -- Except the identity element.  Add that manually if you need it.
+> -- Except the null word.  Add that manually if you need it.
 > idempotents :: (Ord n, Ord e) =>
 >                FSA (n, [Symbol e]) e -> Set (T n e)
 > idempotents f = keep isIdem . tmap destination $ transitions f
@@ -113,13 +115,102 @@ if it does not appear in the syntactic semigroup.
 > -- and \(t\) is in \(\{s, s^2, s^3, \ldots\}\).
 > -- In other words, \(t\) is the unique idempotent element
 > -- in this set.
-> -- This method used here assumes @monoid@ is aperiodic and finite
-> -- and uses this to skip many otherwise necessary checks.
 > omega :: (Ord n, Ord e) => FSA (S n e) e -> T n e -> T n e
-> omega monoid s = fst
->                  . until (uncurry (==)) (\(_,b) -> (b, f b))
->                  $ (s, f s)
->     where f x = Set.findMin $ follow monoid (snd (nodeLabel x)) x
+> omega monoid s = fst . until (uncurry (==)) (\(a,_) -> f (next a)) $ f s
+>     where square x = Set.findMin $ follow monoid (snd (nodeLabel x)) x
+>           next   x = Set.findMin $ follow monoid (snd (nodeLabel s)) x
+>           f      x = (x, square x)
+
+> -- |Construct a monoid based on the idempotent paths
+> -- as described by Straubing (1985).  Elements are of the form
+> -- \((e,esf,f)\) for idempotents \(e\) and \(f\) and arbitrary \(s\).
+> --
+> -- @since 1.1
+> emblock :: (Ord n, Ord e) => SynMon n e -> SynMon Integer Integer
+> emblock = syntacticMonoid . renameStates . renameSymbols . emblock'
+>     where renameSymbols f = renameSymbolsBy index f
+>               where syms = zip (Set.toList $ alphabet f) [1..]
+>                     index x = let xs = filter ((==x) . fst) syms
+>                               in case xs of
+>                                    []    -> 0
+>                                    (y:_) -> snd y
+
+> emblock' :: (Ord n, Ord e) => SynMon n e
+>          -> FSA ([e],[e],[e]) ([e],[e],[e])
+> emblock' s = FSA { sigma = Set.fromList $ map (nodeLabel . source) trs
+>                  , transitions = Set.fromList (trs ++ itrs)
+>                  , initials = Set.singleton (State ([],[],[]))
+>                  , finals = Set.empty
+>                  , isDeterministic = True
+>                  }
+>     where es = map h . Set.toList $ idempotents s
+>           qs = map h . Set.toList $ states s
+>           ismon = initials s `Set.isSubsetOf` idempotents s
+>           h = ([] ++) . unsymbols . snd . nodeLabel
+>           go xs q = fst . choose $ follow s (map Symbol $ concat xs) q
+>           q0 = fst . choose $ initials s
+>           trs = [let exf = go [e,x,f] q0
+>                      fyg = go [f,y,g] q0
+>                  in Transition { source      = State (e, h exf, f)
+>                                , destination = State
+>                                                (e,h $ go [h fyg] exf,g)
+>                                , edgeLabel   = Symbol (f, h fyg, g)
+>                             }
+>                 | e <- es, f <- es, g <- es
+>                 , x <- qs, y <- qs
+>                 ]
+>           itrs = if ismon
+>                  then []
+>                  else [Transition { source = State ([],[],[])
+>                                   , destination = State p
+>                                   , edgeLabel = Symbol p
+>                                   }
+>                       | (Symbol p) <- map edgeLabel trs
+>                       ]
+
+Syntactic Order
+===============
+Pin (1997) suggests the following parial order on syntactic semigroups:
+s <= t iff for all u,v it holds that utv in L implies usv in L.
+This is a weak partial order:
+* reflexive: clear from construction
+* antisymmetric:
+  suppose x <= y and y <= x; then uxv in L iff uyv in L
+  and thus x is Myhill-related to y.
+
+The way the syntactic monoid is constructed,
+this information does remain accessible, so we can generate this order.
+We'll generate it as an FSA with only one sort of edge label,
+where an edge exists from p to q iff p <= q.
+The initial state is the identity and the finals are the finals.
+
+> -- |Returns a machine whose states represent monoid elements
+> -- and where a transition exists from \(p\) to \(q\)
+> -- if and only if \(p\leq q\).
+> --
+> -- @since 1.1
+> syntacticOrder :: (Ord n, Ord e) => SynMon n e -> FSA [e] ()
+> syntacticOrder s = FSA
+>                    { sigma = Set.singleton ()
+>                    , transitions = Set.fromList
+>                                    [ Transition { source = f x
+>                                                 , destination = f y
+>                                                 , edgeLabel = Symbol ()
+>                                                 }
+>                                    | x <- q, y <- q, x # y
+>                                    ]
+>                    , initials = tmap f (initials s)
+>                    , finals = tmap f (finals s)
+>                    , isDeterministic = False
+>                    }
+>     where q = Set.toList $ states s
+>           f = fmap (unsymbols . snd)
+>           g = snd . nodeLabel
+>           x # y = all (accepts s . unsymbols)
+>                   [ g u ++ g x ++ g v
+>                   | u <- q, v <- q,
+>                     accepts s (unsymbols (g u ++ g y ++ g v))
+>                   ]
 
 
 Helpers

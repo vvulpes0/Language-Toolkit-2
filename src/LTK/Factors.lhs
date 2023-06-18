@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module:    LTK.Factors
-> Copyright: (c) 2017-2019 Dakotah Lambert
+> Copyright: (c) 2017-2019,2023 Dakotah Lambert
 > License:   MIT
 
 > This module provides a means to define
@@ -46,12 +46,12 @@
 > data Literal e = Literal Bool (Factor e) deriving (Eq, Ord, Read, Show)
 
 > -- |Multiple constraints, joined by @OR@.
-> data Disjunction e = Disjunction (Set (Literal e))
->                      deriving (Eq, Ord, Read, Show)
+> newtype Disjunction e = Disjunction (Set (Literal e))
+>     deriving (Eq, Ord, Read, Show)
 
 > -- |Multiple disjunctions, joined by @AND@.
-> data Conjunction e = Conjunction (Set (Disjunction e))
->                      deriving (Eq, Ord, Read, Show) -- Primitive Constraint
+> newtype Conjunction e = Conjunction (Set (Disjunction e))
+>     deriving (Eq, Ord, Read, Show) -- Primitive Constraint
 
 > -- |The factor is required to appear in every string.
 > -- Note that a conjunctive constraint of
@@ -67,32 +67,33 @@
 > buildFactor :: (Enum n, Ord n, Ord e) =>
 >                Set e -> Factor e -> Bool -> FSA n e
 > buildFactor alpha (Substring factor anchoredToHead anchoredToTail)
->     = flip (flip f alpha) factor
+>     = flip (`f` alpha) factor
 >     where f = case (anchoredToHead, anchoredToTail)
 >               of (True,   True)   ->  word
 >                  (True,   False)  ->  initialLocal
 >                  (False,  True)   ->  finalLocal
 >                  (False,  False)  ->  local
 > buildFactor alpha (Subsequence factor)
->     =  (\isPositive ->
->         FSA { sigma        =  alpha
->             , transitions  =  tran
->             , initials     =  singleton . State $ toEnum 0
->             , finals       =  if isPositive then fin else fin'
->             , isDeterministic = True
->             }
->        )
+>     =  \isPositive ->
+>        FSA { sigma        =  alpha
+>            , transitions  =  tran
+>            , initials     =  singleton . State $ toEnum 0
+>            , finals       =  if isPositive then fin else fin'
+>            , isDeterministic = True
+>            }
 >     where tagged     =  zip factor $ iterate succ (toEnum 0)
->           trans'     =  unionAll $
->                         tmap
->                         (\(symset, st) ->
->                          union
->                          (tmap (succtrans st) $ intersection alpha symset)
->                          (tmap (selftrans st) $ difference alpha symset)
->                         )
+>           trans'     =  unionAll
+>                         $ tmap
+>                           (\(symset, st) ->
+>                            tmap (succtrans st)
+>                                 (intersection alpha symset)
+>                            `union`
+>                            tmap (selftrans st)
+>                                 (difference alpha symset)
+>                           )
 >                         tagged
->           tran       =  union trans' $
->                         tmap (selftrans nextState) alpha
+>           tran       =  tmap (selftrans nextState) alpha
+>                         `union` trans'
 >           fin'       =  Set.fromList $ tmap (State . snd) tagged
 >           nextState  =  succ . maximum $ tmap snd tagged
 >           fin        =  singleton (State nextState)
@@ -147,18 +148,15 @@
 >           trans'     =  unionAll $
 >                         tmap
 >                         (\(symset, st) ->
->                          union
->                          (tmap
->                           (succtrans st)
->                           (intersection alpha symset))
->                          (tmap
->                           (sinktrans sinkState st)
->                           (difference alpha symset))
+>                          tmap (succtrans st)
+>                               (intersection alpha symset)
+>                          `union`
+>                          tmap (sinktrans sinkState st)
+>                               (difference alpha symset)
 >                         )
 >                         tagged
->           trans      =  union
->                         (tmap (succtrans nextState) alpha)
->                         trans'
+>           trans      =  tmap (succtrans nextState) alpha
+>                         `union` trans'
 >           nextState  =  succ . maximum $ tmap snd tagged
 >           sinkState  =  succ nextState
 
@@ -177,13 +175,12 @@
 >           trans'     =  unionAll $
 >                         tmap
 >                         (\(symset, st) ->
->                          union
->                          (tmap (succtrans st) $ intersection alpha symset)
->                          (tmap (sinktrans sinkState st) $
->                           difference alpha symset
->                          )
->                         )
->                         tagged
+>                          tmap (succtrans st)
+>                               (intersection alpha symset)
+>                          `union`
+>                          tmap (sinktrans sinkState st)
+>                               (difference alpha symset)
+>                         ) tagged
 >           trans      =  unionAll
 >                         [ tmap (selftrans nextState) alpha
 >                         , tmap (selftrans sinkState) alpha
@@ -215,13 +212,13 @@ negative).  Making these from NFAs is cheaper, it seems.
 >                         , isDeterministic  =  False
 >                         }
 >     where tagged     =  zip symseq [0 :: Integer ..]
->           trans'     =  unionAll $
->                         tmap
->                         (\(symset, st) ->
->                          (tmap (succtrans st) (intersection alpha symset))
->                         )
->                            tagged
->           trans      =  union (tmap (selftrans 0) alpha) trans'
+>           trans'     =  unionAll
+>                         $ tmap
+>                           (\(symset, st) ->
+>                            tmap (succtrans st)
+>                            $ intersection alpha symset
+>                           ) tagged
+>           trans      =  tmap (selftrans 0) alpha `union` trans'
 >           nextState  =  succ . maximum $ tmap snd tagged
 
 > local :: (Enum a, Ord a, Ord b) =>

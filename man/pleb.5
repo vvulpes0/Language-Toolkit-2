@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEB 5 "2022-03-15" "Version 1.0" "Language Toolkit"
+.TH PLEB 5 "2023-06-06" "Version 1.1" "Language Toolkit"
 .SH NAME
 pleb \- Piecewise / Local Expression Builder
 .SH DESCRIPTION
@@ -83,18 +83,18 @@ Additionally it can be the name of a defined subexpression.
 ::=
 .RI < n-op >
 .B {
-.RI < exp >
+.RI [< exp >
 .RB [ ,
-.RI < exp "> ...\&]"
+.RI < exp "> ...\&]]"
 .B }
 .RS
 .RE
 .BR "        " "  |"
 .RI < n-op >
 .B (
-.RI < exp >
+.RI [< exp >
 .RB [ ,
-.RI < exp "> ...\&]"
+.RI < exp "> ...\&]]"
 .B )
 .PP
 .RI < unary >
@@ -208,7 +208,7 @@ Symbol sets are define by the following syntax:
 .B }
 .RS
 .RE
-.R "            |"
+.RI "            |"
 .B (
 .RI < symbols
 [
@@ -217,7 +217,7 @@ Symbol sets are define by the following syntax:
 .B )
 .RS
 .RE
-.R "            |"
+.RI "            |"
 .B [
 .RI < symbols
 [
@@ -226,12 +226,12 @@ Symbol sets are define by the following syntax:
 .B ]
 .RS
 .RE
-.R "            |"
+.RI "            |"
 .B /
 .RI < name >
 .RS
 .RE
-.R "            |"
+.RI "            |"
 .RI < name >
 .RE
 .PP
@@ -280,6 +280,22 @@ It is better to use the
 .BR .\&< ...\& >
 form in that case.
 .TP
+.B |_|_|
+Shuffle product of the operands.
+The shuffle product of A and B
+is the set of words formed by taking a word from A and a word from B
+and interleaving them.
+.TP
+.B .^.
+Infiltration product of the operands.
+The infiltration product of A and B
+is the set of words formed by taking a word from A and a word from B
+and interleaving them,
+with overlaps.
+That is, if the two words both contain the symbol x,
+the interleaving might contain only one instance of x
+if the order requirements are fulfilled.
+.TP
 .B \e\e
 Left-quotients of the operands, associating to the left.
 The left-quotient A\eB is the set of strings that can be
@@ -305,6 +321,20 @@ This has the same caveat as the concatenation operator:
 factor-expressions that are not fully anchored
 may have arbitrary strings at the non-anchored ends.
 .TP
+.B +
+The expression
+.B +x
+is equivalent to
+.BR @(x,*x) .
+.TP
+.B ^
+The upward closure of the operand.
+Accept all and only those strings that can be formed
+by inserting zero or more symbols into a string accepted by the operand.
+.TP
+.B -
+The reversal of the operand.
+.TP
 .B $
 The downward closure of the operand.
 Accept all and only those strings that can be formed
@@ -323,6 +353,18 @@ on which the operand should occur.
 This returns the preprojection of the operand:
 the largest language that when projected to the tier
 is equal to the operand.
+.RE
+.PP
+.B |
+.RI < symbols "> ["
+.B ,
+.RI < symbols "> ...\&]"
+.B |
+.RS
+The symbols defined by the
+.RI < symbols >
+components are made neutral
+in the language specified by the operand.
 .RE
 .SS Unicode Syntax
 In addition to the ASCII syntax described previously,
@@ -348,6 +390,12 @@ there is a unicode syntax that provides the following synonyms:
 <U+22C1> [n-ary logical or] or <U+2228> [logical or] or
 <U+22C3> [n-ary union] or <U+222A> [union]
 .TP
+.B |_|_|
+<U+29E2> [shuffle product]
+.TP
+.B .^.
+<U+21D1> [upwards double arrow]
+.TP
 .B @
 <U+2219> [bullet operator]
 .TP
@@ -356,6 +404,12 @@ there is a unicode syntax that provides the following synonyms:
 .TP
 .B *
 <U+2217> [asterisk operator]
+.TP
+.B ^
+<U+2191> [upwards arrow]
+.TP
+.B -
+<U+21C4> [right arrow over left arrow]
 .TP
 .B $
 <U+2193> [downwards arrow]
@@ -390,10 +444,10 @@ it is not the case that the word is empty.
 .B = non-primary {/L, /H}
 .RS
 .RE
-.B = obligatoriness </primary>
+.B = obligatoriness <primary>
 .RS
 .RE
-.B = culminativity !</primary, /primary>
+.B = culminativity !<primary, primary>
 .RS
 .RE
 .B /\e{obligatoriness, culminativity}

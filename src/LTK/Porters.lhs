@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module : LTK.Porters
-> Copyright : (c) 2018-2020 Dakotah Lambert
+> Copyright : (c) 2018-2020,2022-2023 Dakotah Lambert
 > License   : MIT
 > 
 > This module provides methods to convert automata to and from
@@ -21,6 +21,8 @@
 >        -- various formats.
 >        , Type
 >        , Dot(Dot)
+>        , EggBox(EggBox)
+>        , SyntacticOrder(SyntacticOrder)
 >        , Jeff(Jeff)
 >        , Pleb(Pleb)
 >        , ATT(ATT)
@@ -36,13 +38,17 @@
 >        , Exportable(..)
 >        ) where
 
-> import LTK.FSA          (FSA, renameStates, renameSymbolsBy)
+> import LTK.FSA          (FSA, renameStates, renameSymbolsBy
+>                         , syntacticMonoid
+>                         )
 > import LTK.Porters.ATT  ( exportATT
 >                         , invertATT
 >                         , readATT
 >                         )
 > import LTK.Porters.Corpus (readCorpus)
 > import LTK.Porters.Dot  (exportDot, formatSet)
+> import LTK.Porters.EggBox (exportEggBox)
+> import LTK.Porters.SyntacticOrder (exportSyntacticOrder)
 > import LTK.Porters.Jeff ( exportJeff
 >                         , readJeff
 >                         , transliterate
@@ -68,13 +74,13 @@
 > -- |Try to create an 'FSA' from a @String@ treated as the given 'Type'.
 > fromE :: (Importable i) =>
 >          Type i -> String -> Either String (FSA Integer String)
-> fromE ty = toFSA ty
+> fromE = toFSA
 
 > -- |Create a @String@ from an 'FSA', formatted appropriately for
 > -- the given 'Type'.
 > to :: (Ord n, Ord e, Show n, Show e, Exportable x) =>
 >       Type x -> FSA n e -> String
-> to ty = fromFSA ty
+> to = fromFSA
 
 > -- |An importable or exportable format.
 > type Type t = t -> t
@@ -97,6 +103,23 @@
 
 > instance Exportable Dot
 >     where fromFSA _ = exportDot
+
+=== instances for EggBox (in Dot format)
+
+> -- |The egg-box in GraphViz Dot format.
+> newtype EggBox = EggBox EggBox -- ^@since 1.1
+
+> instance Exportable EggBox
+>     where fromFSA _ = exportEggBox . syntacticMonoid
+
+=== instances for SyntacticOrder (in Dot format)
+
+> -- |A Hasse diagram of the syntactic order.
+> --
+> -- @since 1.1
+> newtype SyntacticOrder = SyntacticOrder SyntacticOrder
+> instance Exportable SyntacticOrder
+>     where fromFSA _ = exportSyntacticOrder . syntacticMonoid
 
 === instances for Pleb format
 

@@ -121,8 +121,8 @@ The main meat:
 >           >> exitFailure
 >     | otherwise
 >         = do c <- classified
->              (if (optQuiet opts) then void else f) c
->              if (optReduce opts c) then exitSuccess else exitFailure
+>              (if optQuiet opts then void else f) c
+>              if optReduce opts c then exitSuccess else exitFailure
 >     where printUsage = putStr $ usageInfo usageHeader options
 >           unknowns = filter (`notElem` toCheck) classes
 >           aut = readAut opts input
@@ -143,8 +143,10 @@ The main meat:
 >     where m = syntacticMonoid aut
 
 > readAut :: Options -> String -> IO (FSA Integer String)
-> readAut opts b = fmap (if optNormalize opts then normalize else id)
->                  $ fmap (optType opts) str
+> readAut opts b = fmap
+>                  ((if optNormalize opts then normalize else id)
+>                   . optType opts)
+>                  str
 >     where str :: IO String
 >           str = maybe (return b)
 >                 (\fp -> withFile fp ReadMode embed)
@@ -170,45 +172,53 @@ so that results may be listed in topographic order.
 
 > classmap :: (Ord n, Ord e) =>
 >             Map String
->             ( (Either (FSA n e -> Bool) (SynMon n e -> Bool))
+>             ( Either (FSA n e -> Bool) (SynMon n e -> Bool)
 >             , [String])
 > classmap = Map.fromList
 >            [ ("1", (Left isTrivial, ["Fin","CB","SP"]))
+>            , ("Acom", (Right isAcomM, ["LTT","MTF"]))
 >            , ("B", (Right isBM, ["FO2"]))
->            , ("CB", (Right isCBM, ["B","LT","PT"]))
+>            , ("CB", (Right isCBM, ["B","LT","Acom"]))
 >            , ("Def", (Right isDefM, ["GD", "SL", "TDef"]))
 >            , ("FO2", (Right isFO2M, ["FO2S", "GLT"]))
->            , ("FO2B", (Right isFO2BM, ["SF"]))
+>            , ("FO2BF", (Right isFO2BFM, ["SF"]))
+>            , ("FO2B", (Right isFO2BM, ["FO2BF"]))
 >            , ("FO2S", (Right isFO2SM, ["FO2B"]))
 >            , ("Fin", (Left isFinite, ["Def", "PT", "RDef"]))
 >            , ("GD", (Right isGDM, ["LT", "TGD"]))
 >            , ("GLPT", (Right isGLPTM, ["FO2B"]))
 >            , ("GLT", (Right isGLTM, ["GLPT"]))
+>            , ("LAcom", (Right isLAcomM, ["LPT", "TLAcom"]))
 >            , ("LB", (Right isLBM, ["FO2S"]))
 >            , ("LPT", (Right isLPTM, ["GLPT"]))
 >            , ("LT", (Right isLTM, ["LB", "LTT", "TLT"]))
->            , ("LTT", (Right isLTTM, ["LPT", "TLTT"]))
+>            , ("LTT", (Right isLTTM, ["LAcom", "TLTT"]))
+>            , ("MTDef", (Right isMTDefM, ["MTGD"]))
+>            , ("MTF", (Right isMTFM, ["MTDef","MTRdef","PT"]))
+>            , ("MTGD", (Right isMTGDM, ["FO2"]))
+>            , ("MTRDef", (Right isMTRDefM, ["MTGD"]))
 >            , ("PT", (Right isPTM, ["FO2"]))
 >            , ("RDef", (Right isRDefM, ["GD", "SL", "TRDef"]))
 >            , ("SF", (Right isSFM, []))
 >            , ("SL", (Left isSL, ["LT", "TSL"]))
 >            , ("SP", (Left isSP, ["PT"]))
->            , ("TDef", (Right isTDefM, ["TGD", "TSL"]))
->            , ("TGD", (Right isTGDM, ["FO2", "TLT"]))
+>            , ("TDef", (Right isTDefM, ["TGD", "TSL", "MTDef"]))
+>            , ("TGD", (Right isTGDM, ["MTGD", "TLT"]))
+>            , ("TLAcom", (Right isTLAcomM, ["TLPT"]))
 >            , ("TLB", (Right isTLBM, ["FO2B"]))
 >            , ("TLPT", (Right isTLPTM, ["GLPT"]))
 >            , ("TLT", (Right isTLTM, ["GLT", "TLB", "TLTT"]))
->            , ("TLTT", (Right isTLTTM, ["TLPT"]))
->            , ("TRDef", (Right isTRDefM, ["TGD", "TSL"]))
+>            , ("TLTT", (Right isTLTTM, ["TLAcom"]))
+>            , ("TRDef", (Right isTRDefM, ["TGD", "TSL", "MTRDef"]))
 >            , ("TSL", (Left isTSL, ["TLT"]))
 >            ]
 
 
 > inclusion :: [(String, String)]
-> inclusion = foldr expand [] . map (fmap snd) $ Map.assocs cm
+> inclusion = foldr (expand . fmap snd) [] $ Map.assocs cm
 >     where expand (x, ss) a = map ((,) x) ss ++ a
 >           cm :: Map String
->             ( (Either (FSA () () -> Bool) (SynMon () () -> Bool))
+>             ( Either (FSA () () -> Bool) (SynMon () () -> Bool)
 >             , [String])
 >           cm = classmap
 

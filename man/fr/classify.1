@@ -1,0 +1,88 @@
+.TH CLASSIFY 1 "2022-03-24" "Version 1.1" "Language Toolkit"
+.SH NOM
+classify \- vérifier si un automate est dans une classe
+.SH SYNOPSIS
+.B classify
+.RB [ -a | -A | -j | -p ]
+.RB [ -e | -u ]
+.RB [ -n | -N ]
+.RB [ -hqv?\& ]
+.RB [ -s
+.IR caractères ]
+.I classe ...\&
+.SH DESCRIPTION
+La commande
+.B classify
+lit un automate fini et verifie
+s'il est élément des classes données.
+L'automate est donné depuis l'entrée standard,
+et les options déterminent son format.
+Pour le format AT&T,
+un tableau optionnel de caractères peut être donné avec l'option
+.BR -s .
+.PP
+Le code de retour indique si quelques
+.RB ( -e ", défaut)"
+ou toutes
+.RB ( -u )
+les classes données ont le langage pour élément.
+.PP
+Si dans un ensemble de plusieurs options mutuellement exclusives
+plus d'un est donné,
+ce n'est pas une erreur.
+Seulement le dernier est utilisé.
+.SH OPTIONS
+.SS Formats
+.TP
+.B -a
+Format AT&T tabulaire, projeté à l'entrée.
+C'est la format par défaut.
+.TP
+.B -A
+Format AT&T tabulaire, projeté à la sortie.
+.TP
+.B -j
+Format Jeff.
+.TP
+.B -p
+Format PLEB
+.SS Réduction
+.TP
+.B -e
+Le code de retour est 0 si quelque classe donnée possède le langage.
+C'est l'agit par défaut.
+.TP
+.B -u
+Le code de retour est 0 si toutes les classes données
+possèdent le langage.
+.SS Normalisation
+.TP
+.B -n
+Normaliser l'automate avant de classifier.
+C'est l'agit par défaut.
+.TP
+.B -N
+Classifier l'automate sans normalisation.
+On utiliserait cette option
+si on voulait classifier un transducteur minimal.
+.SS Autres options
+.TP
+.BR -h ", " -?\&
+Afficher un message d'aide et retourner.
+.TP
+.B -q
+Ne rien écrire sur la sortie standard.
+.TP
+.B -v
+Afficher le numéro de version sur la sortie standard
+et immédiatement sortir.
+.SH "CODE DE RETOUR"
+.TP
+.B 0
+Le langage était un élément à souhait.
+.TP
+.B ">0"
+Il y avait une error, ou le langage n'était pas un élément à souhait.
+.SH "VOIR AUSSI"
+.BR fsm (5),
+.BR pleb (5)

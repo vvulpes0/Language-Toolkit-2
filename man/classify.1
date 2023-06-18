@@ -1,4 +1,4 @@
-.TH CLASSIFY 1 "2022-03-13" "Version 1.0" "Language Toolkit"
+.TH CLASSIFY 1 "2022-03-13" "Version 1.1" "Language Toolkit"
 .SH NAME
 classify \- determine subregular class membership
 .SH SYNOPSIS
@@ -19,7 +19,7 @@ The automaton is read from the standard input,
 and its format is determined by command-line options.
 For the AT&T tabular format, an optional symbol table may be provided
 with the
-.RB -s
+.B -s
 option.
 .PP
 The return value indicates whether any
@@ -32,7 +32,7 @@ Specifying more than one of any set of mutually-exclusive options
 shall not be considered an error.
 The last option specified shall determine the behavior of the utility.
 .SH OPTIONS
-.SS FORMATS
+.SS Formats
 .TP
 .B -a
 AT&T tabular format, input projection.
@@ -46,7 +46,7 @@ Jeff format.
 .TP
 .B -p
 PLEB format
-.SS REDUCTION
+.SS Reduction
 .TP
 .B -e
 Exit successfully iff any specified class contains the pattern.
@@ -54,7 +54,7 @@ This is the default.
 .TP
 .B -u
 Exit successfully iff all specified classes contain the pattern.
-.SS NORMALIZATION
+.SS Normalization
 .TP
 .B -n
 Normalize the pattern before processing.
@@ -64,7 +64,7 @@ This is the default.
 Do not normalize the pattern before processing.
 This is useful when dealing with an already-minimal
 finite-state transducer rather than an acceptor.
-.SS OTHER OPTIONS
+.SS Other Options
 .TP
 .BR -h ", " -?\&
 Show a brief help message and exit.

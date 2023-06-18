@@ -7,7 +7,7 @@
 
 > {-|
 > Module    : Traversals
-> Copyright : (c) 2017-2021 Jim Rogers and Dakotah Lambert
+> Copyright : (c) 2017-2023 Jim Rogers and Dakotah Lambert
 > License   : MIT
 >
 > Find paths through an automaton.
@@ -75,33 +75,41 @@ In order to have a Multiset of Path, Path must be Ord:
 >               where (e1, l1, d1)  =  (endstate p1, labels p1, depth p1)
 >                     (e2, l2, d2)  =  (endstate p2, labels p2, depth p2)
 
+> appendPath :: Ord n => Path n e -> Path n e -> Path n e
+> appendPath (Path xs1 q1 qs1 d1) (Path xs2 q2 qs2 d2)
+>     = Path { labels         =  xs1 ++ xs2
+>            , endstate       =  maybe id (const . Just) q1 q2
+>            , stateMultiset  =  qs1 `union` qs2
+>            , depth          =  d1 + d2
+>            }
+
 #if MIN_VERSION_base(4,9,0)
 Semigroup instance to satisfy base-4.9
 
 > instance (Ord n) => Semigroup (Path n e) where
->     (<>) = mappend
-
+>     (<>) = appendPath
 #endif
 
 > instance (Ord n) => Monoid (Path n e) where
 >     mempty = Path [] Nothing empty 0
->     mappend (Path xs1 q1 qs1 d1) (Path xs2 q2 qs2 d2)
->         = Path { labels         =  xs1 ++ xs2
->                , endstate       =  maybe id (const . Just) q1 q2
->                , stateMultiset  =  qs1 `union` qs2
->                , depth          =  d1 + d2
->                }
+#if MIN_VERSION_base(4,11,0)
+> -- mappend will eventually be removed
+#elif MIN_VERSION_base(4,9,0)
+>     mappend = (<>)
+#else
+>     mappend = appendPath
+#endif
 
 The extensions of a path p are paths extending p by a single edge
 
 > extend :: (Ord e, Ord n) =>
 >           Path n e -> Set (Transition n e) -> Set (Path n e)
 > extend p = tmap (\t ->
->                  Path { labels    =  (edgeLabel t : labels p)
->                       , endstate  =  (Just (destination t))
+>                  Path { labels    =  edgeLabel t : labels p
+>                       , endstate  =  Just (destination t)
 >                       , stateMultiset
->                             = (insert (destination t) (stateMultiset p))
->                       , depth     = (depth p + 1)
+>                             = destination t `insert` stateMultiset p
+>                       , depth     = depth p + 1
 >                       }
 >                 )
 

@@ -81,11 +81,17 @@
 
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-# Language
+>   CPP,
 >   MultiParamTypeClasses
 >   #-}
+
+#if !defined(MIN_VERSION_base)
+# define MIN_VERSION_base(a,b,c) 0
+#endif
+
 > {-|
 > Module    : LTK.Extract.SP
-> Copyright : (c) 2017-2020 Dakotah Lambert
+> Copyright : (c) 2017-2020,2022-2023 Dakotah Lambert
 > License   : MIT
 > 
 > Find forbidden subsequences of an automaton.
@@ -104,8 +110,14 @@
 >        ) where
 
 > import Control.DeepSeq (NFData)
+#if !MIN_VERSION_base(4,8,0)
 > import Data.List (sortBy)
-> import Data.Ord (comparing)
+> import Data.Ord  (comparing)
+> sortOn :: Ord b => (a -> b) -> [a] -> [a]
+> sortOn f = sortBy (comparing f)
+#else
+> import Data.List (sortOn)
+#endif
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
@@ -221,7 +233,7 @@ wherever a transition occurred in $\delta$.
 > subsequenceClosure' :: (Ord n, Ord e) => FSAt n e -> FSAt n e
 > subsequenceClosure' (FSA ssigma delta q_0 qf _)
 >     =  FSA ssigma (delta `union` delta_prime) q_0 qf False
->     where  delta_prime  =  tmap (\(Transition _ a b) -> (Transition Epsilon a b)) delta
+>     where  delta_prime  =  tmap (\(Transition _ a b) -> Transition Epsilon a b) delta
 
 %if false
 
@@ -351,7 +363,7 @@ minimal forbidden subsequence.
 > collectMinimalFSSQs :: (Ord n, Ord e) => FSAt n e -> Set [e]
 > collectMinimalFSSQs  =  Set.fromList
 >                         . absorb
->                         . sortBy (comparing isize)
+>                         . sortOn isize
 >                         . Set.toList
 >                         . collectFSSQs
 >     where  absorb (x:xs)  =  x : absorb (keep (\y -> x `isNotSSQ` y) xs)
@@ -369,16 +381,25 @@ the same stringset as its source.
 This makes for quite the simple test to determine
 whether a stringset is $\SP$:
 
-> isSP' :: (Ord n, Ord e) => FSAt n e -> Bool
-> isSP' f = f == subsequenceClosure f
+< isSP' :: (Ord n, Ord e) => FSAt n e -> Bool
+< isSP' f = f == subsequenceClosure f
 
 %if false
+
+Additionally, it holds that a language is downward-closed
+iff its complement is upward-closed.
+We can use that fact to avoid generating (and following)
+epsilon transitions, by computing the upward closure of the complement
+rather than the downward closure of the input.
+In either case, the closure is a superset of the input,
+and so they are the same if subtracting the input yields emptiness.
 
 > -- |Returns @True@ iff the stringset represented by the given 'FSA'
 > -- is Strictly Piecewise, that is,
 > -- if the 'FSA' accepts all subsequences of every string it accepts.
 > isSP :: (Ord n, Ord e) => FSA n e -> Bool
-> isSP = isSP'
+> isSP x' = isEmpty . finals $ autDifference (loopify x) x
+>     where x = complement x'
 
 > -- |The stringset represented by the forbiddenSubsequences.
 > fsaFromForbiddenSubsequences :: (Ord e, NFData e) =>

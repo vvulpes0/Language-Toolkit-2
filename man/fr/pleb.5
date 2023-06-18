@@ -1,0 +1,488 @@
+.\" The version string should track the overall package version
+.TH PLEB 5 "2023-06-06" "Version 1.1" "Language Toolkit"
+.SH NOM
+pleb \- Piecewise / Local Expression Builder
+.SH DESCRIPTION
+Un fichier Pleb définit un langage formel (un ensemble de chaînes de
+caractères) par une expression logique.
+Il peut aussi définir des variables pour
+dénoter des ensembles de caractères
+ou des autres expressions.
+Les expressions logiques peuvent exprimer tous les langages rationnels,
+mais le système se concentre principalement sur les contraintes
+dans lesquelles l'ensemble des facteurs est suffisant
+pour vérifier qu'un mot est bien formé.
+.SS Les syntaxes de base
+Les caractères d'espacement,
+.RI < ws >,
+sont ignorés partout,
+sauf dans les symboles ou sauf indication contraires.
+Les commentaires sont également ignorés.
+.PP
+.RS
+.RI < commentaire >
+::=
+.B #
+.RI [< non-CR "> ...\&]"
+.RI < CR >
+.RE
+.PP
+Un fichier (un programme) est une chaîne non vide d'instructions.
+Après avoir exécuté un programme avec
+.BR LTK.Porters.Pleb.readPleb ,
+le résultat se trouve dans la variable
+.BR it .
+C'est généralement la dernière expression nue (le cas échéant).
+Si la variable
+.B it
+n'avait pas de valeur,
+ce moyen d'exécution générerait une erreur.
+L'automate de résultat (le cas échéant) utilise les caractères
+dans de l'ensemble
+.BR universe ,
+la variable qui accumule tous les caractères qui apparaissent
+dans le fichier.
+.PP
+.RS
+.RI < programme >
+::=
+.RI < instruction >
+.RI [< instruction "> ...\&]"
+.RE
+.PP
+Une instruction est
+soit une expression,
+soit une affectation
+soit d'un ensemble de caractères
+soit d'une expression.
+.PP
+.RS
+.RI < instruction >
+::=
+.RI < affectation-car "> | <" affectation-exp "> | <" exp >
+.PP
+.RI < affectation-car >
+::=
+.B =
+.RI < nom >
+.RI < caractères >
+.PP
+.RI < affectation-exp >
+::=
+.B =
+.RI < nom >
+.RI < expression >
+.RE
+.PP
+Une expression est l'un des trois sortes.
+Ce peut être
+une expression unaire,
+une expression n-aire,
+ou un facteur.
+Ce peut aussi être le nom d'une sous-expression affectée.
+.PP
+.RS
+.RI < exp >
+::=
+.RI < nom "> | <" n-aire "> | <" unaire "> | <" facteur >
+.PP
+.RI < n-aire >
+::=
+.RI < op-n >
+.B {
+.RI [< exp >
+.RB [ ,
+.RI < exp "> ...\&]]"
+.B }
+.RS
+.RE
+.BR "         " "  |"
+.RI < op-n >
+.B (
+.RI [< exp >
+.RB [ ,
+.RI < exp "> ...\&]]"
+.B )
+.PP
+.RI < unaire >
+::=
+.RI < op-u >
+.RI < exp >
+.RE
+.PP
+Les facteurs sont un peu plus compliqués.
+La forme de base d'un facteur est une chaîne d'ensembles de caractères
+séparés par
+.RI < op-r >,
+où
+.RI < op-r >
+indique à la fois l'ordre et la proximité (par
+.RI < ws >)
+ou l'ordre uniquement (par
+.BR , ).
+En plus, un facteur peut être libre (sans ancre),
+ou il peut être ancré à la tête ou à la queue.
+Finalement, il peut être le nom d'une variable
+qui représent un autre facteur.
+.PP
+.RS
+.RI < facteur >
+::=
+.RI < nom >
+.RS
+.RE
+.BR "         " "   |"
+.RI [< ancres >]
+.B <
+.RI [< caractères >
+.RI [< op-r "> <" caractères "> ...\&]]"
+.B >
+.RS
+.RE
+.BR "         " "   |"
+.B ".\&<"
+.RI < facteur >
+.RB [ ,
+.RI < facteur "> ...\&]"
+.B >
+.RS
+.RE
+.BR "         " "   |"
+.B "..\&<"
+.RI < facteur >
+.RB [ ,
+.RI < facteur "> ...\&]"
+.B >
+.RE
+.PP
+Le premier type de facteur composé
+combine son sous-facteurs avec proximité,
+et le second les combine avec la précedence.
+Les ancres sont notées comme suit.
+.PP
+.RS
+.RI < ancres >
+::=
+.RI < tête-queue "> | <" tête "> | <" queue >
+.PP
+.RI < tête-queue >
+::=
+.B "%||%"
+.PP
+.RI < tête >
+::=
+.B "%|"
+.PP
+.RI < queue >
+::=
+.B "|%"
+.RE
+.PP
+Noter que
+.RI < tête-queue >
+n'est qu'un seul symbole,
+donc les caractères d'espacement ne peuvent pas intervenez entre
+.B "%|"
+et
+.BR "|%" .
+.PP
+Comme discuté précédemment, les opérateurs de relation
+.RI < op-r >
+dans un
+.RI < facteur >
+peuvent être
+soit un caractère d'espacement pour représenter
+à la fois l'ordre et la proximité,
+soit une virgule pour représenter seulement l'ordre.
+.PP
+.RS
+.RI < op-r >
+::=
+.RI < ws "> |"
+.B ,
+.RE
+.PP
+Les ensembles de caractères sont définis comme suit.
+.PP
+.RS
+.RI < caractères >
+::=
+.B {
+.RI < caractères
+[
+.B ,
+.RI < caractères "> ...\&]"
+.B }
+.RS
+.RE
+.RI "               |"
+.B (
+.RI < caractères
+[
+.B ,
+.RI < caractères "> ...\&]"
+.B )
+.RS
+.RE
+.RI "               |"
+.B [
+.RI < caractères
+[
+.B ,
+.RI < caractères "> ...\&]"
+.B ]
+.RS
+.RE
+.RI "               |"
+.B /
+.RI < nom >
+.RS
+.RE
+.RI "               |"
+.RI < nom >
+.RE
+.PP
+Les premier et deuxième formes utilisent des accolades ou des parenthèses
+pour dénoter l'union des ensembles qu'elles contiennent.
+La troisième utilise des crochets
+pour dénoter l'intersection.
+La quatrième est un singleton,
+contenant le caractère dont le nom suit le barre oblique.
+Finalement, un nom nu est une variable,
+qui doit être affectée à un ensemble.
+.PP
+Un nom est une lettre (comme défini par Unicode)
+suivie d'une chaîne de caractères
+dans laquelle aucun n'est un espace
+ni dans l'ensemble suivant:
+.RS
+.B , [ ] ( ) { } < >
+.RE
+Noter que le caractère
+.B #
+est valide,
+et qu'un commentaire ne peut donc pas apparaître dans un nom.
+.SS Les opérateurs n-aire
+Un opérateur n-aire peut être l'un des suivants.
+Les formes écrites ici sont ASCII,
+mais il existe des formes Unicode qui sont résumées à la fin.
+.TP
+.B /\e
+L'intersection d'opérandes (conjonction logique).
+.TP
+.B \e/
+L'union d'opérandes (disjonction logique).
+.TP
+.B @@
+La concaténation avec des trous.
+Les opérandes apparaissent dans l'ordre
+mais la proximité n'est pas requise.
+.TP
+.B @
+La concaténation d'opérandes.
+Notez qu'un facteur sans ancre
+permet une expansion arbitraire,
+donc cette opération peut agir de manière inattendue.
+On peut utiliser la forme
+.BR .\&< ...\& >
+dans ce cas.
+.TP
+.B |_|_|
+Le produit de mélange d'opérandes.
+Si x appartient au langage A et y appartient au langage B,
+tous les entrelacements de x et y
+appartiennent au produit de mélange de A et B.
+.TP
+.B .^.
+Le produit d'infiltration d'opérandes.
+Si x appartient au langage A et y appartient au langage B,
+tous les mots qui comprennent (seulement)
+toutes les lettres de x, dans l'ordre,
+et toutes les lettres de y, dans l'ordre,
+appartiennent au produit d'infiltration de A et B.
+.TP
+.B \e\e
+Quotients à gauche d'opérandes, qui s'associent à gauche.
+Le quotient à gauche A\eB est l'ensemble de chaînes
+qui peuvent faire un mot en B en suffixant
+à quelquechose en A.
+Celui-ci est une généralization du dérivée de Brzozowski.
+.TP
+.B //
+Quotients à droit d'opérandes, qui s'associent à droite.
+Le quotient à droit B/A est l'ensemble de chaînes
+qui peuve faire un mot en B en prefixant
+à quelquechose en A.
+.SS Les opérateurs unaire
+Cette section décrit les opérations unaires
+telles que la précédente décrit les n-aires.
+.TP
+.BR ~ " | " !
+La négation de l'opérande.
+C'est l'ensemble complémentaire.
+.TP
+.B *
+La fermature itérative de l'opérande.
+C'est l'ensemble contenant tous concaténations finis
+de l'opérande avec lui-même.
+La même mise en garde qui affecte la concaténation s'applique ici:
+les facteurs sans ancre permettent une expansion arbitraire.
+.TP
+.B +
+L'expression
+.B +x
+est équivalente à
+.BR @(x,*x) .
+.TP
+.B ^
+La fermeture vers le haut de l'opérande:
+toutes les chaînes qui peuvent être créees
+en insérant zéro ou plusieurs caractères d'un mot valide.
+.TP
+.B -
+Les images miroir des mots de l'opérande.
+.TP
+.B $
+La fermeture vers le bas de l'opérande:
+toutes les chaînes qui peuvent être créees
+en supprimant zéro ou plusieurs caractères d'un mot valide.
+.PP
+.B [
+.RI < caractères "> ["
+.B ,
+.RI < caractères "> ...\&]"
+.B ]
+.RS
+Les caractères donnés specifient l'ensemble de caractères saillants,
+et tous les autres sont ignorés lors
+de la vérification de la bonne formation.
+.RE
+.PP
+.B |
+.RI < caractères "> ["
+.B ,
+.RI < caractères "> ...\&]"
+.B |
+.RS
+Les caractères donnés sont rendus neutres dans l'opérande.
+Ils peuvent être librement insérés ou supprimés.
+.RE
+.SS Les syntaxes Unicode
+En plus de la syntaxe ASCII, il y a la syntaxe Unicode.
+Les synonymes suivent.
+.TP
+.B =
+<U+225D> [equal to by definition]
+.TP
+.BR < ...\& >
+<U+27E8>...\&<U+27E9> [mathematical left/right angle bracket]
+.TP
+.B %|
+<U+22CA> [right normal factor semidirect product]
+.TP
+.B |%
+<U+22C9> [left normal factor semidirect product]
+.TP
+.B /\e
+<U+22C0> [n-ary logical and] ou <U+2227> [logical and] ou
+<U+22C2> [n-ary intersection] ou <U+2229> [intersection]
+.TP
+.B \e/
+<U+22C1> [n-ary logical or] ou <U+2228> [logical or] ou
+<U+22C3> [n-ary union] ou <U+222A> [union]
+.TP
+.B |_|_|
+<U+29E2> [shuffle product]
+.TP
+.B .^.
+<U+21D1> [upwards double arrow]
+.TP
+.B @
+<U+2219> [bullet operator]
+.TP
+.B !
+<U+00AC> [not sign]
+.TP
+.B *
+<U+2217> [asterisk operator]
+.TP
+.B ^
+<U+2191> [upwards arrow]
+.TP
+.B -
+<U+21C4> [right arrow over left arrow]
+.TP
+.B $
+<U+2193> [downwards arrow]
+.PP
+On peut utiliser ces synonymes sans configuration particulière,
+sauf possiblement à configurer l'environnement pour faciliter
+la saisie.
+.SH REMARQUES
+L'arbre d'expression admet des automates,
+mais on ne peut pas les faire.
+L'interpeteur
+.B plebby
+construit ces expressions
+lors de l'import d'un automate à partir d'un fichier
+ou lors de la compilation d'expressions.
+.SH EXEMPLES
+.TP
+.B </a>
+Le caractère "a" apparaît.
+.TP
+.B [/a]!%||%<>
+La même contraint,
+écrit en specifiant un caractère saillant:
+ne voyant que les
+.BR a ,
+la chaîne n'est pas vide.
+.PP
+.B = primaire {/H'}
+.RS
+.RE
+.B = non-primaire {/L, /H}
+.RS
+.RE
+.B = obligatoire <primaire>
+.RS
+.RE
+.B = culminativité !<primaire, primaire>
+.RS
+.RE
+.B /\e{obligatoire, culminativité}
+.RS
+.IP (1)
+Affecter l'ensemble {H'} au nom
+.B primaire
+.IP (2)
+Affecter l'ensemble {L, H} au nom
+.BR non-primaire ,
+alors chacun de L, H, et H' sont éléments de
+.BR universe.
+.IP (3)
+Définir
+.B obligatoire
+comme la contrainte qu'un élément de
+.B primaire
+apparaisse.
+.IP (4)
+Définir
+.B culminativité
+comme la contraint qu'aucun élément de
+.B primaire
+n'apparaisse deux fois.
+.IP (5)
+Définir la variable éspecial
+.B it
+(et donc le résultat du programme)
+comme l'intersection de
+.B culminativité
+et
+.BR obligatoire :
+l'ensemble de chaînes dans lequelle
+chacune contient exactement une occurrence d'un seul élément de
+.BR primaire .
+.RE
+.SH "VOIR AUSSI"
+.BR plebby (1)

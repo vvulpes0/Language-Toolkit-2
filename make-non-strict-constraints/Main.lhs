@@ -44,7 +44,7 @@
 > nonEmptySubsets :: (Ord n, NFData e, Ord e) =>
 >                    [(String, FSA n e)] -> [(String, FSA Int e)]
 > nonEmptySubsets []      =  []
-> nonEmptySubsets (x:[])  =  [fmap renameStates x]
+> nonEmptySubsets [x]     =  [fmap renameStates x]
 > nonEmptySubsets (x:xs)  =  f x : map (combine (f x)) xs' ++ xs'
 >     where xs'  =  nonEmptySubsets xs
 >           f    =  fmap renameStates

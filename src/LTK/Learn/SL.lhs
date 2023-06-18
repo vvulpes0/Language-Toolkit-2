@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Learn.SL
-> Copyright : (c) 2019 Dakotah Lambert
+> Copyright : (c) 2019-2020,2023 Dakotah Lambert
 > License   : MIT
 
 > This module implements a string extension learner for the SL class.
@@ -55,9 +55,9 @@
 > instance Grammar SLG
 >     where emptyG = SLG empty 0 empty
 >           augmentG g1 g2
->               = SLG { slgAlpha = union (alphabet g1) (alphabet g2)
+>               = SLG { slgAlpha = alphabet g1 `union` alphabet g2
 >                     , slgK = max (slgK g1) (slgK g2)
->                     , slg = union (slg g1) (slg g2)
+>                     , slg = slg g1 `union` slg g2
 >                     }
 >           isSubGOf g1 g2 = isSubsetOf (slg g1) (slg g2)
 >           genFSA g = n . flatIntersection . (free :)

@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Learn.SP
-> Copyright : (c) 2019 Dakotah Lambert
+> Copyright : (c) 2019-2020,2023 Dakotah Lambert
 > License   : MIT
 
 > This module implements a string extension learner for the SP class.
@@ -43,8 +43,8 @@ when generating a grammar from positive data.
 >     where f = if lt then null . drop k else (==) k . length
 >           g x (xs, ys)
 >             = ( case x
->                 of (s:[]) -> Set.insert s xs
->                    _      -> xs
+>                 of [s]  -> Set.insert s xs
+>                    _    -> xs
 >               , (if f x then Set.insert x else id) ys
 >               )
 
@@ -61,9 +61,9 @@ when generating a grammar from positive data.
 > instance Grammar SPG
 >     where emptyG = SPG empty 0 empty
 >           augmentG g1 g2
->               = SPG { spgAlpha = union (alphabet g1) (alphabet g2)
+>               = SPG { spgAlpha = alphabet g1 `union` alphabet g2
 >                     , spgK = max (spgK g1) (spgK g2)
->                     , spg = union (spg g1) (spg g2)
+>                     , spg = spg g1 `union` spg g2
 >                     }
 >           isSubGOf g1 g2 = isSubsetOf (spg g1) (spg g2)
 >           genFSA g = n . flatIntersection . (free :) .

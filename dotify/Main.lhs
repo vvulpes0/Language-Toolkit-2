@@ -6,6 +6,7 @@
 
 > module Main (main) where
 
+> import Control.Monad ((<=<))
 #if !MIN_VERSION_base(4,8,0)
 > import Data.Functor ((<$>))
 #endif
@@ -54,15 +55,12 @@
 > printDot :: (String -> FSA Integer String) -> (String -> String) ->
 >             Maybe FilePath -> Maybe FilePath -> IO ()
 > printDot convert tf infile outfile
->     = maybe ($ stdin) (flip withFile ReadMode) infile $ \h ->
->       output outfile      =<<
->       to Dot              <$>
->       renameSymbolsBy tf  <$>
->       convert             <$>
->       hGetContents h
+>     = maybe ($ stdin) (`withFile` ReadMode) infile
+>       $ (output outfile . ((to Dot <$> renameSymbolsBy tf) . convert))
+>         <=< hGetContents
 
 > output :: Maybe FilePath -> String -> IO ()
-> output file s = maybe ($ stdout) (\f -> withFile f WriteMode) file $ \h ->
+> output file s = maybe ($ stdout) (`withFile` WriteMode) file $ \h ->
 >                 hPutStr h s >> hFlush h
 
 > usageHeader :: String

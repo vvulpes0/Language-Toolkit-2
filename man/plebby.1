@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEBBY 1 "2022-03-15" "Version 1.0" "Language Toolkit"
+.TH PLEBBY 1 "2023-05-24" "Version 1.1" "Language Toolkit"
 .SH NAME
 plebby \- Piecewise / Local Expression Builder Interpreter
 .SH SYNOPSIS
@@ -152,6 +152,13 @@ with respect to the current
 .BR universe .
 .
 .PP
+.B :isAcom
+.RI < expr >
+.RS
+Aperiodic and commutative; (1,t)-LTT.
+.RE
+.
+.PP
 .B :isB
 .RI < expr >
 .RS
@@ -222,6 +229,13 @@ Generalized locally J-trivial. Related to LT and PT.
 .RI < expr >
 .RS
 Generalized locally testable.
+.RE
+.
+.PP
+.B :isLAcom
+.RI < expr >
+.RS
+Locally aperiodic and commutative.
 .RE
 .
 .PP
@@ -308,6 +322,13 @@ lie in a generalized definite stringset.
 .RE
 .
 .PP
+.B :isTLAcom
+.RI < expr >
+.RS
+Tier-based locally aperiodic and commutative.
+.RE
+.
+.PP
 .B :isTLB
 .RI < expr >
 .RS
@@ -372,6 +393,39 @@ contains all and only the strings whose projections
 to some fixed subset of the current
 .B universe
 lie in a strictly local stringset.
+.RE
+.
+.PP
+.B :isVarietyM
+.RI < variety >
+.RI < expr >
+.RS
+Monoid is in the given *-variety.
+See
+.B Varieties
+below.
+.RE
+.
+.PP
+.B :isVarietyS
+.RI < variety >
+.RI < expr >
+.RS
+Semigroup is in the given +-variety.
+See
+.B Varieties
+below.
+.RE
+.
+.PP
+.B :isVarietyT
+.RI < variety >
+.RI < expr >
+.RS
+Projected subsemigroup is in the given +-variety on a tier.
+See
+.B Varieties
+below.
 .RE
 .
 .SS Grammatical Inference
@@ -457,6 +511,18 @@ i.e. each is a subset of the other.
 .RE
 .
 .PP
+.B :cequal
+.RI < expr >
+.RI < expr >
+.RS
+Determine whether the first
+.RI < expr >
+is logically equivalent to the second,
+whether they are equal in every possible
+.BR universe .
+.RE
+.
+.PP
 .B :implies
 .RI < expr >
 .RI < expr >
@@ -468,6 +534,18 @@ in the current
 .BR universe .
 This is equivalent to
 .BR :subset .
+.RE
+.
+.PP
+.B :cimplies
+.RI < expr >
+.RI < expr >
+.RS
+Determine whether the first
+.RI < expr >
+logically implies the second
+in every possible
+.BR universe .
 .RE
 .
 .SS Graphical Output
@@ -497,6 +575,15 @@ graphically.
 .RE
 .
 .PP
+.B :eggbox
+.RI < expr >
+.RS
+Show the eggbox diagram of
+.RI < expr >
+graphically.
+.RE
+.
+.PP
 .B :psg
 .RI < expr >
 .RS
@@ -510,6 +597,16 @@ graphically.
 .RI < expr >
 .RS
 Show the syntactic monoid associated with a
+normal-form automaton representation of
+.RI < expr >
+graphically.
+.RE
+.
+.PP
+.B :synord
+.RI < expr >
+.RS
+Show the syntactic order associated with a
 normal-form automaton representation of
 .RI < expr >
 graphically.
@@ -603,6 +700,110 @@ Non-satisfiable factors are uniformly replaced by
 .B !<>
 for simplicity.
 .
+.SS Varieties
+This version of
+.B plebby
+allows one to describe arbitrary algebraic varieties
+through universally-quantified systems of equalities.
+For instance,
+.B [ab=ba;x*=x]
+specifies two equations:
+.B ab=ba
+and
+.BR x*=x ,
+both of which must hold for all valuations of the variables
+.IR a ,
+.IR b ,
+and
+.IR x .
+.PP
+The grammar is as follows:
+.RS
+.RI < variety >
+::=
+.B [
+.RI < conj-list >
+.B ]
+.PP
+.RI < conj-list >
+::=
+.RI < eq-list >
+.B ;
+.RI < conj-list >
+|
+.RI < eq-list >
+.PP
+.RI < eq-list >
+::=
+.RI < value >
+.B =
+.RI < eq-list >
+|
+.RI < value >
+.B =
+.RI < value >
+.PP
+.RI < value >
+::=
+.RI < value >
+.RI < value >
+|
+.RI < iter >
+.PP
+.RI < iter >
+::=
+.B 0
+|
+.B 1
+|
+.RI < LETTER >
+|
+.B (
+.RI < value >
+.B )
+|
+.RI < iter >
+.B *
+.RE
+The basic elements are
+.RI < LETTER >
+(any Unicode letter) representing universally-quantified values,
+or
+.B 0
+or
+.BR 1 ,
+representing the unique values such that
+.B 0x=0=x0
+and
+.B 1x=x=x1
+for all values of
+.IR x ,
+if such values exist.
+Adjacency represents multiplication (concatenation),
+and the expression
+.B x*
+represents the unique value in the sequence
+.BR x ,
+.BR xx ,
+and so on, such that
+.BR x*x*=x* .
+.PP
+A chain of equations
+.B x=y=z
+asserts that, under all valuations,
+the expressions
+.BR x ,
+.BR y ,
+and
+.B z
+yield the same value.
+And finally the semicolon acts as a conjunction operator:
+.B [e1;e2]
+holds if and only if
+.B e1
+holds and
+.B e2
+holds.
 .SH OPTIONS
 None.
 .SH "EXIT STATUS"
@@ -624,6 +825,14 @@ If not, then
 is used with no arguments.
 .
 .SH FILES
+.TP
+.RI "${" XDG_CONFIG_HOME "}/plebby/config.ini"
+Main configuration file.
+.
+.TP
+~/.plebby
+Alternative configuration file.
+.
 .TP
 ~/.haskeline
 Configuration file for the line editor.

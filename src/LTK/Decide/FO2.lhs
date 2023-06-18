@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.FO2
-> Copyright : (c) 2021 Dakotah Lambert
+> Copyright : (c) 2021-2023 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -19,8 +19,8 @@
 >
 > @since 1.0
 > -}
-> module LTK.Decide.FO2 (isFO2, isFO2B, isFO2S,
->                        isFO2M, isFO2BM, isFO2SM) where
+> module LTK.Decide.FO2 (isFO2, isFO2B, isFO2BF, isFO2S,
+>                        isFO2M, isFO2BM, isFO2BFM, isFO2SM) where
 
 > import Data.Set (Set)
 > import qualified Data.Set as Set
@@ -64,12 +64,32 @@ from something star-free.
 
 > -- |True iff the submonoid of @monoid@ given by @xs@ is in DA.
 > -- Results are unspecified if @xs@ is not actually a submonoid.
-> fo2test :: (Ord n, Ord e) => FSA (S n e) e -> Set (State (S n e))-> Bool
-> fo2test monoid xs = trivialUnder hEquivalence monoid -- isSF
->                     && (all f $ triples xs) -- in DA
+> fo2testFull :: (Ord n, Ord e) =>
+>               FSA (S n e) e -> Set (State (S n e)) -> Bool
+> fo2testFull monoid xs = trivialUnder hEquivalence monoid -- isSF
+>                         && all f (triples xs) -- in DA
 >     where f (x, y, z) = let xyzw = omega monoid ((x $*$ y) $*$ z)
 >                         in (xyzw $*$ y) $*$ xyzw == xyzw
 >           a $*$ b = Set.findMin $ follow monoid (snd (nodeLabel b)) a
+
+There is a simpler version of this test:
+a pattern is in this class iff
+every regular element (an element sharing a J-class with an idempotent)
+is idempotent.
+As discussed in implementing the test for local J-triviality,
+moving to a local subsemigroup does not affect the J-classes
+(it merely removes elements not under consideration).
+So the same simplification works for FO2[<] and FO2[<,+1],
+although as discussed in implementing the @GLPT@ test,
+the Me-classes may misbehave; so FO2[<,bet] still uses the full test.
+
+> fo2test :: (Ord n, Ord e) =>
+>           SynMon n e -> Set (State (S [Maybe n] e)) -> Bool
+> fo2test monoid xs = flip Set.isSubsetOf i . Set.unions
+>                     . filter (not . Set.disjoint i)
+>                     . map (Set.intersection xs)
+>                     . Set.toList $ jEquivalence monoid
+>     where i = idempotents monoid `Set.union` initials monoid
 
 
 For betweenness:
@@ -85,13 +105,27 @@ is in MeDA.
 > -- \(\sigma(x,y)\) meaning a \(\sigma\) appears strictly between
 > -- the positions \(x\) and \(y\).
 > isFO2B :: (Ord n, Ord e) => FSA n e -> Bool
-> isFO2B fsa = let s = syntacticMonoid fsa
->              in all (fo2test s . emee s)
->                 $ Set.toList (idempotents s)
+> isFO2B = isFO2BM . syntacticMonoid
 
 > -- |True iff the monoid represents a stringset that satisfies @isFO2B@.
 > isFO2BM :: (Ord n, Ord e) => SynMon n e -> Bool
-> isFO2BM s = all (fo2test s . emee s) $ Set.toList (idempotents s)
+> isFO2BM s = all (fo2testFull s . emee s) $ Set.toList (idempotents s)
+
+
+> -- |True iff the automaton recognizes a stringset
+> -- representable in \(\mathrm{FO}^{2}[<,\mathrm{betfac}]\).
+> -- This is like \(\mathrm{FO}^{2}[<,\mathrm{bet}]\)
+> -- except betweenness is of entire factors.
+> --
+> -- @since 1.1
+> isFO2BF :: (Ord n, Ord e) => FSA n e -> Bool
+> isFO2BF = isFO2BFM . syntacticMonoid
+
+> -- |True iff the monoid lies in MeDA*D
+> --
+> -- @since 1.1
+> isFO2BFM :: (Ord n, Ord e) => SynMon n e -> Bool
+> isFO2BFM = isFO2BM . emblock
 
 
 Misc

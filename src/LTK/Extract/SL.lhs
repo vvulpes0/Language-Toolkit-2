@@ -48,7 +48,7 @@ MoL'17 as is the notion of an $\SL$ approximation of a non-$\SL$ stringset.
 >   #-}
 > {-|
 > Module    : LTK.Extract.SL
-> Copyright : (c) 2017-2019 Jim Rogers and Dakotah Lambert
+> Copyright : (c) 2017-2019,2023 Jim Rogers and Dakotah Lambert
 > License   : MIT
 >
 > Find forbidden substrings of an automaton.
@@ -119,8 +119,9 @@ In the former case it evaluates to $0$.
 > slTraversal psg ps k
 >     | isEmpty ps  =  k + 1
 >     | hasCycle    =  0
->     | someSingle  =  slTraversal psg (union live ps') (max k $ depth p + 1)
->     | otherwise   =  slTraversal psg (union live ps') k
+>     | someSingle  =  slTraversal psg (live `union` ps')
+>                      (max k $ depth p + 1)
+>     | otherwise   =  slTraversal psg (live `union` ps') k
 >     where (p, ps')    =  choose ps
 >           exts        =  extensions psg p
 >           someSingle  =  flip anyS exts $
@@ -231,12 +232,12 @@ type of a singleton set.
 > g :: Ord e => (Set [e] -> Set [e] -> Set [e]) ->
 >      ForbiddenSubstrings e -> ForbiddenSubstrings e -> ForbiddenSubstrings e
 > g f a b = ForbiddenSubstrings
->           { attestedUnits    =  union (attestedUnits a) (attestedUnits b)
->           , forbiddenWords   =  f (forbiddenWords a) (forbiddenWords b)
+>           { attestedUnits    =  attestedUnits a `union` attestedUnits b
+>           , forbiddenWords   =  forbiddenWords a `f` forbiddenWords b
 >           , forbiddenInitials
->               = f (forbiddenInitials a) (forbiddenInitials b)
->           , forbiddenFrees   =  f (forbiddenFrees a) (forbiddenFrees b)
->           , forbiddenFinals  =  f (forbiddenFinals a) (forbiddenFinals b)
+>               = forbiddenInitials a `f` forbiddenInitials b
+>           , forbiddenFrees   =  forbiddenFrees a `f` forbiddenFrees b
+>           , forbiddenFinals  =  forbiddenFinals a `f` forbiddenFinals b
 >           }
 
 > -- |The internal structure gathered by the PSG traversals.
@@ -341,9 +342,9 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 >     = Set.fromList .
 >       filter
 >       (\wrd ->
->        not (any (\x -> List.isSuffixOf x wrd) (Set.toList fiFFs) ||
->             any (\x -> List.isInfixOf  x wrd) (Set.toList frFFs) ||
->             any (\x -> List.isPrefixOf x wrd) (Set.toList iFFs)
+>        not (any (`List.isSuffixOf` wrd) (Set.toList fiFFs) ||
+>             any (`List.isInfixOf`  wrd) (Set.toList frFFs) ||
+>             any (`List.isPrefixOf` wrd) (Set.toList iFFs)
 >            )
 >       ) . map word . Set.toList $ rejectingPaths fsa bnd
 >     where bnd = max (supermax (Set.union iFFs fiFFs) - 1) $
@@ -450,7 +451,7 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 >           Set (Path (Set (Set n)) e) -> Set (Path (Set (Set n)) e)
 > gatherFPs psg goal front fps
 >     | isEmpty front = fps
->     | otherwise = gatherFPs psg goal nextFront (union nextFPs fps)
+>     | otherwise = gatherFPs psg goal nextFront (nextFPs `union` fps)
 >     where (nextFront, nextFPs)
 >               = passK goal
 >                 (Set.toList $

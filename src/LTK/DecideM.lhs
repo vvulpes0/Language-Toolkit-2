@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.DecideM
-> Copyright : (c) 2021 Dakotah Lambert
+> Copyright : (c) 2021-2023 Dakotah Lambert
 > License   : MIT
 >
 > Functions used for deciding the complexity class of a monoid.
@@ -18,22 +18,30 @@
 > @since 1.0
 > -}
 > module LTK.DecideM (
+>                    -- * Classes involving finiteness
+>                    isFiniteM, isCofiniteM
+>                    , isTFiniteM, isTCofiniteM
 >                    -- * Piecewise classes
->                      isPTM
+>                    , isPTM
 >                    -- * Local classes
 >                    , isDefM, isRDefM, isGDM
->                    , isLTM, isLTTM
+>                    , isLTM, isLTTM, isLAcomM
 >                    -- * Both Local and Piecewise
+>                    , isAcomM
 >                    , isCBM, isGLTM, isLPTM, isGLPTM, isSFM
 >                    -- * Tier-based generalizations
 >                    , isTDefM, isTRDefM, isTGDM
->                    , isTLTM, isTLTTM, isTLPTM
+>                    , isTLTM, isTLTTM, isTLAcomM, isTLPTM
+>                    , isMTFM, isMTDefM, isMTRDefM, isMTGDM
 >                   -- * Others between CB and G
 >                   , isBM, isLBM, isTLBM
 >                    -- * Two-Variable Logics
->                    , isFO2M, isFO2BM, isFO2SM
+>                    , isFO2M, isFO2BM, isFO2BFM, isFO2SM
+>                    -- * Generic Algebra
+>                    , isVarietyM
 >                   ) where
 
+> import LTK.Decide.Finite
 > import LTK.Decide.LT
 > import LTK.Decide.LPT
 > import LTK.Decide.LTT
@@ -48,4 +56,9 @@
 > import LTK.Decide.GD
 > import LTK.Decide.CB
 > import LTK.Decide.B
+> import LTK.Decide.Acom
+> import LTK.Decide.LAcom
+> import LTK.Decide.TLAcom
 > import LTK.Decide.Definite
+> import LTK.Decide.Multitier
+> import LTK.Decide.Variety
