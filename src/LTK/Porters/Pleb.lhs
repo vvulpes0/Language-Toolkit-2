@@ -95,6 +95,7 @@
 >     | Domination    [Expr]
 >     | Infiltration  [Expr] -- ^@since 1.1
 >     | Shuffle       [Expr] -- ^@since 1.1
+>     | StrictOrder   [Expr]
 >     | QuotientL     [Expr] -- ^@since 1.0
 >     | QuotientR     [Expr] -- ^@since 1.0
 >       deriving (Eq, Ord, Read, Show)
@@ -190,6 +191,7 @@ Therefore, this cleanup step has been removed.
 >                    NAry (Domination es)     ->  f Domination es
 >                    NAry (Infiltration es)   ->  f Infiltration es
 >                    NAry (Shuffle es)        ->  f Shuffle es
+>                    NAry (StrictOrder es)    ->  f StrictOrder es
 >                    NAry (QuotientL es)      ->  f QuotientL es
 >                    NAry (QuotientR es)      ->  f QuotientR es
 >                    Unary (DownClose ex)     ->  g DownClose ex
@@ -239,6 +241,12 @@ prevents having to descend through the tree to find this information.
 >                 ) es
 >          NAry (Infiltration es)  -> f emptyStr flatInfiltration es
 >          NAry (Shuffle es)       -> f emptyStr flatShuffle es
+>          NAry (StrictOrder es)   -> foldr
+>                                     (\x y ->
+>                                      normalize
+>                                      $ autStrictOrderOverlay x y)
+>                                     emptyStr
+>                                     $ automata es
 >          NAry (QuotientL es)     -> f emptyStr ql es
 >          NAry (QuotientR es)     -> f emptyStr qr es
 >          Unary (DownClose ex)
@@ -311,6 +319,7 @@ prevents having to descend through the tree to find this information.
 >           usedSymbolsN (Domination es)     =  us es
 >           usedSymbolsN (Infiltration es)   =  us es
 >           usedSymbolsN (Shuffle es)        =  us es
+>           usedSymbolsN (StrictOrder es)    =  us es
 >           usedSymbolsN (QuotientL es)      =  us es
 >           usedSymbolsN (QuotientR es)      =  us es
 >           usedSymbolsU (DownClose ex)      =  usedSymbols ex
@@ -389,6 +398,7 @@ prevents having to descend through the tree to find this information.
 >       , (["⋁", "⋃", "∨", "∪", "\\/"],  NAry . Disjunction)
 >       , (["\\\\"],                     NAry . QuotientL)
 >       , (["//"],                       NAry . QuotientR)
+>       , ([".∙.", ".@."],               NAry . StrictOrder)
 >       , (["∙∙", "@@"],                 NAry . Domination)
 >       , (["∙" , "@" ],                 NAry . Concatenation)
 >       , (["⧢", "|_|_|"],               NAry . Shuffle)
