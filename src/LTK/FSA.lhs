@@ -920,14 +920,17 @@ Other Combinations
 > autStrictOrderOverlay :: (Ord n1, Ord n2, Ord e) =>
 >                          FSA n1 e
 >                       -> FSA n2 e
->                       -> FSA ( Maybe (Either (Maybe n1) n2)
->                              , Maybe (Either n1 ())) e
-> autStrictOrderOverlay f1 f2 = autIntersection joined f1''
+>                       -> FSA (Maybe (Either (Maybe n1) n2, Maybe n1)) e
+> autStrictOrderOverlay f1 f2
+>     = renameStatesBy g $ autIntersection joined f1''
 >     where alpha = alphabet f1 `Set.union` alphabet f2
 >           f1' = trimFailStates f1
->           prefixes =  nonEmpty (f1' { finals = states f1' })
+>           prefixes = nonEmpty (f1' { finals = states f1' })
 >           joined = autConcatenation prefixes f2
->           f1'' = autConcatenation f1' (totalWithAlphabet alpha)
+>           f1'' = renameStatesBy (either Just (\() -> Nothing))
+>                  $ autConcatenation f1' (totalWithAlphabet alpha)
+>           g (Just a, Just b) = Just (a, b)
+>           g _ = Nothing
 
 > nonEmpty :: (Ord n, Ord e) => FSA n e -> FSA (Maybe n) e
 > nonEmpty = g . renameStatesByMonotonic Just
