@@ -598,11 +598,10 @@ Miscellaneous functions
 > -- generated in a breadth-first manner.
 > --
 > -- @since 0.3
-> sequencesOver :: [a] -> [[a]]
-> sequencesOver a = [] :
->                   if null a
->                   then []
->                   else concatMap (\w -> map (: w) a) (sequencesOver a)
+> sequencesOver :: [x] -> [[x]]
+> sequencesOver [] = [[]]
+> sequencesOver xs
+>     = [] : concatMap (\w -> map (: w) xs) (sequencesOver xs)
 
 A fast method to extract elements from a set
 that works to find elements whose image under a monotonic function
