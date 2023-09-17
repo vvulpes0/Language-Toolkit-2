@@ -1054,49 +1054,49 @@ equivalence class.
 >                       , Set.mapMonotonic fst $ keep ((== x) . snd) i
 >                       ]
 
-The easiest way to construct the equivalence classes is to iteratively
-build a set of known-distinct pairs.  In the beginning we know that
-any accepting state is distinct from any non-accepting state.  At each
-further iteration, two states p and q are distinct if there exists
-some symbol x such that delta<sub>x</sub>(p) is distinct from
-delta<sub>x</sub>(q).
+In order to accomplish this task,
+we begin by saying that two states are distinct
+if one is accepting and the other is not.
+We can then iteratively improve our partition:
+states \(p\) and \(q\) are also distinct
+if there is a symbol \(x\) such that
+the state reached from \(p\) by \(x\)
+was known in the last iteration to be distinct from
+the state reached from \(q\) by \(x\).
+If no change has occurred, then we are done.
+We need only iterate as many times as the FSA has states,
+as each step splits at least one class into two,
+and there are at most as many classes as states.
 
-When an iteration completes without updating the set of known-distinct
-pairs, the algorithm is finished; all possible distinctions have been
-discovered.  The Myhill-Nerode equivalence class of a state p, then,
-is the set of states not distinct from p.
-
-> distinguishedPairs :: (Ord e, Ord n) => FSA n e -> Set (State n, State n)
-> distinguishedPairs fsa = fst result
->     where allPairs = pairs (states fsa)
->           initiallyDistinguished
->               = collapse (union . pairs' (finals fsa)) empty .
->                 difference (states fsa) $ finals fsa
->           f d (a, b) = areDistinguishedByOneStep fsa d a b
->           result = until
->                    (\(x, y) -> isize x == isize y)
->                    (\(x, _) ->
->                     ( union x $
->                       keep (f x) (difference allPairs x)
->                     , x
->                     )
->                    )
->                    (initiallyDistinguished, empty)
-
-> areDistinguishedByOneStep :: (Ord e, Ord n) =>
->                              FSA n e ->
->                              Set (State n, State n) ->
->                              State n ->
->                              State n ->
->                              Bool
-> areDistinguishedByOneStep fsa knownDistinct p q
->     | isIn knownDistinct (makePair p q) = True
->     | otherwise = anyS (isIn knownDistinct) newPairs
->     where destinations s x = delta fsa (Symbol x) (singleton s)
->           newPairs' a = collapse (union . pairs' (destinations q a))
->                         empty
->                         (destinations p a)
->           newPairs = collapse (union . newPairs') empty (alphabet fsa)
+> distinguishedPairs :: (Ord e, Ord n) =>
+>                       FSA n e -> Set (State n, State n)
+> distinguishedPairs fsa
+>     = Set.fromList . map ((i2s Map.!) . fst) . filter snd . zip [0..]
+>       $ subsolve !! (length (states fsa))
+>     where ps = Set.toAscList . pairs $ states fsa
+>           is = map fst $ zip [0::Integer ..] ps
+>           i2s = Map.fromAscList $ zip [0..] ps
+>           s2i = Map.fromAscList $ zip ps [0..]
+>           cartesian as bs
+>               = concatMap (\a -> map (makePair a) $ Set.toList bs)
+>                 $ Set.toList as
+>           sucs (p,q)
+>               = (s2i Map.! (p,q) :)
+>                 . Set.toList . Set.fromList
+>                 . concatMap
+>                       ( \x ->
+>                         map (s2i Map.!) . filter (uncurry (/=))
+>                       $ cartesian
+>                         (delta fsa (Symbol x) $ Set.singleton p)
+>                         (delta fsa (Symbol x) $ Set.singleton q))
+>                 . Set.toList $ alphabet fsa
+>           i2ii = sucs <$> i2s
+>           subsolve = ( map
+>                        (\(p,q) ->
+>                         isIn (finals fsa) p /= isIn (finals fsa) q
+>                        ) ps
+>                      ) : map go subsolve
+>           go x = map (foldr (||) False . map (x !!) . (i2ii Map.!)) is
 
 We only need to check each pair of states once: (1, 2) and (2, 1) are
 equivalent in this sense.  Since they are not equivalent in Haskell,
@@ -1109,9 +1109,6 @@ direction.
 > pairs :: (Ord a) => Set a -> Set (a, a)
 > pairs xs = collapse (union . f) empty xs
 >     where f x = Set.mapMonotonic ((,) x) . snd $ Set.split x xs
-
-> pairs' :: (Ord a) => Set a -> a -> Set (a, a)
-> pairs' xs x = Set.mapMonotonic (makePair x) xs
 
 An FSA is certainly not minimal if there are states that cannot be
 reached by any path from the initial state.  We can trim those.
