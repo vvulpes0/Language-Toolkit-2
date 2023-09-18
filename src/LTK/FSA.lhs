@@ -106,6 +106,7 @@
 #endif
 > import Data.Maybe (fromMaybe)
 > import Data.Set (Set)
+> import qualified Data.Array as Array
 > import qualified Data.Set as Set
 > import qualified Data.Map.Lazy as Map
 
@@ -1067,44 +1068,33 @@ If no change has occurred, then we are done.
 We need only iterate as many times as the FSA has states,
 as each step splits at least one class into two,
 and there are at most as many classes as states.
+This function works as intended
+only on (complete) deterministic machines.
 
 > distinguishedPairs :: (Ord e, Ord n) =>
 >                       FSA n e -> Set (State n, State n)
 > distinguishedPairs fsa
->     = Set.fromList . map ((i2s Map.!) . fst) . filter snd . zip [0..]
->       $ subsolve !! (length (states fsa))
->     where ps = Set.toAscList . pairs $ states fsa
->           is = map fst $ zip [0::Integer ..] ps
->           i2s = Map.fromAscList $ zip [0..] ps
->           s2i = Map.fromAscList $ zip ps [0..]
->           cartesian as bs
->               = concatMap (\a -> map (makePair a) $ Set.toList bs)
->                 $ Set.toList as
+>     = Set.fromList . map ((i2s Array.!) . fst)
+>       . filter snd . Array.assocs . fst
+>       $ until (uncurry (==)) (\(_,b) -> (b, go b)) (parity, go parity)
+>     where ps = pairs $ states fsa
+>           i2s = Array.listArray (1, Set.size ps) (Set.toList ps)
+>           s2i = Map.fromList . map (\(a,b) -> (b,a)) $ Array.assocs i2s
+>           f s x a
+>               | Set.size d == 2
+>                   = add (s2i Map.! (Set.findMin d, Set.findMax d)) a
+>               | otherwise = a
+>               where d = delta fsa (Symbol x) s
+>                     add t ts = if t `elem` ts then ts else t:ts
 >           sucs (p,q)
 >               = (s2i Map.! (p,q) :)
->                 . Set.toList . Set.fromList
->                 . concatMap
->                       ( \x ->
->                         map (s2i Map.!) . filter (uncurry (/=))
->                       $ cartesian
->                         (delta fsa (Symbol x) $ Set.singleton p)
->                         (delta fsa (Symbol x) $ Set.singleton q))
->                 . Set.toList $ alphabet fsa
+>                 . Set.foldr (f (Set.fromDistinctAscList [p,q])) []
+>                 $ alphabet fsa
 >           i2ii = sucs <$> i2s
->           subsolve = ( map
->                        (\(p,q) ->
->                         isIn (finals fsa) p /= isIn (finals fsa) q
->                        ) ps
->                      ) : map go subsolve
->           go x = map (foldr (||) False . map (x !!) . (i2ii Map.!)) is
-
-We only need to check each pair of states once: (1, 2) and (2, 1) are
-equivalent in this sense.  Since they are not equivalent in Haskell,
-we define a function to ensure that each pair is only built in one
-direction.
-
-> makePair :: (Ord a) => a -> a -> (a, a)
-> makePair a b = (min a b, max a b)
+>           parity = (\(p,q) ->
+>                     isIn (finals fsa) p /= isIn (finals fsa) q
+>                    ) <$> i2s
+>           go x = fmap (foldr (||) False . map (x Array.!)) i2ii
 
 > pairs :: (Ord a) => Set a -> Set (a, a)
 > pairs xs = collapse (union . f) empty xs

@@ -117,7 +117,8 @@ library
                 , LTK.Traversals
   -- Modules included in this library but not exported.
   -- other-modules:
-  build-depends: base >=4.2 && <4.19
+  build-depends: array >= 0.1 && <0.6
+               , base >=4.2 && <4.19
                , containers >=0.5 && <0.7
                , deepseq >=1.1 && <1.5
                , parallel >=1.0 && <3.3
