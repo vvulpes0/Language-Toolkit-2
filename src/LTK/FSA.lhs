@@ -581,6 +581,15 @@ function `delta` from an FSA, a symbol, and a state to a set of states:
 > accepts fsa = anyS (isIn (finals fsa)) . tmap state
 >               . compute fsa . tmap Symbol
 
+> -- |An optimized transition function for deterministic machines.
+> -- The precondition, that the machine is deterministic, is not checked.
+> deltaD :: (Ord e, Ord n) =>
+>           FSA n e -> Symbol e -> State n -> State n
+> deltaD fsa x q = destination . Set.findMin
+>                  . extractMonotonic source q
+>                  . extractMonotonic edgeLabel x
+>                  $ transitions fsa
+
 The Brzozowski derivative of an FSA with respect to some string
 is an FSA representing the valid continuations from that string.
 
@@ -1074,21 +1083,24 @@ only on (complete) deterministic machines.
 > distinguishedPairs :: (Ord e, Ord n) =>
 >                       FSA n e -> Set (State n, State n)
 > distinguishedPairs fsa
->     = Set.fromList . map ((i2s Array.!) . fst)
->       . filter snd . Array.assocs . fst
+>     = Set.fromList . foldr addIf [] . Array.assocs . fst
 >       $ until (uncurry (==)) (\(_,b) -> (b, go b)) (parity, go parity)
 >     where ps = pairs $ states fsa
 >           i2s = Array.listArray (1, Set.size ps) (Set.toList ps)
 >           s2i = Map.fromList . map (\(a,b) -> (b,a)) $ Array.assocs i2s
->           f s x a
->               | Set.size d == 2
->                   = add (s2i Map.! (Set.findMin d, Set.findMax d)) a
->               | otherwise = a
->               where d = delta fsa (Symbol x) s
+>           addIf ~(i,x) = if x then ((i2s Array.! i):) else id
+>           f p q x a
+>               = maybe a (flip add a . (s2i Map.!)) out
+>               where out = case compare p' q' of
+>                             LT  ->  Just (p', q')
+>                             GT  ->  Just (q', p')
+>                             _   ->  Nothing
+>                     p' = deltaD fsa (Symbol x) p
+>                     q' = deltaD fsa (Symbol x) q
 >                     add t ts = if t `elem` ts then ts else t:ts
 >           sucs (p,q)
 >               = (s2i Map.! (p,q) :)
->                 . Set.foldr (f (Set.fromDistinctAscList [p,q])) []
+>                 . Set.foldr (f p q) []
 >                 $ alphabet fsa
 >           i2ii = sucs <$> i2s
 >           parity = (\(p,q) ->
@@ -1152,7 +1164,7 @@ the FSA.
 > -- |Returns a normal form of the input.
 > -- An FSA is in normal form if it is minimal and deterministic,
 > -- and contains neither unreachable states nor nonaccepting sinks.
-> -- Node labels are irrelevant, so 'Int' is used as a small
+> -- Node labels are irrelevant, so 'Integer' is used as a default
 > -- representation.
 > normalize :: (Ord e, Ord n) => FSA n e -> FSA Integer e
 > normalize = f . trimFailStates . minimize . trimUnreachables

@@ -144,7 +144,8 @@
 > -- |Transform all saved expressions into automata to prevent reevaluation.
 > compileEnv :: Env -> Env
 > compileEnv (dict, subexprs, e) = (dict, tmap (mapsnd f) subexprs, f <$> e)
->     where f = Automaton . renameStates . minimize . automatonFromExpr
+>     where f = Automaton . renameStates
+>               . minimizeDeterministic . automatonFromExpr
 
 > -- |Convert saved automata from descriptions of constraints to
 > -- descriptions of stringsets.
@@ -153,7 +154,8 @@
 > groundEnv :: Env -> Env
 > groundEnv (dict, subexprs, e) = (dict, tmap (mapsnd f) subexprs, f <$> e)
 >     where f = Automaton .
->               renameSymbolsBy Just . renameStates . minimize .
+>               renameSymbolsBy Just
+>               . renameStates . minimizeDeterministic .
 >               desemantify . semanticallyExtendAlphabetTo universe .
 >               automatonFromExpr
 >           universe = either (const Set.empty) id (definition "universe" dict)
@@ -214,7 +216,7 @@ Therefore, this cleanup step has been removed.
 > -- |Create an 'FSA' from an expression tree and environment,
 > -- complete with metadata regarding the constraint(s) it represents.
 > makeAutomaton :: Env -> Maybe (FSA Integer (Maybe String))
-> makeAutomaton (dict, _, e) = normalize
+> makeAutomaton (dict, _, e) = renameStates . minimizeDeterministic
 >                              . semanticallyExtendAlphabetTo symsets
 >                              . automatonFromExpr <$> e
 >     where symsets = either (const Set.empty) id
@@ -243,7 +245,7 @@ prevents having to descend through the tree to find this information.
 >          NAry (Shuffle es)       -> f emptyStr flatShuffle es
 >          NAry (StrictOrder es)   -> foldr
 >                                     (\x y ->
->                                      normalize
+>                                      renameStates . minimize
 >                                      $ autStrictOrderOverlay x y)
 >                                     emptyStr
 >                                     $ automata es
@@ -265,9 +267,10 @@ prevents having to descend through the tree to find this information.
 >              -> renameStates . minimize . LTK.FSA.reverse
 >                 $ automatonFromExpr ex
 >          Unary (Tierify ts ex)
->              -> tierify (unionAll ts) $ automatonFromExpr ex
+>              -> renameStates . minimize . tierify (unionAll ts)
+>                 $ automatonFromExpr ex
 >          Unary (UpClose ex)
->              -> renameStates . minimize . determinize . loopify $
+>              -> renameStates . minimize . loopify $
 >                 automatonFromExpr ex
 >     where f z tl xs = case automata xs
 >                       of [] -> z
@@ -578,7 +581,7 @@ prevents having to descend through the tree to find this information.
 > -- |Generate an expression (sub)tree from an 'FSA' that
 > -- contains metadata regarding the constraint(s) it represents.
 > fromSemanticAutomaton :: FSA Integer (Maybe String) -> Expr
-> fromSemanticAutomaton = Automaton
+> fromSemanticAutomaton = Automaton . renameStates . minimize
 
 > -- |Generate an expression (sub)tree from an 'FSA'.
 > fromAutomaton :: FSA Integer String -> Expr
