@@ -12,41 +12,24 @@
 >
 > @since 1.0
 > -}
-> module LTK.Decide.GLPT (isGLPT, isGLPTM) where
+> module LTK.Decide.GLPT (isGLPT, isGLPTM, isGLPTs) where
 
-> import qualified Data.Set as Set
+> import Data.Representation.FiniteSemigroup
 
 > import LTK.FSA
-> import LTK.Algebra
+> import LTK.Algebra(SynMon)
 
 > -- |True iff the syntactic monoid of the automaton is in
 > -- \(\mathbf{M_e J}\).
 > -- This is a generalization of LPT in the same way that
 > -- GLT is a generalization of LT.
 > isGLPT :: (Ord n, Ord e) => FSA n e -> Bool
-> isGLPT = isGLPTM . syntacticMonoid
-
-J-trivial means MaM = MbM in all and only those cases where a=b
-We're asking if X=e*M_e*e is J-trivial
-That is, if for all a,b in X, XaX=XbX iff a=b.
-
-It does not appear that a shortcut like that used to test for
-local J-triviality is viable.  If it turns out to be, then this
-file will shrink dramatically and this test will speed up quite
-a bit.
+> isGLPT = isGLPTs . syntacticSemigroup
 
 > -- |True iff the given monoid is in \(\mathbf{M_e J}\).
-> isGLPTM :: (Ord n, Ord e) => FSA (n, [Symbol e]) e -> Bool
-> isGLPTM m = all f $ Set.toList i
->     where i = idempotents m
->           x = Set.toList . emee m
->           f e = isDistinct . map (g e) $ x e
->           g e h = Set.unions
->                   [flip (follow m) qi $ label a ++ label h ++ label b
->                    | a <- x e, b <- x e]
->           qi = Set.findMin $ initials m
->           label = snd . nodeLabel
+> isGLPTM :: (Ord n, Ord e) => SynMon n e -> Bool
+> isGLPTM = isGLPT
 
-> isDistinct :: Eq a => [a] -> Bool
-> isDistinct [] = True
-> isDistinct (x:xs) = x `notElem` xs && isDistinct xs
+> -- |True iff the given semigroup is in \(\mathbf{M_e J}\).
+> isGLPTs :: FiniteSemigroupRep s => s -> Bool
+> isGLPTs = all isJTrivial . emee

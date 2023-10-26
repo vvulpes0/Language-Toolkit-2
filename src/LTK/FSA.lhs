@@ -45,6 +45,9 @@
 >        , kleeneClosure
 >        , powersetGraph
 >        , syntacticMonoid
+>        , syntacticOMonoid
+>        , syntacticSemigroup
+>        , syntacticOSemigroup
 >        , residue
 >        , coresidue
 >        -- * Primitive ideals
@@ -82,7 +85,7 @@
 >        , forceAlphabetTo
 >        , desemantify
 >        , renameSymbolsBy
->        -- ** Transformations of 'State' labels
+>        -- ** Transformations of t'State' labels
 >        , renameStatesBy
 >        , renameStates
 >        -- * Miscellaneous
@@ -106,7 +109,12 @@
 #endif
 > import Data.Maybe (fromMaybe)
 > import Data.Set (Set)
+> import Data.Representation.FiniteSemigroup
+>     ( GeneratedAction, OrderedSemigroup
+>     , fromBasesWith, syntacticOrder, unordered
+>     )
 > import qualified Data.Array as Array
+> import qualified Data.IntSet as IntSet
 > import qualified Data.Set as Set
 > import qualified Data.Map.Lazy as Map
 
@@ -222,7 +230,7 @@ represents a transition that may occur without consuming any further
 input.
 
 
-> -- |The label of a 'Transition'.
+> -- |The label of a t'Transition'.
 > data Symbol e = Epsilon  -- ^The edge may be taken without consuming input.
 >               | Symbol e -- ^The edge requires consuming this symbol.
 >               deriving (Eq, Ord, Read, Show)
@@ -246,7 +254,7 @@ becomes
 
     fromList ['a', 'b'].
 
-> -- |Remove 'Epsilon' from a 'Collapsible' of 'Symbol'
+> -- |Remove 'Epsilon' from a 'Collapsible' of t'Symbol'
 > -- and present the unwrapped results as a new 'Container'.
 > unsymbols :: (Collapsible s, Container c e, Monoid c) => s (Symbol e) -> c
 > unsymbols = collapse (mappend . f) mempty
@@ -256,7 +264,7 @@ becomes
 States
 ------
 
-> -- |A vertex of the graph representation of an 'FSA' is a 'State',
+> -- |A vertex of the graph representation of an t'FSA' is a t'State',
 > -- which can be labelled with any arbitrary value, so long as every
 > -- vertex of a single automaton is labelled with a distinct value
 > -- of the same type.
@@ -271,7 +279,7 @@ components to a transition: an edge label, and two states.  If a
 computation in the first state encounters a symbol matching the
 transition's edge label, then it moves to the second state.
 
-> -- |The edges of an 'FSA'.
+> -- |The edges of an t'FSA'.
 > data Transition n e
 >     = Transition
 >       { edgeLabel   :: Symbol e
@@ -432,17 +440,12 @@ Semigroup instance to satisfy base-4.9
 
 > instance (Enum n, Ord n, Ord e) => Monoid (FSA n e)
 >     where mempty   =  singletonLanguage empty
-
 #if MIN_VERSION_base(4,11,0)
--- mappend will eventually be removed
+>           -- mappend will eventually be removed
 #elif MIN_VERSION_base(4,9,0)
-
 >           mappend = (<>)
-
 #else
-
 >           mappend  =  apply autConcatenation
-
 #endif
 
 > apply :: (Ord e, Ord n1, Ord n2, Enum n2) =>
@@ -550,16 +553,15 @@ that to define the transition function.
 >     where ts = transitions fsa
 >           filterID i = ID (state i) (keep (/= Epsilon) (string i))
 >           filteredIDs = tmap filterID ids
->           next i
->               | null s     = tmap (`ID` []) closure
->               | otherwise  = tmap (`ID` tail s) outStates
+>           next i = case s of
+>                      (x:xs) -> tmap (`ID` xs) (outStates x)
+>                      _      -> tmap (`ID` []) closure
 >               where s = string i
 >                     closure = epsilonClosure fsa (singleton (state i))
->                     outStates  = epsilonClosure fsa
->                                  . tmap destination
->                                  . keep (isIn closure . source)
->                                  $ extractMonotonic edgeLabel
->                                    (head s) ts
+>                     outStates x = epsilonClosure fsa
+>                                   . tmap destination
+>                                   . keep (isIn closure . source)
+>                                   $ extractMonotonic edgeLabel x ts
 
 We should not have to produce IDs ourselves.  We can define the transition
 function `delta` from an FSA, a symbol, and a state to a set of states:
@@ -573,7 +575,7 @@ function `delta` from an FSA, a symbol, and a state to a set of states:
 >     where initialIDs = Set.mapMonotonic (`ID` str) expandedInitials
 >           expandedInitials = epsilonClosure fsa $ initials fsa
 
-> -- |Returns whether the given 'FSA' lands in a final state
+> -- |Returns whether the given t'FSA' lands in a final state
 > -- after processing the given sequence.
 > --
 > -- @since 1.1
@@ -801,7 +803,7 @@ accepting in B.  This is not what we want, as it means that w is still
 accepted.  Thus we cannot use the cartesian construction to gain an
 advantage over the naive implementation (A & not B).
 
-> -- |Returns an 'FSA' accepting all and only those strings
+> -- |Returns an t'FSA' accepting all and only those strings
 > -- accepted by the first input but rejected by the second.
 > --
 > -- @since 1.1
@@ -835,12 +837,12 @@ becomes under this construction:
 
 and the string "a" is accepted in both.
 
-> -- |Returns an 'FSA' accepting all and only those strings not
+> -- |Returns an t'FSA' accepting all and only those strings not
 > -- accepted by the input.
 > complement :: (Ord e, Ord n) => FSA n e -> FSA (Set n) e
 > complement = complementDeterministic . determinize
 
-> -- |Returns the 'complement' of a deterministic 'FSA'.
+> -- |Returns the 'complement' of a deterministic t'FSA'.
 > -- The precondition that the input is deterministic
 > -- is not checked.
 > complementDeterministic :: (Ord e, Ord n) => FSA n e -> FSA n e
@@ -1010,12 +1012,12 @@ We begin by constructing the set of Myhill-Nerode equivalence classes
 for the states of the input FSA, then simply replace each state by its
 equivalence class.
 
-> -- |Returns a deterministic 'FSA' recognizing the same stringset
+> -- |Returns a deterministic t'FSA' recognizing the same stringset
 > -- as the input, with a minimal number of states.
 > minimize :: (Ord e, Ord n) => FSA n e -> FSA (Set (Set n)) e
 > minimize = minimizeDeterministic . determinize
 
-> -- |Returns a deterministic 'FSA' recognizing the same stringset
+> -- |Returns a deterministic t'FSA' recognizing the same stringset
 > -- as the input, with a minimal number of states.
 > -- The precondition that the input is deterministic
 > -- is not checked.
@@ -1023,7 +1025,7 @@ equivalence class.
 > minimizeDeterministic = setD . minimizeOver nerode
 >     where setD f = f {isDeterministic = True}
 
-> -- |Returns a non-necessarily deterministic 'FSA'
+> -- |Returns a non-necessarily deterministic t'FSA'
 > -- minimized over a given relation.
 > -- Some, but not all, relations do guarantee deterministic output.
 > -- The precondition that the input is deterministic
@@ -1484,6 +1486,56 @@ state is considered accepting in the syntactic monoid.
 >           fnd           =  fst . nodeLabel . destination
 >           sds           =  keep ((==) (fnd x) . fnd) xs
 >           set_dest d t  =  t {destination = d}
+
+
+Syntactic Semigroups
+====================
+
+The syntactic monoid described above
+is represented by a right Cayley graph.
+The neutral element (identity function) is always included,
+which makes some tests more difficult than necessary.
+In many cases, we want only the syntactic semigroup.
+In order to simplify and speed up processing,
+this is not necessarily represented as a graph.
+
+> -- |Consider each alphabetic symbol as a function from state to state.
+> -- The semigroup generated by these functions is the transformation
+> -- semigroup of a deterministic automaton.
+> -- The syntactic semigroup is the transformation semigroup
+> -- of the minimal determinsitic machine.
+> syntacticSemigroup :: (Ord n, Ord e) => FSA n e -> GeneratedAction
+> syntacticSemigroup = unordered . syntacticOSemigroup
+
+> -- |The syntactic ordered semigroup is the syntactic semigroup
+> -- alongside an order, where \(x\leq y\)
+> -- if and only if whenever \(uyv\) maps the inital state
+> -- to a final state, so too does \(uxv\).
+> syntacticOSemigroup :: (Ord n, Ord e) =>
+>                        FSA n e -> OrderedSemigroup GeneratedAction
+> syntacticOSemigroup = syntacticO False
+
+> -- |The syntactic ordered monoid is the syntactic monoid
+> -- alongside the same order as in the syntactic ordered semigroup.
+> syntacticOMonoid :: (Ord n, Ord e) =>
+>                     FSA n e -> OrderedSemigroup GeneratedAction
+> syntacticOMonoid = syntacticO True
+
+> syntacticO :: (Ord n, Ord e) =>
+>               Bool
+>            -> FSA n e -> OrderedSemigroup GeneratedAction
+> syntacticO adjoin = mk . renameStates . minimize
+>     where f m = let q = Set.toAscList $ states m
+>                     a = map Symbol . Set.toAscList $ alphabet m
+>                 in map (\s -> map (pn . deltaD m s) q) a
+>           pn = pred . nodeLabel
+>           mk x = let q0 = pn . Set.findMin $ initials x
+>                      fs = IntSet.fromList . map pn
+>                           . Set.toList $ finals x
+>                      bs = (if adjoin
+>                            then ([0 .. Set.size (states x) - 1] :)
+>                            else id) (f x)
+>                  in fromBasesWith (syntacticOrder q0 fs) bs
 
 
 Alphabet Manipulation

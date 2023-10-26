@@ -14,7 +14,7 @@
 
 > import Data.Set (Set)
 
-> -- |Forbidden tier-substrings of the given 'FSA'.
+> -- |Forbidden tier-substrings of the given t'FSA'.
 > forbiddenTierSubstrings :: (Ord e, Ord n, Enum n) =>
 >                            FSA n e -> (Set e, ForbiddenSubstrings e)
 > forbiddenTierSubstrings f = (tier f, forbiddenSubstrings f)

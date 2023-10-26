@@ -24,9 +24,11 @@
 
 > import Data.Char (isDigit)
 > import Data.List (intercalate)
+> import Data.List.NonEmpty (NonEmpty(..))
 > import Data.Maybe (fromMaybe)
 > import Data.Set (Set)
 > import Data.Map (Map)
+> import qualified Data.List.NonEmpty as NE
 > import qualified Data.Map.Strict as Map
 > import qualified Data.Set as Set
 
@@ -57,7 +59,8 @@
 > -- The result represents the transitions, input symbols, and output symbols
 > -- in that order.
 > extractSymbolsATT :: String -> (String, String, String)
-> extractSymbolsATT = f . map unlines . splitOn separator . lines
+> extractSymbolsATT
+>     = f . map unlines . NE.toList . splitOn separator . lines
 >     where f (x:y:z:_)  =  (x, y, z)
 >           f (x:y:_)    =  (x, y, [])
 >           f (x:_)      =  (x, [], [])
@@ -139,7 +142,7 @@ Reading an AT&T format automaton
 Creating an AT&T format automaton
 =================================
 
-> -- |Convert an 'FSA' into its AT&T format, with one caveat:
+> -- |Convert an t'FSA' into its AT&T format, with one caveat:
 > -- The LTK internal format allows for symbols that the AT&T format
 > -- does not understand, and no attempt is made to work around this.
 > -- Nonnumeric symbols are exported as-is,
@@ -191,10 +194,11 @@ Creating an AT&T format automaton
 >                   _        -> defaultEpsilon
 >           f e
 >               | all isDigit (showish e)
->                   = head
->                     . (++ [showish e]) . map (showish . snd)
+>                   = h (showish e) . map (showish . snd)
 >                     $ filter ((== e) . fst) tags
 >               | otherwise = deescape (showish e)
+>               where h _ (x:_) = x
+>                     h x [] = x
 
 > dumpFinals :: (Ord n, Show n) => Set (State n) -> [String]
 > dumpFinals = map (show . nodeLabel) . Set.toAscList
@@ -203,11 +207,11 @@ Creating an AT&T format automaton
 Helpers
 =======
 
-> splitOn :: Eq a => a -> [a] -> [[a]]
-> splitOn _ [] = [[]]
+> splitOn :: Eq a => a -> [a] -> NonEmpty [a]
+> splitOn _ [] = [] :| []
 > splitOn b (a:as)
->     | a == b = []:x
->     | otherwise = (a:head x):tail x
+>     | a == b = [] :| NE.toList x
+>     | otherwise = (a:NE.head x) :| NE.tail x
 >     where x = splitOn b as
 
 > showish :: Show a => a -> String

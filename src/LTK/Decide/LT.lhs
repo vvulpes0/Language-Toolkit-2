@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.LT
-> Copyright : (c) 2019,2021-2022 Dakotah Lambert
+> Copyright : (c) 2019,2021-2023 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -11,16 +11,16 @@
 >
 > @since 0.2
 > -}
-> module LTK.Decide.LT (isLT, isLTM) where
+> module LTK.Decide.LT (isLT, isLTM, isLTs) where
 
-> import qualified Data.Set as Set
+> import Data.Representation.FiniteSemigroup
 
 > import LTK.FSA
-> import LTK.Algebra
+> import LTK.Algebra(SynMon)
 
 > -- |True iff the automaton recognizes an LT stringset.
 > isLT :: (Ord n, Ord e) => FSA n e -> Bool
-> isLT = isLTM . syntacticMonoid
+> isLT = isLTs . syntacticSemigroup
 
 A semigroup (S) [e.g. the syntactic semigroup] is locally testable iff
 for all idempotent e, the generated subsemigroup eSe is an idempotent
@@ -30,6 +30,8 @@ commutative monoid.
 > --
 > -- @since 1.0
 > isLTM :: (Ord n, Ord e) => SynMon n e -> Bool
-> isLTM s = all (both (isCommutative s) (isSubsetOf i) . ese s)
->           . Set.toList $ i
->     where i = idempotents s
+> isLTM = isLT
+
+> -- |True iff the given semigroup is locally a semilattice.
+> isLTs :: FiniteSemigroupRep s => s -> Bool
+> isLTs = locally (both isJTrivial isBand)

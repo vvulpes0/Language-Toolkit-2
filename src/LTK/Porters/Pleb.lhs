@@ -13,7 +13,7 @@
 > The (P)iecewise / (L)ocal (E)xpression (B)uilder.
 > This module defines a parser for a representation of
 > logical formulae over subsequence- and adjacency-factors,
-> as well as a mechanism for evaluating (creating an 'FSA' from)
+> as well as a mechanism for evaluating (creating an t'FSA' from)
 > the resulting expression tree.
 
 > There are two special variables:
@@ -213,7 +213,7 @@ Therefore, this cleanup step has been removed.
 >                     -- <> and ~<> are essentially True and False
 >               | otherwise = Factor (PLFactor h t ps)
 
-> -- |Create an 'FSA' from an expression tree and environment,
+> -- |Create an t'FSA' from an expression tree and environment,
 > -- complete with metadata regarding the constraint(s) it represents.
 > makeAutomaton :: Env -> Maybe (FSA Integer (Maybe String))
 > makeAutomaton (dict, _, e) = renameStates . minimizeDeterministic
@@ -226,7 +226,7 @@ The properties of semantic automata are used here to prevent having to
 pass alphabet information to the individual constructors, which in turn
 prevents having to descend through the tree to find this information.
 
-> -- |Create an 'FSA' from an expression tree,
+> -- |Create an t'FSA' from an expression tree,
 > -- complete with metadata regarding the constraint(s) it represents.
 > automatonFromExpr :: Expr -> FSA Integer (Maybe String)
 > automatonFromExpr e
@@ -578,12 +578,12 @@ prevents having to descend through the tree to find this information.
 
 
 
-> -- |Generate an expression (sub)tree from an 'FSA' that
+> -- |Generate an expression (sub)tree from an t'FSA' that
 > -- contains metadata regarding the constraint(s) it represents.
 > fromSemanticAutomaton :: FSA Integer (Maybe String) -> Expr
 > fromSemanticAutomaton = Automaton . renameStates . minimize
 
-> -- |Generate an expression (sub)tree from an 'FSA'.
+> -- |Generate an expression (sub)tree from an t'FSA'.
 > fromAutomaton :: FSA Integer String -> Expr
 > fromAutomaton = fromSemanticAutomaton . renameSymbolsBy Just
 

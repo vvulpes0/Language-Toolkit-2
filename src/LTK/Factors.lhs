@@ -98,7 +98,7 @@
 >           nextState  =  succ . maximum $ tmap snd tagged
 >           fin        =  singleton (State nextState)
 
-> -- |Build an 'FSA' representing a single constraint.
+> -- |Build an t'FSA' representing a single constraint.
 > buildLiteral :: (Enum n, Ord n, Ord e) => Set e -> Literal e -> FSA n e
 > buildLiteral alpha (Literal isPositive factor)
 >     = buildFactor alpha factor isPositive
@@ -115,7 +115,7 @@
 >     = flatIntersection . insert (totalWithAlphabet alpha) .
 >       tmap (buildDisjunction alpha) $ Set.toList disjunctions
 
-> -- |Build an 'FSA' representing the conjunction of a set of
+> -- |Build an t'FSA' representing the conjunction of a set of
 > -- constraints provided in conjunctive normal form.
 > build :: (Enum n, NFData n, Ord n, NFData e, Ord e) =>
 >          Set e -> Set (Conjunction e) -> FSA n e
@@ -123,8 +123,8 @@
 >               insert (totalWithAlphabet alpha)  .
 >               tmap (buildConjunction alpha) . Set.toList
 
-> -- |Combine inner lists by 'Disjunction',
-> -- and form a 'Conjunction' of the results.
+> -- |Combine inner lists by t'Disjunction',
+> -- and form a t'Conjunction' of the results.
 > makeConstraint :: (Ord e) => [[Literal e]] -> Conjunction e
 > makeConstraint
 >     = Conjunction . Set.fromList . tmap (Disjunction . Set.fromList)

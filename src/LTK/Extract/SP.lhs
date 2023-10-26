@@ -201,7 +201,7 @@ Documentation
 > [] `isSSQ` _   =  True
 > (v:vs) `isSSQ` ws
 >     | isEmpty notV  =  False
->     | otherwise     =  vs `isSSQ` tail notV
+>     | otherwise     =  vs `isSSQ` drop 1 notV
 >     where notV = dropWhile (/= v) ws
 
 %if false
@@ -237,7 +237,7 @@ wherever a transition occurred in $\delta$.
 
 %if false
 
-> -- |Returns an 'FSA' that accepts every string accepted by the
+> -- |Returns an t'FSA' that accepts every string accepted by the
 > -- original, as well as every subsequence of these strings.
 > subsequenceClosure :: (Ord n, Ord e) => FSA n e -> FSA n e
 > subsequenceClosure = subsequenceClosure'
@@ -320,7 +320,7 @@ $\Language{\Automaton{M}}$.
 
 %if false
 
-> -- |Given an 'FSA' \(A\),
+> -- |Given an t'FSA' \(A\),
 > -- returns the set of subsequences \(v\) such that
 > -- for all words \(w\), \(v\sqsubseteq w\) implies
 > -- that \(w\) is not accepted by \(A\).
@@ -394,9 +394,9 @@ rather than the downward closure of the input.
 In either case, the closure is a superset of the input,
 and so they are the same if subtracting the input yields emptiness.
 
-> -- |Returns @True@ iff the stringset represented by the given 'FSA'
+> -- |Returns @True@ iff the stringset represented by the given t'FSA'
 > -- is Strictly Piecewise, that is,
-> -- if the 'FSA' accepts all subsequences of every string it accepts.
+> -- if the t'FSA' accepts all subsequences of every string it accepts.
 > isSP :: (Ord n, Ord e) => FSA n e -> Bool
 > isSP x' = isEmpty . finals $ autDifference (loopify x) x
 >     where x = complement x'

@@ -180,6 +180,15 @@ Definite, defined by a set of permitted suffixes.
 .RE
 .
 .PP
+.B :isDot1
+.RI < expr >
+.RS
+Dot depth at most one, defined by sets of substring-subsequences.
+For example, one might require that an \(lqab\(rq occurs,
+followed somewhere later by \(lqcd\(rq.
+.RE
+.
+.PP
 .B :isFinite
 .RI < expr >
 .RS
@@ -704,7 +713,7 @@ for simplicity.
 This version of
 .B plebby
 allows one to describe arbitrary algebraic varieties
-through universally-quantified systems of equalities.
+through universally-quantified systems of inequalities.
 For instance,
 .B [ab=ba;x*=x]
 specifies two equations:
@@ -727,21 +736,33 @@ The grammar is as follows:
 .PP
 .RI < conj-list >
 ::=
-.RI < eq-list >
+.RI < rel-list >
 .B ;
 .RI < conj-list >
 |
-.RI < eq-list >
+.RI < rel-list >
 .PP
-.RI < eq-list >
+.RI < rel-list >
 ::=
 .RI < value >
-.B =
-.RI < eq-list >
+.RI < op >
+.RI < rel-list >
 |
 .RI < value >
-.B =
+.RI < op >
 .RI < value >
+.PP
+.RI < op >
+::=
+.B <
+|
+.B \(<=
+|
+.B =
+|
+.B \(>=
+|
+.B >
 .PP
 .RI < value >
 ::=

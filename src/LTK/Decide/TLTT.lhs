@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.TLTT
-> Copyright : (c) 2019,2021-2022 Dakotah Lambert
+> Copyright : (c) 2019,2021-2023 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -9,9 +9,11 @@
 >
 > @since 0.2
 > -}
-> module LTK.Decide.TLTT (isTLTT, isTLTTM) where
+> module LTK.Decide.TLTT (isTLTT, isTLTTM, isTLTTs) where
 
-> import LTK.Decide.LTT (isLTT, isLTTM)
+> import Data.Representation.FiniteSemigroup
+
+> import LTK.Decide.LTT (isLTT, isLTTM, isLTTs)
 > import LTK.FSA (FSA)
 > import LTK.Tiers (project)
 > import LTK.Algebra (SynMon)
@@ -25,3 +27,7 @@
 > -- @since 1.0
 > isTLTTM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isTLTTM = isLTTM . project
+
+> -- |True iff the semigroup recognizes a TLTT stringset.
+> isTLTTs :: FiniteSemigroupRep s => s -> Bool
+> isTLTTs = isLTTs . projectedSubsemigroup

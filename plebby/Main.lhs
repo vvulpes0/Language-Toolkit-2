@@ -49,6 +49,7 @@
 >                         , isLT, isTLT
 >                         , isLTT, isTLTT
 >                         , isLPT, isTLPT
+>                         , isDot1
 >                         , isSP
 >                         , isPT
 >                         , isFO2, isFO2B, isFO2BF, isFO2S
@@ -203,6 +204,7 @@
 >               | IsB Expr
 >               | IsCB Expr
 >               | IsDef Expr
+>               | IsDot1 Expr
 >               | IsFin Expr
 >               | IsFO2 Expr
 >               | IsFO2B Expr
@@ -448,6 +450,11 @@ in order to deal with spaces or other special characters.
 >                   , M . IsDef <$> pe
 >                   , [ArgE]
 >                   , "determine if expr is a definite language"
+>                   )
+>                 , ( ":isDot1"
+>                   , M . IsDot1 <$> pe
+>                   , [ArgE]
+>                   , "determine if expr has dot-depth at most one"
 >                   )
 >                 , ( ":isFinite"
 >                   , M . IsFin <$> pe
@@ -990,7 +997,9 @@ in order to deal with spaces or other special characters.
 > lessHelp :: [(String, [ArgType], String)] -> IO ()
 > lessHelp xs = do
 >   mpager <- fmap (map snd . filter ((==) "PAGER" . fst)) getEnvironment
->   let ps     =  words $ head (mpager ++ ["less"])
+>   let ps     =  case mpager of
+>                   (x:_) -> words x
+>                   _ -> ["less"]
 >       (p,s)  =  case ps of
 >                   (y:ys) -> (y,ys)
 >                   _ -> ("less",[])
@@ -1016,6 +1025,7 @@ in order to deal with spaces or other special characters.
 >          IsB p          ->  check isB p
 >          IsCB p         ->  check isCB p
 >          IsDef p        ->  check isDef p
+>          IsDot1 p       ->  check isDot1 p
 >          IsFin p        ->  check isFinite p
 >          IsFO2 p        ->  check isFO2 p
 >          IsFO2B p       ->  check isFO2B p

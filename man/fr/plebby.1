@@ -178,6 +178,16 @@ Apériodique et commutatif; (1,t)-LTT.
 .RE
 .
 .PP
+.B :isDot1
+.RI < expr >
+.RS
+Pas plus haut que le premier niveau de la hiérarchie de Brzozowski.
+Ceux langages-ci sont définis par des ensembles
+de sous-sequences de sous-chaînes.
+Par exemple, on peut dire que «cd» apparaît quelque part après «ab».
+.RE
+.
+.PP
 .B :isFinite
 .RI < expr >
 .RS
@@ -692,7 +702,8 @@ Le théorème d'Eilenberg dit qu'à
 chaque variété de langages formels
 correspond une variété de monoïdes ou de demi-groupes
 caractèrisée par un système d'équations.
-On donne les équations et
+Avec un ordre, on peut distinguer un langage et son complément.
+On donne les équations ou les inéquations et
 .B plebby
 vérifie si elles sont universellement vraies.
 Par exemple,
@@ -717,21 +728,33 @@ La grammaire est comme suivant:
 .PP
 .RI < conjonction >
 ::=
-.RI < équiv >
+.RI < rel >
 .B ;
 .RI < conjonction >
 |
-.RI < équiv >
+.RI < rel >
 .PP
-.RI < équiv >
+.RI < rel >
 ::=
 .RI < produit >
-.B =
-.RI < équiv >
+.RI < op >
+.RI < rel >
 |
 .RI < produit >
-.B =
+.RI < op >
 .RI < produit >
+.PP
+.RI < op >
+::=
+.B <
+|
+.B \(<=
+|
+.B =
+|
+.B \(>=
+|
+.B >
 .PP
 .RI < produit >
 ::=

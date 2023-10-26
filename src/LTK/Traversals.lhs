@@ -48,13 +48,13 @@ A Path is
      ending at that state has been traversed.
 * the length of the path (depth of the terminal state)
 
-> -- |A path through an 'FSA'.
+> -- |A path through an t'FSA'.
 > data Path n e
 >     = Path
 >       { -- |Edge labels are gathered in reverse order,
 >         -- so 'labels' is a reversed string.
 >         labels        :: [Symbol e]
->         -- |Current 'State', if any.
+>         -- |Current t'State', if any.
 >       , endstate      :: Maybe (State n)
 >         -- |States seen so far, with multiplicity.
 >       , stateMultiset :: Multiset (State n)
@@ -63,7 +63,7 @@ A Path is
 >       }
 >     deriving (Eq, Show)
 
-> -- |The reversal of the 'labels' of the 'Path'.
+> -- |The reversal of the 'labels' of the t'Path'.
 > word :: Path n e -> [Symbol e]
 > word = Prelude.reverse . labels
 

@@ -25,10 +25,8 @@
 > import System.Environment (getArgs)
 > import System.Exit (die)
 > import System.FilePath ((</>), takeBaseName)
-> import System.IO ( IOMode(WriteMode)
->                  , hPutStrLn
+> import System.IO ( hPutStrLn
 >                  , stderr
->                  , withFile
 >                  )
 > import qualified Data.Set as Set
 
@@ -291,8 +289,8 @@ those sets that are known to be non-productive.
 >           (empty {attestedUnits = alpha}) substrings
 >         , ForbiddenSubsequences
 >           { attestedAlphabet = alpha
->           , getSubsequences  = tmap (\(Subsequence xs) -> singlify xs) $
->             difference factors substrings
+>           , getSubsequences  = tmap getssq
+>           $ difference factors substrings
 >           }
 >         )
 >     where factors = tmap (\(Literal _ f) -> f) literals
@@ -304,7 +302,9 @@ those sets that are known to be non-productive.
 >           makeTag (Substring xs False True)   =  Final (singlify xs)
 >           makeTag (Substring xs True False)   =  Initial (singlify xs)
 >           makeTag (Substring xs True True)    =  Word (singlify xs)
->           makeTag (Subsequence _)             =  error "No subsequences here"
+>           makeTag (Subsequence _) = error "No subsequences here"
+>           getssq (Subsequence xs) = singlify xs
+>           getssq _ = error "No substrings here"
 
 
 Formatting output

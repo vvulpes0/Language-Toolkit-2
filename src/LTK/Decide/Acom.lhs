@@ -12,29 +12,32 @@
 >
 > @since 1.1
 > -}
-> module LTK.Decide.Acom (isAcom, isAcomM, comTest) where
+> module LTK.Decide.Acom (isAcom, isAcomM, isAcoms, comTest) where
 
+> import Data.Representation.FiniteSemigroup
 > import Data.Set (Set)
 > import qualified Data.Set as Set
 
-> import LTK.Decide.SF (isSFM)
 > import LTK.FSA
-> import LTK.Algebra
+> import LTK.Algebra(SynMon)
 
-> type S n e = (n, [Symbol e])
 
 > -- |True iff the automaton recognizes a \(\langle 1,t\rangle\)-LTT
 > -- stringset.
 > isAcom :: (Ord n, Ord e) => FSA n e -> Bool
-> isAcom = isAcomM . syntacticMonoid
+> isAcom = isAcoms . syntacticSemigroup
 
 > -- |True iff the monoid is aperiodic and commutative
 > isAcomM :: (Ord n, Ord e) => SynMon n e -> Bool
-> isAcomM = both isSFM (\m -> comTest m (states m))
+> isAcomM = isAcom
+
+> -- |True iff the semigroup is aperiodic and commutative
+> isAcoms :: FiniteSemigroupRep s => s -> Bool
+> isAcoms = both isAperiodic isCommutative
 
 > -- |True iff the specified elements commute.
 > comTest :: (Ord n, Ord e) =>
->           SynMon n e -> Set (State (S [Maybe n] e)) -> Bool
+>           SynMon n e -> Set (State ([Maybe n], [Symbol e])) -> Bool
 > comTest m qs
 >     | Set.size (initials m) /= 1 = Set.null (initials m)
 >     | otherwise = all commutes $ Set.toList p

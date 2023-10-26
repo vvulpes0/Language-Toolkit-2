@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.B
-> Copyright : (c) 2022 Dakotah Lambert
+> Copyright : (c) 2022-2023 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -12,36 +12,47 @@
 >
 > @since 1.0
 > -}
-> module LTK.Decide.B (isB, isBM, isLB, isLBM, isTLB, isTLBM) where
+> module LTK.Decide.B ( isB, isBM, isLB, isLBM, isTLB, isTLBM
+>                     , isBs, isLBs, isTLBs) where
 
-> import qualified Data.Set as Set
+> import Data.Representation.FiniteSemigroup
 
 > import LTK.FSA
-> import LTK.Algebra
+> import LTK.Algebra(SynMon)
 > import LTK.Tiers (project)
 
 > -- |True iff the automaton recognizes a band stringset.
 > isB :: (Ord n, Ord e) => FSA n e -> Bool
-> isB = isBM . syntacticMonoid
+> isB = isBs . syntacticSemigroup
 
 > -- |True iff the monoid is a band.
 > isBM :: (Ord n, Ord e) => SynMon n e -> Bool
-> isBM m = Set.union (initials m) (idempotents m) == states m
+> isBM = isB
+
+> -- |True iff the semigroup is a band.
+> isBs :: FiniteSemigroupRep s => s -> Bool
+> isBs = isBand
 
 > -- |True iff the recognized stringset is locally a band.
 > isLB :: (Ord n, Ord e) => FSA n e -> Bool
-> isLB = isLBM . syntacticMonoid
+> isLB = isLBs . syntacticSemigroup
 
 > -- |True iff the monoid is locally a band.
 > isLBM :: (Ord n, Ord e) => SynMon n e -> Bool
-> isLBM m = allS f (states m)
->     where f x = Set.null (ese m x `Set.difference` i)
->           i = Set.union (initials m) (idempotents m)
+> isLBM = isLB
+
+> -- |True iff the semigroup is locally a band.
+> isLBs :: FiniteSemigroupRep s => s -> Bool
+> isLBs = locally isBand
 
 > -- |True iff the recognized stringset is locally a band on some tier.
 > isTLB :: (Ord n, Ord e) => FSA n e -> Bool
-> isTLB = isLBM . syntacticMonoid . project
+> isTLB = isLB . project
 
 > -- |True iff the monoid is locally a band on some tier.
 > isTLBM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isTLBM = isLBM . project
+
+> -- |True iff the semigroup is locally a band on some tier.
+> isTLBs :: FiniteSemigroupRep s => s -> Bool
+> isTLBs = isLBs . projectedSubsemigroup
