@@ -89,6 +89,8 @@
 >        , renameStatesBy
 >        , renameStates
 >        -- * Miscellaneous
+>        , commonPrefix
+>        , commonSuffix
 >        , State(..)
 >        , Symbol(..)
 >        , unsymbols
@@ -591,6 +593,31 @@ function `delta` from an FSA, a symbol, and a state to a set of states:
 >                  . extractMonotonic source q
 >                  . extractMonotonic edgeLabel x
 >                  $ transitions fsa
+
+> -- |Return Just the longest sequence \(u\) of symbols
+> -- such that every word in the language is \(uv\) for some \(v\).
+> -- If the language is empty, return None.
+> commonPrefix :: (Ord e, Ord n) => FSA n e -> Maybe [e]
+> commonPrefix f' = fmap go q
+>     where f = normalize f'
+>           q = fmap fst . Set.minView $ initials f
+>           ts = Set.toList $ transitions f
+>           el t = case edgeLabel t of
+>                    Symbol p -> (p:)
+>                    _ -> id
+>           go x
+>               | x `Set.member` finals f = []
+>               | otherwise
+>                   = case filter ((== x) . source) ts of
+>                       [t] -> el t $ go (destination t)
+>                       _ -> []
+
+> -- |Return Just the longest sequence \(v\) of symbols
+> -- such that every word in the language is \(uv\) for some \(u\).
+> -- If the language is empty, return None.
+> commonSuffix :: (Ord e, Ord n) => FSA n e -> Maybe [e]
+> commonSuffix = commonPrefix . LTK.FSA.reverse
+
 
 The Brzozowski derivative of an FSA with respect to some string
 is an FSA representing the valid continuations from that string.
