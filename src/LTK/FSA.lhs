@@ -616,7 +616,7 @@ function `delta` from an FSA, a symbol, and a state to a set of states:
 > -- such that every word in the language is \(uv\) for some \(u\).
 > -- If the language is empty, return None.
 > commonSuffix :: (Ord e, Ord n) => FSA n e -> Maybe [e]
-> commonSuffix = commonPrefix . LTK.FSA.reverse
+> commonSuffix = fmap Prelude.reverse . commonPrefix . LTK.FSA.reverse
 
 
 The Brzozowski derivative of an FSA with respect to some string
