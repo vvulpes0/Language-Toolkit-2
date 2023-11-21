@@ -12,7 +12,9 @@
 #endif
 > import Control.Monad.Trans.Class (lift)
 > import Data.Char (isSpace, toLower)
+> import Data.List (intercalate, nub)
 > import Data.Maybe (fromMaybe)
+> import Data.Set (Set)
 > import System.Console.Haskeline ( InputT
 >                                 , defaultSettings
 >                                 , getInputLine
@@ -45,26 +47,19 @@
 > import System.IO.Error (IOError, catch) -- We'll make our own
 #endif
 
-> import LTK.Decide       ( isSL, isTSL
->                         , isLT, isTLT
->                         , isLTT, isTLTT
->                         , isLPT, isTLPT
+> import qualified Data.Set as Set
+
+> import LTK.Decide       ( isLT
+>                         , isLTT
+>                         , isLPT
 >                         , isDot1
->                         , isSP
 >                         , isPT
 >                         , isFO2, isFO2B, isFO2BF, isFO2S
 >                         , isSF
 >                         , isGLT, isGLPT
 >                         , isFinite
->                         , isGD
->                         , isTGD
->                         , isCB
->                         , isAcom, isLAcom, isTLAcom
->                         , isB, isLB, isTLB
->                         , isDef
->                         , isRDef
->                         , isTDef
->                         , isTRDef
+>                         , isLAcom
+>                         , isB, isLB
 >                         , isTrivial
 >                         , isMTF, isMTDef, isMTRDef, isMTGD
 >                         , isVariety
@@ -74,6 +69,12 @@
 > import LTK.Learn.SP  (fSP)
 > import LTK.Learn.TSL (fTSL)
 > import LTK.Learn.StringExt (Grammar(..), learn)
+> import LTK.Parameters   ( Parameter(..)
+>                         , pTier
+>                         , pDef, pRDef, pGDef
+>                         , pCB, pAcom
+>                         , pSL, pSP
+>                         )
 > import LTK.Porters      ( ATT(ATT), ATTO(ATTO), Dot(Dot)
 >                         , EggBox(EggBox)
 >                         , SyntacticOrder(SyntacticOrder)
@@ -168,6 +169,9 @@
 > data Command = Bindings
 >              | D_EB Expr -- Display EggBox
 >              | D_JE Expr -- Display J-minimized Form
+>              | D_OJ Expr -- Display Green's L Order
+>              | D_OL Expr -- Display Green's L Order
+>              | D_OR Expr -- Display Green's R Order
 >              | D_PSG Expr -- Display Powerset Graph
 >              | D_SM Expr -- Display Syntactic Monoid
 >              | D_SO Expr -- Display Syntactic Order
@@ -656,6 +660,21 @@ in order to deal with spaces or other special characters.
 >                   , [ArgF]
 >                   , "restore state from file"
 >                   )
+>                 , ( ":orderJ"
+>                   , L . D_OJ <$> pe
+>                   , [ArgE]
+>                   , "display Green's J-order of expr"
+>                   )
+>                 , ( ":orderL"
+>                   , L . D_OL <$> pe
+>                   , [ArgE]
+>                   , "display Green's L-order of expr"
+>                   )
+>                 , ( ":orderR"
+>                   , L . D_OR <$> pe
+>                   , [ArgE]
+>                   , "display Green's R-order of expr"
+>                   )
 >                 , ( ":psg"
 >                   , L . D_PSG <$> pe
 >                   , [ArgE]
@@ -734,7 +753,7 @@ in order to deal with spaces or other special characters.
 >                 , ( ":synord"
 >                   , L . D_SO <$> pe
 >                   , [ArgE]
->                   , "display teh syntactic order of expr"
+>                   , "display the syntactic order of expr"
 >                   )
 >                 , ( ":unset"
 >                   , error ":unset not defined here"
@@ -770,6 +789,9 @@ in order to deal with spaces or other special characters.
 >          D_JE expr -> disp (renameStatesBy (formatSet . tmap f)
 >                             . minimizeOver jEquivalence
 >                             . syntacticMonoid) expr
+>          D_OJ expr -> disp' (display' pc) greenOrderJ expr
+>          D_OL expr -> disp' (display' pc) greenOrderL expr
+>          D_OR expr -> disp' (display' pc) greenOrderR expr
 >          D_PSG expr -> disp (renameStatesBy formatSet . powersetGraph) expr
 >          D_SM expr -> disp (renameStatesBy f . syntacticMonoid) expr
 >          D_SO expr -> disp' (display' pc) (to SyntacticOrder) expr
@@ -1015,60 +1037,69 @@ in order to deal with spaces or other special characters.
 >   _ <- waitForProcess less_ph
 >   return ()
 
-> doRelation :: Env -> Relation -> Maybe Bool
+"Relation" isn't really just a "relation" anymore,
+as it carries along a set of parameters.
+Pure relations need to be wrapped.
+The outer Maybe is for when parsing fails,
+the inner Maybe is Nothing::False, (Just params)::True
+
+> doRelation :: Env -> Relation -> Maybe (Maybe [Parameter String])
 > doRelation e r
 >     = case r
->       of CEqual p1 p2   ->  relate id e (==) p1 p2
->          Equal p1 p2    ->  relate desemantify e (==) p1 p2
->          CImply p1 p2   ->  relate id e isSupersetOf p1 p2
->          IsAcom p       ->  check isAcom p
->          IsB p          ->  check isB p
->          IsCB p         ->  check isCB p
->          IsDef p        ->  check isDef p
->          IsDot1 p       ->  check isDot1 p
->          IsFin p        ->  check isFinite p
->          IsFO2 p        ->  check isFO2 p
->          IsFO2B p       ->  check isFO2B p
->          IsFO2BF p      ->  check isFO2BF p
->          IsFO2S p       ->  check isFO2S p
->          IsGD p         ->  check isGD p
->          IsGLPT p       ->  check isGLPT p
->          IsGLT p        ->  check isGLT p
->          IsLAcom p      ->  check isLAcom p
->          IsLB p         ->  check isLB p
->          IsLPT p        ->  check isLPT p
->          IsLT p         ->  check isLT p
->          IsLTT p        ->  check isLTT p
->          IsMTDef p      ->  check isMTDef p
->          IsMTF p        ->  check isMTF p
->          IsMTGD p       ->  check isMTGD p
->          IsMTRDef p     ->  check isMTRDef p
->          IsPT p         ->  check isPT p
->          IsRDef p       ->  check isRDef p
->          IsSF p         ->  check isSF p
->          IsSL p         ->  check isSL p
->          IsSP p         ->  check isSP p
->          IsTDef p       ->  check isTDef p
->          IsTGD p        ->  check isTGD p
->          IsTLAcom p     ->  check isTLAcom p
->          IsTLB p        ->  check isTLB p
->          IsTLT p        ->  check isTLT p
->          IsTLPT p       ->  check isTLPT p
->          IsTLTT p       ->  check isTLTT p
->          IsTRDef p      ->  check isTRDef p
->          IsTrivial p    ->  check isTrivial p
->          IsTSL p        ->  check isTSL p
+>       of CEqual p1 p2   ->  rel' id e (==) p1 p2
+>          Equal p1 p2    ->  rel' desemantify e (==) p1 p2
+>          CImply p1 p2   ->  rel' id e isSupersetOf p1 p2
+>          IsAcom p       ->  check pAcom p
+>          IsB p          ->  check (fromBool . isB) p
+>          IsCB p         ->  check pCB p
+>          IsDef p        ->  check pDef p
+>          IsDot1 p       ->  check (fromBool . isDot1) p
+>          IsFin p        ->  check (fromBool . isFinite) p
+>          IsFO2 p        ->  check (fromBool . isFO2) p
+>          IsFO2B p       ->  check (fromBool . isFO2B) p
+>          IsFO2BF p      ->  check (fromBool . isFO2BF) p
+>          IsFO2S p       ->  check (fromBool . isFO2S) p
+>          IsGD p         ->  check pGDef p
+>          IsGLPT p       ->  check (fromBool . isGLPT) p
+>          IsGLT p        ->  check (fromBool . isGLT) p
+>          IsLAcom p      ->  check (fromBool . isLAcom) p
+>          IsLB p         ->  check (fromBool . isLB) p
+>          IsLPT p        ->  check (fromBool . isLPT) p
+>          IsLT p         ->  check (fromBool . isLT) p
+>          IsLTT p        ->  check (fromBool . isLTT) p
+>          IsMTDef p      ->  check (fromBool . isMTDef) p
+>          IsMTF p        ->  check (fromBool . isMTF) p
+>          IsMTGD p       ->  check (fromBool . isMTGD) p
+>          IsMTRDef p     ->  check (fromBool . isMTRDef) p
+>          IsPT p         ->  check (fromBool . isPT) p
+>          IsRDef p       ->  check pRDef p
+>          IsSF p         ->  check (fromBool . isSF) p
+>          IsSL p         ->  check pSL p
+>          IsSP p         ->  check pSP p
+>          IsTDef p       ->  check (pTier pDef) p
+>          IsTGD p        ->  check (pTier pGDef) p
+>          IsTLAcom p     ->  check (tierX isLAcom) p
+>          IsTLB p        ->  check (tierX isLB) p
+>          IsTLT p        ->  check (tierX isLT) p
+>          IsTLPT p       ->  check (tierX isLPT) p
+>          IsTLTT p       ->  check (tierX isLTT) p
+>          IsTRDef p      ->  check (pTier pRDef) p
+>          IsTrivial p    ->  check (fromBool . isTrivial) p
+>          IsTSL p        ->  check (pTier pSL) p
 >          IsVariety t s p
 >              -> case t of
->                   VTStar -> check (isV True s) p
->                   VTPlus -> check (isV False s) p
->                   VTTier -> check (isV False s . project) p
->          Subset p1 p2   ->  relate desemantify e isSupersetOf p1 p2
->          SSubset p1 p2  ->  relate desemantify e isProperSupersetOf p1 p2
+>                   VTStar -> check (fromBool . isV True s) p
+>                   VTPlus -> check (fromBool . isV False s) p
+>                   VTTier -> check (fromBool . isV False s . project) p
+>          Subset p1 p2   ->  rel' desemantify e isSupersetOf p1 p2
+>          SSubset p1 p2  ->  rel' desemantify e isProperSupersetOf p1 p2
 >     where check f p = fmap (f . normalize . desemantify)
 >                       . makeAutomaton
 >                       $ (\(a, b, _) -> (a, b, Just p)) e
 >           isV a b = fromMaybe False . isVariety a b
+>           fromBool x = if x then Just [] else Nothing
+>           rel' u v x y z = fromBool <$> relate u v x y z
+>           tierX f = pTier (fromBool . f)
 
 > relate :: (FSA Integer (Maybe String) -> x) ->
 >           Env ->
@@ -1085,9 +1116,18 @@ in order to deal with spaces or other special characters.
 > act :: PlebConfig ->  Env -> Trither Command Relation Env -> IO Env
 > act pc d = trither
 >            (doCommand pc d)
->            (\r -> maybe err print (doRelation d r) >> return d)
+>            (\r -> maybe err printP (doRelation d r) >> return d)
 >            return
 >     where err = hPutStrLn stderr "could not parse relation"
+>           printP = putStrLn . showParameters
+
+> showParameters :: Show e => Maybe [Parameter e] -> String
+> showParameters Nothing = "False"
+> showParameters (Just []) = "True"
+> showParameters (Just xs)
+>     = "True: " ++ intercalate ", " (map showP xs)
+>     where showP (PInt s x) = s ++ "=" ++ show x
+>           showP (PSymSet s x) = s ++ "=" ++ deescape (formatSet x)
 
 > importScript :: PlebConfig -> Env -> [String] -> IO Env
 > importScript _ e [] = return e
@@ -1197,3 +1237,77 @@ in order to deal with spaces or other special characters.
 >                     <$> catchIOError getHomeDirectory (const (pure "~"))
 >         _ -> pure fp
 >     where parts = splitDirectories fp
+
+
+
+
+
+> greenOrderL :: (Ord n, Ord e, Show e) => FSA n e -> String
+> greenOrderL = greenOrder gl
+>     where gl m x y = State x `Set.member` primitiveIdealL m (State y)
+> greenOrderR :: (Ord n, Ord e, Show e) => FSA n e -> String
+> greenOrderR = greenOrder gr
+>     where gr m x y = State x `Set.member` primitiveIdealR m (State y)
+> greenOrderJ :: (Ord n, Ord e, Show e) => FSA n e -> String
+> greenOrderJ = greenOrder gj
+>     where gj m x y = State x `Set.member` primitiveIdeal2 m (State y)
+
+> greenOrder :: (Ord n, Ord e, Show e) =>
+>               (  FSA ([Maybe n], [Symbol e]) e
+>               -> ([Maybe n], [Symbol e])
+>               -> ([Maybe n], [Symbol e]) -> Bool)
+>            -> FSA n e -> String
+> greenOrder o f = showOrder isMonoid . sccGraph
+>                  . renameStatesBy (unsymbols . snd)
+>                  $ orderGraph (o m) m
+>     where m = syntacticMonoid f
+>           isMonoid
+>               = case Set.toList (initials m) of
+>                   (y:_) -> any ((==y) . destination) (transitions m)
+>                   _ -> False
+
+> -- |Draw the Hasse diagram of the given ordered graph
+> -- in GraphViz @dot@ format.
+> showOrder :: (Ord n, Show n) => Bool -> FSA (Set [n]) () -> String
+> showOrder i g
+>     = unlines
+>       ([ "digraph {", "graph [rankdir=BT]"
+>        , "node [shape=box]", "edge [dir=none]" ]
+>       ++ sts
+>       ++ map (uncurry showtr) (reduce rel)
+>       ++ ["}"]
+>       )
+>     where qs = zip (map show [1::Integer ..]) . Set.toList $ states g
+>           rel = [ (fst x, fst y)
+>                 | x <- qs, y <- qs
+>                 , x /= y
+>                 , Transition { source = snd x
+>                              , destination = snd y
+>                              , edgeLabel = Symbol () }
+>                   `elem` transitions g
+>                 ]
+>           showstr s = if null s then
+>                           if i then "*" else ""
+>                       else
+>                           intercalate "\x2009" $ map showish s
+>           showset x = '{' : intercalate ", " (map showstr x) ++ "}"
+>           sts = map
+>                 (\(x,y) ->
+>                  concat [ x
+>                         , " [label=\""
+>                         , showset . Set.toList $ nodeLabel y
+>                         , "\"];"]
+>                 ) qs
+>           showish = deescape . filter (/= '"') . show
+>           showtr x y = x ++ " -> " ++ y ++ ";"
+
+Compute the transitive reduction of an acyclic graph
+which is specified by source/destination pairs.
+The precondition, that the graph be acyclic, is not checked.
+
+> reduce :: (Eq a) => [(a,a)] -> [(a,a)]
+> reduce ps = [(x,y) | x <- nodes, y <- nodes, y `elem` ex x,
+>              all ((`notElem` ps) . flip (,) y) (ex x)]
+>     where nodes = nub $ map fst ps ++ map snd ps
+>           ex p = let n = map snd $ filter ((p ==) . fst) ps
+>                  in n ++ concatMap ex n

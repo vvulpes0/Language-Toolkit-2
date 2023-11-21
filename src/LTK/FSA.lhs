@@ -50,11 +50,14 @@
 >        , syntacticOSemigroup
 >        , residue
 >        , coresidue
+>        , orderGraph
 >        -- * Primitive ideals
 >        , primitiveIdeal2
 >        , primitiveIdealL
 >        , primitiveIdealR
+>        , scc
 >        -- * Transformations
+>        , sccGraph
 >        , flatIntersection
 >        , flatUnion
 >        , flatInfiltration
@@ -1563,6 +1566,46 @@ this is not necessarily represented as a graph.
 >                            then ([0 .. Set.size (states x) - 1] :)
 >                            else id) (f x)
 >                  in fromBasesWith (syntacticOrder q0 fs) bs
+
+
+Graphing an Order
+=================
+
+> -- |Create a graph whose vertices are states of the given FSA
+> -- and where a directed edge exists from \(p\) to \(q\)
+> -- if and only if \(p\mathcal{R}q\) under the given relation.
+> orderGraph :: (Ord n, Ord e) =>
+>               (n -> n -> Bool) -> FSA n e -> FSA n ()
+> orderGraph (#) f
+>     = FSA { sigma = Set.singleton ()
+>           , transitions = Set.fromList
+>                           [ Transition { source = x
+>                                        , destination = y
+>                                        , edgeLabel = Symbol ()
+>                                        }
+>                           | x <- q, y <- q, nodeLabel x # nodeLabel y
+>                           ]
+>           , initials = initials f
+>           , finals = finals f
+>           , isDeterministic = False
+>           }
+>     where q = Set.toList $ states f
+
+> -- |Return the set of states in the same strongly connected component
+> -- as the given state.
+> scc :: (Ord n, Ord e) => FSA n e -> n -> Set n
+> scc f n = Set.map nodeLabel
+>           . Set.filter (Set.member (State n) . primitiveIdealR f)
+>           $ primitiveIdealR f (State n)
+
+> -- |Return a graph of the strongly connected components
+> -- of the given FSA and the directed connections between them.
+> sccGraph :: (Ord n, Ord e) => FSA n e -> FSA (Set n) ()
+> sccGraph f = g . renameSymbolsBy (const ()) $ renameStatesBy (scc f) f
+>     where g m = m { transitions = Set.filter
+>                                   (\t -> source t /= destination t)
+>                                   (transitions m)
+>                   }
 
 
 Alphabet Manipulation

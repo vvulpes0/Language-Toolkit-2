@@ -107,6 +107,7 @@ library
                 , LTK.Learn.TSL
                 , LTK.Learn.TSL.AugmentedSubsequences
                 , LTK.Learn.TSL.ViaSL
+                , LTK.Parameters
                 , LTK.Porters
                 , LTK.Porters.ATT
                 , LTK.Porters.Corpus
@@ -167,6 +168,7 @@ executable plebby
   hs-source-dirs: plebby
   main-is: Main.lhs
   build-depends: base >=4.2 && <5.0
+               , containers >=0.1 && <0.8
                , language-toolkit
                , haskeline >=0.2 && <0.9
                , process >=1.1 && <1.7
