@@ -18,6 +18,9 @@
 > import System.Console.Haskeline ( InputT
 >                                 , defaultSettings
 >                                 , getInputLine
+>                                 , haveTerminalUI
+>                                 , outputStr
+>                                 , outputStrLn
 >                                 , runInputT
 >                                 )
 > import System.Environment (getEnvironment)
@@ -116,15 +119,27 @@
 >     , displayProg :: (String, [String])
 >     } deriving (Eq, Ord, Read, Show)
 
+> writeStrLn :: String -> IO ()
+> writeStrLn = runInputT defaultSettings . outputStrLn
+> writeStr :: String -> IO ()
+> writeStr = runInputT defaultSettings . outputStr
+
+> writeVersion :: InputT IO ()
+> writeVersion
+>     = (\x -> if x then outputStr $ unlines header else return ())
+>     =<< haveTerminalUI
+>     where header = [ name ++ ", version " ++ version ++ ": " ++ url
+>                    , ":help for help"
+>                    ]
+>           name = "plebby"
+>           version = "1.1"
+>           url = "https://hackage.haskell.org/package/language-toolkit"
 > main :: IO ()
 > main = do
->   putStrLn (name ++ ", version " ++ version ++ ": " ++ url)
->   putStrLn ":help for help"
 >   pc <- getConfig
->   runInputT defaultSettings $ processLines pc (empty, empty, Nothing)
->       where name = "plebby"
->             version = "1.1"
->             url = "https://hackage.haskell.org/package/language-toolkit"
+>   runInputT defaultSettings
+>        $ (writeVersion >> processLines pc (empty, empty, Nothing))
+
 
 > getConfig :: IO PlebConfig
 > getConfig = do
@@ -151,8 +166,8 @@
 >           go (["display"],(x:xs)) c = c { displayProg = (x, xs) }
 >           go _ c = c
 
-> prompt :: String
-> prompt = "> "
+> prompt :: Monad m => InputT m String
+> prompt = (\x -> if x then "> " else "") <$> haveTerminalUI
 
 > data Trither a b c = L a
 >                    | M b
@@ -250,7 +265,7 @@
 >              deriving (Eq, Ord, Read, Show)
 
 > processLines :: PlebConfig -> Env -> InputT IO ()
-> processLines pc e = f =<< getInputLine prompt
+> processLines pc e = f =<< getInputLine =<< prompt
 >     where f minput
 >               = case minput
 >                 of Nothing       ->  return ()
@@ -776,13 +791,13 @@ in order to deal with spaces or other special characters.
 > doCommand pc e@(dict, subexprs, ex) c
 >     = case c
 >       of Bindings
->              -> putStrLn "# Symbol aliases:"
+>              -> writeStrLn "# Symbol aliases:"
 >                 >> mapM_ (\(n, s) ->
->                           putStrLn
+>                           writeStrLn
 >                           (n ++ " <- " ++ deescape (formatSet s))
 >                          ) dict
->                 >> putStrLn "# Expression aliases:"
->                 >> putStrLn (formatSet $ tmap fst subexprs)
+>                 >> writeStrLn "# Expression aliases:"
+>                 >> writeStrLn (formatSet $ tmap fst subexprs)
 >                 >> return e
 >          Display expr -> disp id expr
 >          D_EB expr -> disp' (display' pc) (to EggBox) expr
@@ -890,15 +905,17 @@ in order to deal with spaces or other special characters.
 >                    (isNotIn (tmap fst subexprs))
 >                    (isNotIn (tmap fst dict))
 >                    name
->                 then putStrLn ("undefined variable \"" ++ name ++ "\"")
+>                 then writeStrLn
+>                      ("undefined variable \"" ++ name ++ "\"")
 >                      >> return e
 >                 else mapM_
 >                      (\(_,a) ->
->                       putStrLn (name ++ " <- " ++ show a)
+>                       writeStrLn (name ++ " <- " ++ show a)
 >                      ) (keep ((== name) . fst) subexprs)
 >                      >> mapM_
 >                      (\(_,s) ->
->                       putStrLn (name ++ " <- " ++ deescape (formatSet s))
+>                       writeStrLn
+>                       (name ++ " <- " ++ deescape (formatSet s))
 >                      ) (keep ((== name) . fst) dict)
 >                      >> return e
 >          Unset name
@@ -935,7 +952,7 @@ in order to deal with spaces or other special characters.
 >                 >> return e
 >           dot :: (Ord n, Show n) =>
 >                  (FSA Integer String -> FSA n String) -> Expr -> IO Env
->           dot = disp' (putStr . to Dot)
+>           dot = disp' (writeStr . to Dot)
 >           err = hPutStrLn stderr "could not parse expression"
 >           f (_, xs) = '<' : unwords (map f' xs) ++ ">"
 >           f' Epsilon = "ε"
@@ -1119,7 +1136,7 @@ the inner Maybe is Nothing::False, (Just params)::True
 >            (\r -> maybe err printP (doRelation d r) >> return d)
 >            return
 >     where err = hPutStrLn stderr "could not parse relation"
->           printP = putStrLn . showParameters
+>           printP = writeStrLn . showParameters
 
 > showParameters :: Show e => Maybe [Parameter e] -> String
 > showParameters Nothing = "False"
