@@ -197,10 +197,6 @@
 >         Unary u        ->  Unary <$> (fillVarsU d u)
 >         Automaton x    ->  Right $ Automaton x
 >         Variable v     ->  fillVars d =<< definition v subexprs
->         Factor (PLVariable v)
->             -> case fillVars d (Variable v) of
->                  Left _   ->  Factor <$> fillVarsF d (PLVariable v)
->                  Right x  ->  Right $ x
 >         Factor f       ->  Factor <$> (fillVarsF d f)
 > fillVarsN :: Env -> NAryExpr -> Either String NAryExpr
 > fillVarsN d n
@@ -239,11 +235,12 @@
 >           = fmap PLGap . sequence $ map (fillVarsF d) fs
 > fillVarsF d@(dict,subexprs,_) (PLVariable s)
 >     = case definition s subexprs of
->         Left _ -> x
+>         Left msg -> Left msg
 >         Right (Variable v) -> fillVarsF d (PLVariable v)
 >         Right (Factor p) -> fillVarsF d p
 >         Right _ -> Left $ unlines
->                    ["attempted to use a non-factor as a factor"]
+>                    ["attempted to use the non-factor "
+>                     ++ s ++ " as a factor"]
 >     where x = case definition s dict of
 >                 Left t -> Left t
 >                 Right t -> Right $ PLFactor True True [[SSSet t]]
@@ -528,10 +525,10 @@ prevents having to descend through the tree to find this information.
 > -- |Parse an expression from a 'Token' stream.
 > parseExpr :: Parse Expr
 > parseExpr = asum
->             [ parseNAryExpr
+>             [ Parse var
+>             , parseNAryExpr
 >             , parseUnaryExpr
 >             , Factor <$> parsePLFactor
->             , Parse var
 >             ]
 >     where var (TName n : ts) = Right (Variable n, ts)
 >           var (x : _) = Left . unlines . pure $
