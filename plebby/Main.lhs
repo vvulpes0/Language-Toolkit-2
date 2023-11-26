@@ -90,11 +90,13 @@
 >                         , compileEnv
 >                         , doParse
 >                         , doStatements
+>                         , doStatementsWithError
 >                         , fromAutomaton
 >                         , fromSemanticAutomaton
 >                         , groundEnv
 >                         , insertExpr
 >                         , makeAutomaton
+>                         , makeAutomatonE
 >                         , parseExpr
 >                         , restrictUniverse
 >                         , tokenize
@@ -278,9 +280,10 @@ so that file names can be quoted or escaped
 in order to deal with spaces or other special characters.
 
 > processLine :: Env -> String -> Trither Command Relation Env
-> processLine d@(dict, subexprs, _) str
->     | null str = R d
->     | not (isPrefixOf str ":") = R $ doStatements d str
+> processLine d str
+>     | not (isPrefixOf str ":")
+>         = either (L . ErrorMsg . deescape) R
+>           $ doStatementsWithError d str
 >     | isStartOf str ":isvarietym"
 >         = case words str
 >           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
@@ -363,10 +366,11 @@ in order to deal with spaces or other special characters.
 >           of (_:a:as) -> g (L . Write a <$> pe) (unwords as)
 >              _        -> R d
 >     | otherwise =  doOne . filter (isStartOf str . fst) $ p12 commands
->     where pe        =  parseExpr dict subexprs
+>     where pe        =  parseExpr
 >           p2e       =  (,) <$> pe <*> pe
 >           f (s, p)  =  g p (drop (length s) str)
->           g p x     =  either (L . err) fst . doParse p $ tokenize x
+>           g p x     =  either (L . ErrorMsg . deescape) fst
+>                        . doParse p $ tokenize x
 >           getVDesc  =  (\(a,b) -> (a ++ take 1 b, drop 1 b))
 >                        . break (== ']')
 >           p12       =  map (\(a,b,_,_) -> (a,b))
@@ -375,7 +379,6 @@ in order to deal with spaces or other special characters.
 >                        of (x:_)  ->  f x
 >                           _      ->  L . ErrorMsg $
 >                                      "unknown interpreter command\n"
->           err       =  ErrorMsg -- "failed to evaluate"
 >           isStartOf xs x
 >               = isPrefixOf (map toLower xs) (map toLower x)
 >                 && (all isSpace . take 1 $ drop (length x) xs)
@@ -947,13 +950,13 @@ in order to deal with spaces or other special characters.
 >                   (FSA Integer String -> FSA n String) -> Expr -> IO Env
 >           disp = disp' (display pc)
 >           disp' how x expr
->               = maybe err (how . x . normalize . desemantify)
->                 (makeAutomaton (dict, subexprs, Just expr))
+>               = either (hPutStr stderr . deescape)
+>                 (how . x . normalize . desemantify)
+>                 (makeAutomatonE (dict, subexprs, Just expr))
 >                 >> return e
 >           dot :: (Ord n, Show n) =>
 >                  (FSA Integer String -> FSA n String) -> Expr -> IO Env
 >           dot = disp' (writeStr . to Dot)
->           err = hPutStrLn stderr "could not parse expression"
 >           f (_, xs) = '<' : unwords (map f' xs) ++ ">"
 >           f' Epsilon = "ε"
 >           f' (Symbol x) = x

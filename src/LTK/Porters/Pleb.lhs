@@ -35,7 +35,9 @@
 >        , fromAutomaton
 >        , fromSemanticAutomaton
 >        , makeAutomaton
+>        , makeAutomatonE
 >        , doStatements
+>        , doStatementsWithError
 >        , parseExpr
 >        , readPleb
 >        , restrictUniverse
@@ -77,7 +79,7 @@
 
 > -- |The environment: defined sets of symbols, defined expressions, and
 > -- possibly a value for the special variable @(it)@.
-> type Env = (Dictionary SymSet, Dictionary Expr, Maybe Expr)
+> type Env = (Dictionary (Set String), Dictionary Expr, Maybe Expr)
 
 > -- |An expression, the root of an expression tree.
 > data Expr
@@ -85,6 +87,7 @@
 >     | Unary UnaryExpr
 >     | Factor PLFactor
 >     | Automaton (FSA Integer (Maybe String))
+>     | Variable String
 >       deriving (Eq, Ord, Read, Show)
 
 > -- |A subexpression that consists of an n-ary operator and its operands.
@@ -112,34 +115,145 @@
 >       deriving (Eq, Ord, Read, Show)
 
 > -- |A subexpression representing a single Piecewise-Local factor.
+> -- @Left s@ represents a variable name, while @Right x@ is a real set.
 > data PLFactor
 >     = PLFactor Bool Bool [[SymSet]]
+>     | PLGap [PLFactor]
+>     | PLCat [PLFactor]
+>     | PLVariable String
+>       deriving (Eq, Ord, Read, Show)
+
+> -- |A particular action.
+> data Statement
+>     = EAssignment String Expr
+>     | SAssignment String SymSet
 >       deriving (Eq, Ord, Read, Show)
 
 > -- |A set of symbols.
-> type SymSet = Set String
+> data SymSet = SSSet (Set String)
+>             | SSUni [SymSet]
+>             | SSInt [SymSet]
+>             | SSVar String
+>               deriving (Eq, Ord, Read, Show)
 
 > -- |Parse an input string and create a stringset-automaton from the result.
 > -- If there is an error while parsing, the result is the string "no parse".
 > readPleb :: String -> Either String (FSA Integer String)
-> readPleb = maybe (Left "no parse") (Right . desemantify) .
->            either (const Nothing) (makeAutomaton . fst) .
->            doParse (parseStatements (Set.empty, Set.empty, Nothing)) .
->            tokenize
+> readPleb = fmap desemantify
+>            . (=<<) makeAutomatonE
+>            . (=<<) (evaluateS (Set.empty, Set.empty, Nothing) . fst)
+>            . doParse parseStatements
+>            . tokenize
 
 > -- |Parse an input string and update the environment
 > -- according to the result of the parse.
 > doStatements :: Env -> String -> Env
-> doStatements d str  =  either (const d) f .
->                        doParse (parseStatements d) $
->                        tokenize str
->     where f (x, [])  =  x
->           f _        =  d
+> doStatements d  =  either (const d) id . doStatementsWithError d
+
+> -- |Parse an input string and update the environment
+> -- according to the result of the parse.  Pass along
+> -- errors encountered.
+> doStatementsWithError :: Env -> String -> Either String Env
+> doStatementsWithError d str
+>     = evaluateS d =<< f =<< (doParse parseStatements $ tokenize str)
+>     where f (x, []) = Right x
+>           f _ = Left $ unlines ["input not exhausted"]
 
 > -- |Add a new expression to the environment, call it "@(it)@".
 > insertExpr :: Env -> Expr -> Env
-> insertExpr (dict, subexprs, _) e
->     = doStatements (dict, define "it" e subexprs, Just e) "= it it"
+> insertExpr d e
+>     = either (const d) id $ evaluate d (EAssignment "it" e)
+
+> -- |Act upon a statement, reporting any semantic errors
+> -- (i.e. undefined variables)
+> evaluate :: Env -> Statement -> Either String Env
+> evaluate d@(dict,subexprs,it) stmt
+>     = case stmt of
+>         EAssignment name e
+>             -> (\x -> ( mkUniverse $ usedSymbols x
+>                       , define name x subexprs
+>                       , if name == "it" then Just x else it
+>                       )
+>                ) <$> fillVars d e
+>         SAssignment name s
+>             -> (\x -> ( let x' = getSyms x
+>                         in define name x' $ mkUniverse x'
+>                       , subexprs
+>                       , it
+>                       )
+>                ) <$> fillVarsS d s
+>     where u = either (const Set.empty) id $ definition "universe" dict
+>           mkUniverse s = define "universe" (Set.union s u) dict
+> -- |Act upon a sequence of statements.
+> evaluateS :: Env -> [Statement] -> Either String Env
+> evaluateS d [] = Right d
+> evaluateS d (x:xs) = evaluate d x >>= (\d' -> evaluateS d' xs)
+
+> -- |Instantiate variables in an expression.
+> fillVars :: Env -> Expr -> Either String Expr
+> fillVars d@(_,subexprs,it) e
+>     = case e of
+>         NAry n         ->  NAry <$> (fillVarsN d n)
+>         Unary u        ->  Unary <$> (fillVarsU d u)
+>         Automaton x    ->  Right $ Automaton x
+>         Variable v     ->  fillVars d =<< definition v subexprs
+>         Factor (PLVariable v)
+>             -> case fillVarsF d (PLVariable v) of
+>                  Left _   ->  fillVars d (Variable v)
+>                  Right x  ->  Right $ Factor x
+>         Factor f       ->  Factor <$> (fillVarsF d f)
+> fillVarsN :: Env -> NAryExpr -> Either String NAryExpr
+> fillVarsN d n
+>     = case n of
+>         Concatenation es  ->  Concatenation <$> f es
+>         Conjunction es    ->  Conjunction <$> f es
+>         Disjunction es    ->  Disjunction <$> f es
+>         Domination es     ->  Domination  <$> f es
+>         Infiltration es   ->  Infiltration <$> f es
+>         Shuffle es        ->  Shuffle <$> f es
+>         StrictOrder es    ->  StrictOrder <$> f es
+>         QuotientL es      ->  QuotientL <$> f es
+>         QuotientR es      ->  QuotientR <$> f es
+>     where f es = sequence $ map (fillVars d) es
+> fillVarsU :: Env -> UnaryExpr -> Either String UnaryExpr
+> fillVarsU d u
+>     = case u of
+>         DownClose e  ->  DownClose <$> fillVars d e
+>         Iteration e  ->  Iteration <$> fillVars d e
+>         Negation e   ->  Negation <$> fillVars d e
+>         Reversal e   ->  Reversal <$> fillVars d e
+>         UpClose e    ->  UpClose <$> fillVars d e
+>         Neutralize ts e
+>             -> Neutralize <$> sequence (map (fillVarsS d) ts)
+>                <*> fillVars d e
+>         Tierify ts e
+>             -> Tierify <$> sequence (map (fillVarsS d) ts)
+>                <*> fillVars d e
+> fillVarsF :: Env -> PLFactor -> Either String PLFactor
+> fillVarsF d (PLFactor h t ps)
+>     = fmap (PLFactor h t)
+>       . sequence $ map (sequence . map (fillVarsS d)) ps
+> fillVarsF d (PLCat fs)
+>           = fmap PLCat . sequence $ map (fillVarsF d) fs
+> fillVarsF d (PLGap fs)
+>           = fmap PLGap . sequence $ map (fillVarsF d) fs
+> fillVarsF d@(dict,subexprs,_) (PLVariable s)
+>     = case definition s subexprs of
+>         Left _ -> x
+>         Right (Variable v) -> fillVarsF d (PLVariable v)
+>         Right (Factor p) -> fillVarsF d p
+>         Right _ -> Left $ unlines
+>                    ["attempted to use a non-factor as a factor"]
+>     where x = case definition s dict of
+>                 Left t -> Left t
+>                 Right t -> Right $ PLFactor True True [[SSSet t]]
+> fillVarsS :: Env -> SymSet -> Either String SymSet
+> fillVarsS d@(dict,_,_) s
+>     = case s of
+>         SSSet xs -> Right $ SSSet xs
+>         SSUni xs -> fmap SSUni . sequence $ map (fillVarsS d) xs
+>         SSInt xs -> fmap SSInt . sequence $ map (fillVarsS d) xs
+>         SSVar v  -> SSSet <$> definition v dict
 
 > -- |Transform all saved expressions into automata to prevent reevaluation.
 > compileEnv :: Env -> Env
@@ -158,7 +272,8 @@
 >               . renameStates . minimizeDeterministic .
 >               desemantify . semanticallyExtendAlphabetTo universe .
 >               automatonFromExpr
->           universe = either (const Set.empty) id (definition "universe" dict)
+>           universe = either (const Set.empty) id
+>                      (definition "universe" dict)
 
 =====
 Note:
@@ -171,56 +286,75 @@ Therefore, this cleanup step has been removed.
 > -- |Remove any symbols not present in @(universe)@ from the environment.
 > restrictUniverse :: Env -> Env
 > restrictUniverse (dict, subexprs, v)
->     = ( tmap (mapsnd restrictUniverseS) dict
+>     = ( tmap (mapsnd (Set.intersection universe)) dict 
 >       , tmap (mapsnd restrictUniverseE) subexprs
 >       , restrictUniverseE <$> v
 >       )
->     where universe           =  either (const Set.empty) id $
->                                 definition "universe" dict
->           restrictUniverseS  =  intersection universe
+>     where universe = either (const Set.empty) id
+>                      $ definition "universe" dict
+>           restrictUniverseS s
+>               = case s of
+>                   SSSet x -> SSSet (intersection universe x)
+>                   SSUni x -> SSUni $ map restrictUniverseS x
+>                   SSInt x -> SSInt $ map restrictUniverseS x
+>                   SSVar x -> SSVar x
+>           restrictUniverseF pf
+>               = case pf of
+>                   PLVariable x -> PLVariable x
+>                   PLGap ps -> PLGap $ map restrictUniverseF ps
+>                   PLCat ps -> PLCat $ map restrictUniverseF ps
+>                   PLFactor h t ps
+>                       -> PLFactor h t
+>                          $ map (map restrictUniverseS) ps
 >           restrictUniverseE e
->               = case e
->                 of Automaton x
->                        ->  Automaton $
->                            contractAlphabetTo
->                            (insert Nothing (tmap Just universe))
->                            x
->                    Factor (PLFactor h t ps)
->                        -> fixFactor h t $ tmap (tmap restrictUniverseS) ps
->                    NAry (Concatenation es)  ->  f Concatenation es
->                    NAry (Conjunction es)    ->  f Conjunction es
->                    NAry (Disjunction es)    ->  f Disjunction es
->                    NAry (Domination es)     ->  f Domination es
->                    NAry (Infiltration es)   ->  f Infiltration es
->                    NAry (Shuffle es)        ->  f Shuffle es
->                    NAry (StrictOrder es)    ->  f StrictOrder es
->                    NAry (QuotientL es)      ->  f QuotientL es
->                    NAry (QuotientR es)      ->  f QuotientR es
->                    Unary (DownClose ex)     ->  g DownClose ex
->                    Unary (Iteration ex)     ->  g Iteration ex
->                    Unary (Negation ex)      ->  g Negation ex
->                    Unary (Neutralize ts ex)
->                        -> g (Neutralize (tmap restrictUniverseS ts)) ex
->                    Unary (Reversal ex)      ->  g Reversal ex
->                    Unary (Tierify ts ex)
->                        -> g (Tierify (tmap restrictUniverseS ts)) ex
->                    Unary (UpClose ex)       ->  g UpClose ex
+>               = case e of
+>                   Automaton x
+>                       ->  Automaton $
+>                           contractAlphabetTo
+>                           (insert Nothing (tmap Just universe))
+>                           x
+>                   Factor pf
+>                       ->  Factor $ restrictUniverseF pf
+>                   NAry (Concatenation es)  ->  f Concatenation es
+>                   NAry (Conjunction es)    ->  f Conjunction es
+>                   NAry (Disjunction es)    ->  f Disjunction es
+>                   NAry (Domination es)     ->  f Domination es
+>                   NAry (Infiltration es)   ->  f Infiltration es
+>                   NAry (Shuffle es)        ->  f Shuffle es
+>                   NAry (StrictOrder es)    ->  f StrictOrder es
+>                   NAry (QuotientL es)      ->  f QuotientL es
+>                   NAry (QuotientR es)      ->  f QuotientR es
+>                   Unary (DownClose ex)     ->  g DownClose ex
+>                   Unary (Iteration ex)     ->  g Iteration ex
+>                   Unary (Negation ex)      ->  g Negation ex
+>                   Unary (Neutralize ts ex)
+>                       -> g (Neutralize (tmap restrictUniverseS ts)) ex
+>                   Unary (Reversal ex)      ->  g Reversal ex
+>                   Unary (Tierify ts ex)
+>                       -> g (Tierify (tmap restrictUniverseS ts)) ex
+>                   Unary (UpClose ex)       ->  g UpClose ex
+>                   Variable x               ->  Variable x
 >           f t es = NAry (t $ tmap restrictUniverseE es)
 >           g t e  = Unary (t $ restrictUniverseE e)
->           fixFactor h t ps
->               | any (any isEmpty) ps
->                   = Unary (Negation (Factor (PLFactor False False [])))
->                     -- <> and ~<> are essentially True and False
->               | otherwise = Factor (PLFactor h t ps)
 
 > -- |Create an t'FSA' from an expression tree and environment,
 > -- complete with metadata regarding the constraint(s) it represents.
 > makeAutomaton :: Env -> Maybe (FSA Integer (Maybe String))
-> makeAutomaton (dict, _, e) = renameStates . minimizeDeterministic
->                              . semanticallyExtendAlphabetTo symsets
->                              . automatonFromExpr <$> e
+> makeAutomaton = either (const Nothing) Just . makeAutomatonE
+
+> -- |Create an t'FSA' from an expression tree and environment,
+> -- complete with metadata regarding the constraint(s) it represents.
+> makeAutomatonE :: Env -> Either String (FSA Integer (Maybe String))
+> makeAutomatonE d@(dict, _, e)
+>     = renameStates . minimizeDeterministic
+>       . semanticallyExtendAlphabetTo symsets
+>       . automatonFromExpr <$> filled
 >     where symsets = either (const Set.empty) id
 >                     $ definition "universe" dict
+>           filled = case fillVars d <$> e of
+>                      Just (Right x) -> Right x
+>                      Just (Left s)  -> Left s
+>                      _ -> Left "attempted to build nothing"
 
 The properties of semantic automata are used here to prevent having to
 pass alphabet information to the individual constructors, which in turn
@@ -232,7 +366,8 @@ prevents having to descend through the tree to find this information.
 > automatonFromExpr e
 >     = case e
 >       of Automaton x             -> x
->          Factor x                -> automatonFromPLFactor x
+>          Factor x
+>              -> automatonFromPLFactor (simplifyPL x)
 >          NAry (Concatenation es) -> f emptyStr mconcat es
 >          NAry (Conjunction es)   -> f univLang flatIntersection es
 >          NAry (Disjunction es)   -> f emptyLanguage flatUnion es
@@ -261,17 +396,21 @@ prevents having to descend through the tree to find this information.
 >              -> complementDeterministic $ automatonFromExpr ex
 >          Unary (Neutralize ts ex)
 >              -> renameStates . minimize
->                 . neutralize (Set.mapMonotonic Just $ unionAll ts)
+>                 . neutralize
+>                   (Set.mapMonotonic Just . unionAll $ map getSyms ts)
 >                 $ automatonFromExpr ex
 >          Unary (Reversal ex)
 >              -> renameStates . minimize . LTK.FSA.reverse
 >                 $ automatonFromExpr ex
 >          Unary (Tierify ts ex)
->              -> renameStates . minimize . tierify (unionAll ts)
+>              -> renameStates . minimize
+>                 . tierify (unionAll $ map getSyms ts)
 >                 $ automatonFromExpr ex
 >          Unary (UpClose ex)
 >              -> renameStates . minimize . loopify $
 >                 automatonFromExpr ex
+>          Variable _
+>              -> error "free variable in expression"
 >     where f z tl xs = case automata xs
 >                       of [] -> z
 >                          a -> renameStates . minimize $ tl a
@@ -289,8 +428,9 @@ prevents having to descend through the tree to find this information.
 >                   then emptyWithAlphabet (Set.singleton Nothing)
 >                   else foldr1 (\a b -> renameStates $ quotRight a b) xs
 
-> automatonFromPLFactor :: PLFactor -> FSA Integer (Maybe String)
-> automatonFromPLFactor (PLFactor h t pieces)
+> automatonFromPLFactor :: (Bool, Bool, [[SymSet]])
+>                       -> FSA Integer (Maybe String)
+> automatonFromPLFactor (h, t, pieces')
 >     = case tmap (tmap (tmap Just)) pieces of
 >         []      ->  bl (Substring [] h t)
 >         [p]     ->  bl (Substring p  h t)
@@ -299,22 +439,32 @@ prevents having to descend through the tree to find this information.
 >                     else renameStates . minimize . mconcat
 >                          $ map bl lfs
 >                         where lfs  =  Substring p h False : lfs' ps
->     where as           =  insert Nothing . tmap Just $
->                           unionAll (unionAll pieces)
+>     where as           =  insert Nothing . tmap Just
+>                           . Set.unions $ concat pieces
 >           bl           =  buildLiteral as . required
 >           isPF         =  not h && not t &&
 >                           all ((==) [()] . map (const ())) pieces
 >           lfs' [x]     =  Substring x False t : lfs' []
 >           lfs' (x:xs)  =  Substring x False False : lfs' xs
 >           lfs' _       =  []
+>           pieces       =  map (map (getSyms)) pieces'
 
-> usedSymbols :: Expr -> SymSet
+> getSyms :: SymSet -> Set String
+> getSyms (SSSet ts) = ts
+> getSyms (SSUni xs) = Set.unions $ map getSyms xs
+> getSyms (SSInt []) = error "unreplaced void intersection"
+> getSyms (SSInt (x:xs))
+>     = foldr (Set.intersection) (getSyms x) (map getSyms xs)
+> getSyms (SSVar _) = error "free variable in symset"
+
+> usedSymbols :: Expr -> Set String
 > usedSymbols e = case e
 >                 of Automaton a  ->  collapse (maybe id insert) Set.empty $
 >                                     alphabet a
 >                    Factor f     ->  usedSymbolsF f
 >                    NAry n       ->  usedSymbolsN n
 >                    Unary u      ->  usedSymbolsU u
+>                    Variable _   ->  Set.empty
 >     where us = collapse (union . usedSymbols) Set.empty
 >           usedSymbolsN (Concatenation es)  =  us es
 >           usedSymbolsN (Conjunction es)    =  us es
@@ -328,74 +478,69 @@ prevents having to descend through the tree to find this information.
 >           usedSymbolsU (DownClose ex)      =  usedSymbols ex
 >           usedSymbolsU (Iteration ex)      =  usedSymbols ex
 >           usedSymbolsU (Negation ex)       =  usedSymbols ex
->           usedSymbolsU (Neutralize ts ex)  =  Set.union
->                                               (usedSymbols ex)
->                                               (unionAll ts)
+>           usedSymbolsU (Neutralize ts ex)
+>               = Set.unions (usedSymbols ex : map usedSymsInSet ts)
 >           usedSymbolsU (Reversal ex)       =  usedSymbols ex
->           usedSymbolsU (Tierify ts _)      =  unionAll ts
+>           usedSymbolsU (Tierify ts _)
+>               = Set.unions $ map usedSymsInSet ts
 >           usedSymbolsU (UpClose ex)        =  usedSymbols ex
->           usedSymbolsF (PLFactor _ _ ps)   =  unionAll $ unionAll ps
+>           usedSymbolsF (PLFactor _ _ ps)
+>               = Set.unions . map usedSymsInSet $ concat ps
+>           usedSymbolsF (PLCat xs)
+>               = Set.unions $ map usedSymbolsF xs
+>           usedSymbolsF (PLGap xs)
+>               = Set.unions $ map usedSymbolsF xs
+>           usedSymbolsF (PLVariable _) = Set.empty
 
-> parseStatements :: Env -> Parse Env
-> parseStatements (dict, subexprs, prev)
+> usedSymsInSet :: SymSet -> Set String
+> usedSymsInSet (SSSet ts) = ts
+> usedSymsInSet (SSUni sets) = Set.unions $ map usedSymsInSet sets
+> usedSymsInSet (SSInt sets) = Set.unions $ map usedSymsInSet sets
+> usedSymsInSet (SSVar _) = Set.empty
+
+> parseStatements :: Parse [Statement]
+> parseStatements
 >     = asum
->       [ start
->         >> (f False <$> getName <*> (Just <$> parseExpr dict subexprs))
->         >>= parseStatements
->       , start >> putFst
->         <$> (mkSyms <$> getName <*> parseSymExpr dict <*> pure dict)
->         >>= parseStatements
->       , f True "it" . Just <$> parseExpr dict subexprs
+>       [ (:)
+>         <$> (EAssignment <$> (start >> getName) <*> parseExpr)
+>         <*> parseStatements
+>       , (:)
+>         <$> (SAssignment <$> (start >> getName) <*> parseSymExpr)
+>         <*> parseStatements
+>       , (:) <$> (EAssignment "it" <$> parseExpr) <*> parseStatements
 >       , Parse $ \ts ->
 >         case ts
->         of []  ->  Right ((dict, subexprs, prev), [])
->            _   ->  Left "not finished"
+>         of []  ->  Right ([], [])
+>            _   ->  Left $ unlines ["not finished"]
 >       ]
 >    where getName
 >              = Parse $ \ts ->
 >                case ts
 >                of (TName n : ts') -> Right (n, ts')
 >                   (x : _)
->                       -> Left $
+>                       -> Left . unlines . pure $
 >                          "could not find name at " ++
 >                          showParen True (shows x) ""
->                   _ -> Left "end of input looking for name"
+>                   _ -> Left . unlines . pure
+>                        $ "end of input looking for name"
 >          start = eat "≝" [] <|> eat "=" []
->          putFst a = (a, subexprs, prev)
->          universe = either (const Set.empty) id $
->                     definition "universe" dict
->          mkSyms name value
->              = define "universe"
->                (if name /= "universe"
->                 then universe `union` value
->                 else value
->                ) . define name value
->          f isL name me
->              = let nd = maybe
->                         dict
->                         (flip (define "universe") dict .
->                          union universe .
->                          usedSymbols
->                         )
->                         me
->                in ( nd
->                   , maybe subexprs (flip (define name) subexprs) me
->                   , if isL then me else prev)
 
 > -- |Parse an expression from a 'Token' stream.
-> parseExpr :: Dictionary SymSet -> Dictionary Expr -> Parse Expr
-> parseExpr dict subexprs = asum
->                           [ parseNAryExpr dict subexprs
->                           , parseUnaryExpr dict subexprs
->                           , Factor  <$>  parsePLFactor dict subexprs
->                           , Parse expandVar
->                           ]
->     where expandVar (TName n : ts)
->               = flip (,) ts <$> definition n subexprs
->           expandVar _ = Left "not a variable"
+> parseExpr :: Parse Expr
+> parseExpr = asum
+>             [ parseNAryExpr
+>             , parseUnaryExpr
+>             , Factor <$> parsePLFactor
+>             , Parse var
+>             ]
+>     where var (TName n : ts) = Right (Variable n, ts)
+>           var (x : _) = Left . unlines . pure $
+>                         "not a variable: " ++
+>                         showParen False (shows x) ""
+>           var _ = Left $ unlines ["not a variable"]
 
-> parseNAryExpr :: Dictionary SymSet -> Dictionary Expr -> Parse Expr
-> parseNAryExpr dict subexprs
+> parseNAryExpr :: Parse Expr
+> parseNAryExpr
 >     = makeLifter
 >       [ (["⋀", "⋂", "∧", "∩", "/\\"],  NAry . Conjunction)
 >       , (["⋁", "⋃", "∨", "∪", "\\/"],  NAry . Disjunction)
@@ -409,15 +554,15 @@ prevents having to descend through the tree to find this information.
 >       ] <*> pd
 >     where pd = parseEmpty
 >                <|> parseDelimited ['(', '{']
->                    (parseSeparated "," $ parseExpr dict subexprs)
+>                    (parseSeparated "," $ parseExpr)
 >           parseEmpty = Parse $ \xs ->
 >                        case xs of
 >                          (TSymbol '(':TSymbol ')':ts) -> Right ([], ts)
 >                          (TSymbol '{':TSymbol '}':ts) -> Right ([], ts)
->                          _ -> Left "not an empty expr"
+>                          _ -> Left $ unlines ["not an empty expr"]
 
-> parseUnaryExpr :: Dictionary SymSet -> Dictionary Expr -> Parse Expr
-> parseUnaryExpr dict subexprs
+> parseUnaryExpr :: Parse Expr
+> parseUnaryExpr
 >     = (makeLifter
 >        [ (["↓", "$"],       Unary . DownClose)
 >        , (["↑", "^"],       Unary . UpClose)
@@ -425,34 +570,29 @@ prevents having to descend through the tree to find this information.
 >        , (["+"],            NAry  . plus)
 >        , (["¬", "~", "!"],  Unary . Negation)
 >        , (["⇄", "-"],       Unary . Reversal)
->        ] <*> parseExpr dict subexprs
->       ) <|> (Unary <$> (Tierify <$> pt <*> parseExpr dict subexprs))
->         <|> (Unary <$> (Neutralize <$> pn <*> parseExpr dict subexprs))
->     where pt = parseDelimited ['[']
->                (parseSeparated "," (parseSymExpr dict))
->           pn = parseDelimited ['|']
->                (parseSeparated "," (parseSymExpr dict))
+>        ] <*> parseExpr
+>       ) <|> (Unary <$> (Tierify <$> pt <*> parseExpr))
+>         <|> (Unary <$> (Neutralize <$> pn <*> parseExpr))
+>     where pt = parseDelimited ['['] (parseSeparated "," parseSymExpr)
+>           pn = parseDelimited ['|'] (parseSeparated "," parseSymExpr)
 >           plus e = Concatenation [e, Unary $ Iteration e]
 
-> parsePLFactor :: Dictionary SymSet -> Dictionary Expr -> Parse PLFactor
-> parsePLFactor dict subexprs
->     = combine ".." plGap <|>
->       combine "‥" plGap <|>
->       combine "." plCatenate <|>
->       pplf
->     where combine s f = eat s (foldr1 f) <*>
+> parsePLFactor :: Parse PLFactor
+> parsePLFactor = combine ".." PLGap <|> combine "‥" PLGap
+>                 <|> combine "." PLCat
+>                 <|> pplf
+>     where combine s f = eat s f <*>
 >                         parseDelimited ['<', '⟨']
 >                         (parseSeparated "," pplf)
->           pplf = parseBasicPLFactor dict <|> Parse expandVar
->           expandVar (TName n : ts)
->               = case v
->                 of Right (Factor x) -> Right (x, ts)
->                    _ -> Left "expression does not represent a factor"
->               where v = definition n subexprs
->           expandVar _ = Left "not a variable"
+>           pplf = parseBasicPLFactor <|> Parse var
+>           var (TName n : ts) = Right (PLVariable n, ts)
+>           var (x : _) = Left . unlines . pure $
+>                         "not a variable: " ++
+>                         showParen False (shows x) ""
+>           var _ = Left $ unlines ["not a variable"]
 
-> parseBasicPLFactor :: Dictionary SymSet -> Parse PLFactor
-> parseBasicPLFactor dict
+> parseBasicPLFactor :: Parse PLFactor
+> parseBasicPLFactor
 >     = makeLifter
 >       [ (["⋊⋉", "%||%"], PLFactor True True)
 >       , (["⋊", "%|"], PLFactor True False)
@@ -460,31 +600,32 @@ prevents having to descend through the tree to find this information.
 >       , ([""], PLFactor False False)
 >       ]
 >       <*> parseDelimited ['<', '⟨']
->           (parseSeparated "," $ some (parseSymExpr dict)
+>           (parseSeparated "," $ some parseSymExpr
 >            <|> Parse (\ts -> Right ([], ts)))
 
-> parseSymExpr :: Dictionary SymSet -> Parse SymSet
-> parseSymExpr dict
->     = (fmap Set.unions
+> parseSymExpr :: Parse SymSet
+> parseSymExpr
+>     = (fmap SSUni
 >        . parseDelimited ['{', '(']
->        $ parseSeparated "," (parseSymExpr dict))
->       <|> ( fmap (foldr1 Set.intersection)
+>        $ parseSeparated "," parseSymExpr)
+>       <|> ( fmap SSInt
 >           . parseDelimited ['[']
->           $ parseSeparated "," (parseSymExpr dict))
->       <|> parseSymSet dict
+>           $ parseSeparated "," parseSymExpr)
+>       <|> parseSymSet
 
-> parseSymSet :: Dictionary SymSet -> Parse SymSet
-> parseSymSet dict
+> parseSymSet :: Parse SymSet
+> parseSymSet
 >     = Parse $ \xs ->
 >       case xs
 >       of (TName n : ts)
->              -> fmap (flip (,) ts) (definition n dict)
+>              -> Right ((SSVar n), ts)
 >          (TSymbol '/' : TName n : ts)
->              -> Right . flip (,) ts $ singleton n
+>              -> Right ((SSSet $ Set.singleton n), ts)
 >          (a:_)
->              -> Left $ "cannot start a SymSet with " ++
+>              -> Left . unlines . pure $
+>                 "cannot start a SymSet with " ++
 >                 showParen True (shows a) ""
->          _ -> Left "unexpected end of input in SymSet"
+>          _ -> Left $ unlines ["unexpected end of input in SymSet"]
 
 > makeLifter :: [([String], a)] -> Parse a
 > makeLifter = asum . concatMap (map (uncurry eat) . f)
@@ -505,11 +646,16 @@ prevents having to descend through the tree to find this information.
 > parseOpeningDelimiter ds = Parse openingDelimiter
 >     where openingDelimiter (TSymbol x : ts)
 >               | isIn ds x  =  Right (x, ts)
->               | otherwise  =  Left $
->                               "invalid opening delimiter: " ++
->                               show x
+>               | otherwise  =  Left . unlines . pure $
+>                               "sought " ++ sought ds ++
+>                               " but instead found " ++ show x
 >           openingDelimiter _
->               = Left "unexpected end of input looking for opening delimiter"
+>               = Left . unlines . pure $
+>                 "unexpected end of input looking for "
+>                 ++ sought ds
+>           sought (x:[]) = '\'' : x : "'"
+>           sought (x:xs) = '\'' : x : '\'' : ',' : sought xs
+>           sought _ = "nothing"
 
 > parseClosingDelimiter :: Char -> Parse [a]
 > parseClosingDelimiter = flip eat [] . singleton . matchingDelimiter
@@ -519,15 +665,23 @@ prevents having to descend through the tree to find this information.
 
 
 
-> plCatenate :: PLFactor -> PLFactor -> PLFactor
-> plCatenate (PLFactor h _ xs) (PLFactor _ t ys) = PLFactor h t (pc xs ys)
+> simplifyPL :: PLFactor -> (Bool, Bool, [[SymSet]])
+> simplifyPL p
+>     = case p of
+>         PLVariable _ -> error "free variable in PLFactor"
+>         PLFactor h t ps -> (h, t, ps)
+>         PLCat [] -> (False, False, [])
+>         PLCat (x:xs) -> let (h, _, a) = simplifyPL x
+>                             (_, t, b) = simplifyPL (PLCat xs)
+>                         in (h, t, pc a b)
+>         PLGap [] -> (False, False, [])
+>         PLGap (x:xs) -> let (h, _, a) = simplifyPL x
+>                             (_, t, b) = simplifyPL (PLGap xs)
+>                         in (h, t, a ++ b)
 >     where pc [] bs       =  bs
 >           pc [a] []      =  [a]
->           pc [a] (b:bs)  =  (a ++ b) : bs
+>           pc [a] (b:bs)  = (a ++ b) : bs
 >           pc (a:as) bs   =  a : pc as bs
-
-> plGap :: PLFactor -> PLFactor -> PLFactor
-> plGap (PLFactor h _ xs) (PLFactor _ t ys) = PLFactor h t (xs ++ ys)
 
 
 
@@ -539,7 +693,8 @@ prevents having to descend through the tree to find this information.
 
 > definition :: (Ord a) => String -> Dictionary a -> Either String a
 > definition a = maybe
->                (Left $ "undefined variable \"" ++ a ++ "\"")
+>                (Left . unlines . pure
+>                 $ "undefined variable \"" ++ a ++ "\"")
 >                Right .
 >                lookupMin . tmap snd . keep ((== a) . fst)
 >     where lookupMin xs
@@ -563,7 +718,8 @@ prevents having to descend through the tree to find this information.
 >     where empty    =  Parse . const $ Left ""
 >           p <|> q  =  Parse $ \ts ->
 >                       let f s1 s2
->                             = unlines $ concatMap (filter (/= "") . lines)
+>                             = unlines
+>                               $ concatMap (filter (/= "") . lines)
 >                               [s1, s2]
 >                           h s = either (Left . f s) Right $ doParse q ts
 >                       in either h Right $ doParse p ts
