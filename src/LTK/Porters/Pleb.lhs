@@ -191,16 +191,16 @@
 
 > -- |Instantiate variables in an expression.
 > fillVars :: Env -> Expr -> Either String Expr
-> fillVars d@(_,subexprs,it) e
+> fillVars d@(_,subexprs,_) e
 >     = case e of
 >         NAry n         ->  NAry <$> (fillVarsN d n)
 >         Unary u        ->  Unary <$> (fillVarsU d u)
 >         Automaton x    ->  Right $ Automaton x
 >         Variable v     ->  fillVars d =<< definition v subexprs
 >         Factor (PLVariable v)
->             -> case fillVarsF d (PLVariable v) of
->                  Left _   ->  fillVars d (Variable v)
->                  Right x  ->  Right $ Factor x
+>             -> case fillVars d (Variable v) of
+>                  Left _   ->  Factor <$> fillVarsF d (PLVariable v)
+>                  Right x  ->  Right $ x
 >         Factor f       ->  Factor <$> (fillVarsF d f)
 > fillVarsN :: Env -> NAryExpr -> Either String NAryExpr
 > fillVarsN d n
