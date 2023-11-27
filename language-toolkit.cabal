@@ -169,6 +169,7 @@ executable plebby
   main-is: Main.lhs
   build-depends: base >=4.2 && <5.0
                , containers >=0.1 && <0.8
+               , exceptions >=0.1 && <0.11
                , language-toolkit
                , haskeline >=0.6.3 && <0.9
                , process >=1.1 && <1.7

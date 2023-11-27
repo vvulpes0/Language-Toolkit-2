@@ -233,7 +233,7 @@
 >           = fmap PLCat . sequence $ map (fillVarsF d) fs
 > fillVarsF d (PLGap fs)
 >           = fmap PLGap . sequence $ map (fillVarsF d) fs
-> fillVarsF d@(dict,subexprs,_) (PLVariable s)
+> fillVarsF d@(_,subexprs,_) (PLVariable s)
 >     = case definition s subexprs of
 >         Left msg -> Left msg
 >         Right (Variable v) -> fillVarsF d (PLVariable v)
@@ -241,9 +241,6 @@
 >         Right _ -> Left $ unlines
 >                    ["attempted to use the non-factor "
 >                     ++ s ++ " as a factor"]
->     where x = case definition s dict of
->                 Left t -> Left t
->                 Right t -> Right $ PLFactor True True [[SSSet t]]
 > fillVarsS :: Env -> SymSet -> Either String SymSet
 > fillVarsS d@(dict,_,_) s
 >     = case s of

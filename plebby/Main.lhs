@@ -16,6 +16,8 @@
 > import Data.Maybe (fromMaybe)
 > import Data.Set (Set)
 > import System.Console.Haskeline ( InputT
+>                                 , Interrupt(..)
+>                                 , withInterrupt
 >                                 , defaultSettings
 >                                 , getInputLine
 >                                 , haveTerminalUI
@@ -44,6 +46,7 @@
 >                  , stderr
 >                  , stdout
 >                  )
+> import Control.Monad.Catch (handle)
 #if MIN_VERSION_base(4,4,0)
 > import System.IO.Error (catchIOError)
 #else
@@ -119,6 +122,9 @@
 > data PlebConfig = PlebConfig
 >     { dotProg :: (String, [String])
 >     , displayProg :: (String, [String])
+>     , pagerProg :: Maybe (String, [String])
+>     , formatting :: Bool
+>     , promptString :: String
 >     } deriving (Eq, Ord, Read, Show)
 
 > writeStrLn :: String -> IO ()
@@ -156,20 +162,34 @@
 >        else return base
 >       where base = PlebConfig { dotProg = ("dot", ["-Tpng"])
 >                               , displayProg = ("display", [])
+>                               , pagerProg = Nothing
+>                               , formatting = True
+>                               , promptString = "> "
 >                               }
 
 > parseConfig :: PlebConfig -> String -> PlebConfig
 > parseConfig pc s = foldr go pc
->                    . map (\(a,b) -> (words a, words $ drop 1 b))
+>                    . map (\(a,b) -> (words a, words $ drop 1 b, b))
 >                    . filter (not . null . snd)
 >                    . map (break (== '=') . fst . break (== '#'))
 >                    $ lines s
->     where go (["dot"],(x:xs)) c = c { dotProg = (x, xs) }
->           go (["display"],(x:xs)) c = c { displayProg = (x, xs) }
+>     where go (["dot"],(x:xs),_) c = c { dotProg = (x, xs) }
+>           go (["display"],(x:xs),_) c = c { displayProg = (x, xs) }
+>           go (["formatting"],(x:_),_) c = c { formatting = mkBool x }
+>           go (["pager"],(x:xs),_) c = c { pagerProg = Just (x, xs) }
+>           go (["prompt"],_,b) c = c { promptString = extractString b }
 >           go _ c = c
+>           extractString = deescape . extractString'
+>                           . drop 1 . dropWhile (/= '"')
+>           extractString' [] = ""
+>           extractString' ('"':_) = []
+>           extractString' ('\\':x:xs) = '\\' : x : extractString' xs
+>           extractString' (x:xs) = x : extractString' xs
+>           mkBool x = map toLower x `elem` ["t","true","1"]
 
-> prompt :: Monad m => InputT m String
-> prompt = (\x -> if x then "> " else "") <$> haveTerminalUI
+> prompt :: Monad m => PlebConfig -> InputT m String
+> prompt pc = (\x -> if x then promptString pc else "")
+>             <$> haveTerminalUI
 
 > data Trither a b c = L a
 >                    | M b
@@ -267,13 +287,19 @@
 >              deriving (Eq, Ord, Read, Show)
 
 > processLines :: PlebConfig -> Env -> InputT IO ()
-> processLines pc e = f =<< getInputLine =<< prompt
+> processLines pc e = f =<< getinput =<< prompt pc
 >     where f minput
 >               = case minput
 >                 of Nothing       ->  return ()
 >                    Just ":quit"  ->  return ()
 >                    Just line     ->  go line >>= processLines pc
->           go line = lift (act pc e (processLine e line))
+>           getinput p = handle (\Interrupt -> return (Just ""))
+>                        . withInterrupt $ getInputLine p
+>           go line = handle (\Interrupt ->
+>                             lift $ act pc e
+>                             (L . ErrorMsg $ unlines ["interrupted"]))
+>                     . withInterrupt . lift
+>                     $ act pc e (processLine e line)
 
 Always use "modwords" when FilePath objects are at issue,
 so that file names can be quoted or escaped
@@ -506,17 +532,17 @@ in order to deal with spaces or other special characters.
 >                 , ( ":isGD"
 >                   , M . IsGD <$> pe
 >                   , [ArgE]
->                   , "determine if expr is Generalized Definite"
+>                   , "determine if expr is generalized definite"
 >                   )
 >                 , ( ":isGLPT"
 >                   , M . IsGLPT <$> pe
 >                   , [ArgE]
->                   , "determine if expr is Generalized Locally PT"
+>                   , "determine if expr is generalized locally PT"
 >                   )
 >                 , ( ":isGLT"
 >                   , M . IsGLT <$> pe
 >                   , [ArgE]
->                   , "determine if expr is Generalized Locally Testable"
+>                   , "determine if expr is generalized locally testable"
 >                   )
 >                 , ( ":isLAcom"
 >                   , M . IsLAcom <$> pe
@@ -531,42 +557,42 @@ in order to deal with spaces or other special characters.
 >                 , ( ":isLPT"
 >                   , M . IsLPT <$> pe
 >                   , [ArgE]
->                   , "determine if expr is locally Piecewise Testable"
+>                   , "determine if expr is locally piecewise testable"
 >                   )
 >                 , ( ":isLT"
 >                   , M . IsLT <$> pe
 >                   , [ArgE]
->                   , "determine if expr is Locally Testable"
+>                   , "determine if expr is locally testable"
 >                   )
 >                 , ( ":isLTT"
 >                   , M . IsLTT <$> pe
 >                   , [ArgE]
->                   , "determine if expr is Locally Threshold Testable"
+>                   , "determine if expr is locally threshold testable"
 >                   )
 >                 , ( ":isMTDef"
 >                   , M . IsMTDef <$> pe
 >                   , [ArgE]
->                   , "determine if expr is a combination of TDef things"
+>                   , "determine if expr is multitier definite"
 >                   )
 >                 , ( ":isMTF"
 >                   , M . IsMTF <$> pe
 >                   , [ArgE]
->                   , "determine if expr is a combination of tier-(co)finite things"
+>                   , "determine if expr is multitier co/finite"
 >                   )
 >                 , ( ":isMTGD"
 >                   , M . IsMTGD <$> pe
 >                   , [ArgE]
->                   , "determine if expr is a combination of TGD things"
+>                   , "determine if expr is multitier gen. definite"
 >                   )
 >                 , ( ":isMTRDef"
 >                   , M . IsMTRDef <$> pe
 >                   , [ArgE]
->                   , "determine if expr is a combination of TRDef things"
+>                   , "determine if expr is multitier rev. definite"
 >                   )
 >                 , ( ":isPT"
 >                   , M . IsPT <$> pe
 >                   , [ArgE]
->                   , "determine if expr is Piecewise Testable"
+>                   , "determine if expr is piecewise testable"
 >                   )
 >                 , ( ":isRDef"
 >                   , M . IsRDef <$> pe
@@ -576,17 +602,17 @@ in order to deal with spaces or other special characters.
 >                 , ( ":isSF"
 >                   , M . IsSF <$> pe
 >                   , [ArgE]
->                   , "determine if expr is Star-Free"
+>                   , "determine if expr is star-free"
 >                   )
 >                 , ( ":isSL"
 >                   , M . IsSL <$> pe
 >                   , [ArgE]
->                   , "determine if expr is Strictly Local"
+>                   , "determine if expr is strictly local"
 >                   )
 >                 , ( ":isSP"
 >                   , M . IsSP <$> pe
 >                   , [ArgE]
->                   , "determine if expr is Strictly Piecewise"
+>                   , "determine if expr is strictly piecewise"
 >                   )
 >                 , ( ":isTDef"
 >                   , M . IsTDef <$> pe
@@ -596,7 +622,7 @@ in order to deal with spaces or other special characters.
 >                 , ( ":isTGD"
 >                   , M . IsTGD <$> pe
 >                   , [ArgE]
->                   , "determine if expr is Generalized Definite on a tier"
+>                   , "determine if expr is generalized definite on a tier"
 >                   )
 >                 , ( ":isTLAcom"
 >                   , M . IsTLAcom <$> pe
@@ -611,17 +637,17 @@ in order to deal with spaces or other special characters.
 >                 , ( ":isTLPT"
 >                   , M . IsTLPT <$> pe
 >                   , [ArgE]
->                   , "determine if expr is tier-locally Piecewise Testable"
+>                   , "determine if expr is tier-locally piecewise testable"
 >                   )
 >                 , ( ":isTLT"
 >                   , M . IsTLT <$> pe
 >                   , [ArgE]
->                   , "determine if expr is Tier-Locally Testable"
+>                   , "determine if expr is tier-locally testable"
 >                   )
 >                 , ( ":isTLTT"
 >                   , M . IsTLTT <$> pe
 >                   , [ArgE]
->                   , "determine if expr is Tier-LTT"
+>                   , "determine if expr is tier-LTT"
 >                   )
 >                 , ( ":isTRDef"
 >                   , M . IsTRDef <$> pe
@@ -636,7 +662,7 @@ in order to deal with spaces or other special characters.
 >                 , ( ":isTSL"
 >                   , M . IsTSL <$> pe
 >                   , [ArgE]
->                   , "determine if expr is Strictly Tier-Local"
+>                   , "determine if expr is strictly tier-local"
 >                   )
 >                 , ( ":isVarietyM"
 >                   , error ":isVarietyM not defined here"
@@ -817,7 +843,7 @@ in order to deal with spaces or other special characters.
 >          DT_PSG expr -> dot (renameStatesBy formatSet . powersetGraph) expr
 >          DT_SM expr -> dot (renameStatesBy f . syntacticMonoid) expr
 >          ErrorMsg str -> hPutStr stderr str >> return e
->          Help xs -> lessHelp xs >> return e
+>          Help xs -> lessHelp pc xs >> return e
 >          Import file
 >              -> catchIOError
 >                 (importScript pc e . lines
@@ -1013,38 +1039,63 @@ in order to deal with spaces or other special characters.
 >                 )
 
 
-> doHelp :: [(String, [ArgType], String)] -> String
-> doHelp xs = showArg ArgE ++ " = expression, "  ++
->             showArg ArgF ++ " = file, "        ++
->             showArg ArgI ++ " = int, "         ++
->             showArg ArgS ++ " = string, "      ++
->             showArg ArgV ++ " = variable\n\n"  ++
->             unlines s2
->     where cs = zipWith (++) (p1 xs) (map showArgs (p2 xs))
->           s1 = let l = foldr (max . length) 0 cs
+> doHelp :: Bool -> [(String, [ArgType], String)] -> String
+> doHelp format xs
+>     = showArg ArgE ++ " = expression, "  ++
+>       showArg ArgF ++ " = file, "        ++
+>       showArg ArgI ++ " = int, "         ++
+>       showArg ArgS ++ " = string, "      ++
+>       showArg ArgV ++ " = variable\n\n"  ++
+>       unlines s2
+>     where cs = zipWith (++) (map bold $ p1 xs) (map showArgs (p2 xs))
+>           s1 = let l = foldr (max . lengthsgr) 0 cs
 >                in map (alignl (l + 2) . alignr l) cs
 >           s2 = zipWith (++) s1 (p3 xs)
->           alignr l s = take (l - length s) (cycle " ") ++ s
->           alignl l s = take l (s ++ cycle " ")
->           showArg ArgE  =  "<e>"
->           showArg ArgF  =  "<f>"
->           showArg ArgI  =  "<i>"
->           showArg ArgS  =  "<s>"
->           showArg _     =  "<v>"
+>           alignr l s = takesgr (l - lengthsgr s) (cycle " ") ++ s
+>           alignl l s = takesgr l (s ++ cycle " ")
+>           wrap s = '<' : s ++ ">"
+>           sgr :: Int -> String -> String
+>           sgr n s = if format
+>                     then "\27[" ++ shows n ('m' : s ++ "\27[m")
+>                     else s
+>           bold = (++ sgr 0 "") . sgr 1
+>           showArg ArgE  =  wrap $ sgr 4 "e"
+>           showArg ArgF  =  wrap $ sgr 4 "f"
+>           showArg ArgI  =  wrap $ sgr 4 "i"
+>           showArg ArgS  =  wrap $ sgr 4 "s"
+>           showArg _     =  wrap $ sgr 4 "v"
 >           showArgs = concatMap ((' ':) . showArg)
 >           p1 = map (\(a,_,_) -> a)
 >           p2 = map (\(_,b,_) -> b)
 >           p3 = map (\(_,_,c) -> c)
 
-> lessHelp :: [(String, [ArgType], String)] -> IO ()
-> lessHelp xs = do
->   mpager <- fmap (map snd . filter ((==) "PAGER" . fst)) getEnvironment
->   let ps     =  case mpager of
->                   (x:_) -> words x
->                   _ -> ["less"]
+> lengthsgr :: String -> Int
+> lengthsgr ('\27':xs) = lengthsgr . drop 1 . snd $ break (== 'm') xs
+> lengthsgr (_:xs) = 1 + lengthsgr xs
+> lengthsgr _ = 0
+
+> takesgr :: Int -> String -> String
+> takesgr _ [] = []
+> takesgr n (x:xs)
+>     | n < 1 = []
+>     | otherwise = case x of
+>                     '\27' -> sgrseq ++ takesgr n (drop 1 post)
+>                     _     -> x : takesgr (n - 1) xs
+>     where (pre,post) = break (== 'm') xs
+>           sgrseq = '\27' : pre ++ take 1 post
+
+> lessHelp :: PlebConfig -> [(String, [ArgType], String)] -> IO ()
+> lessHelp pc xs = do
+>   mpager <- (map snd . filter ((==) "PAGER" . fst)) <$> getEnvironment
+>   let args   =  if formatting pc then ["-sR"] else ["-s"]
+>       ps     =  case pagerProg pc of
+>                   Nothing  ->  case mpager of
+>                                  (x:_) -> words x
+>                                  _ -> []
+>                   Just ys -> uncurry (:) ys
 >       (p,s)  =  case ps of
 >                   (y:ys) -> (y,ys)
->                   _ -> ("less",[])
+>                   _ -> ("less",args)
 >       lessP  =  (proc p s)
 >                 { std_in = CreatePipe
 >                 , std_out = UseHandle stdout
@@ -1052,7 +1103,7 @@ in order to deal with spaces or other special characters.
 >                 }
 >   (Just p_stdin, _, Just p_stderr, less_ph) <- createProcess lessP
 >   _ <- hGetContents p_stderr
->   hPutStr p_stdin (doHelp xs)
+>   hPutStr p_stdin (doHelp (formatting pc) xs)
 >   hClose p_stdin
 >   _ <- waitForProcess less_ph
 >   return ()
@@ -1158,6 +1209,14 @@ the inner Maybe is Nothing::False, (Just params)::True
 
 > deescape :: String -> String
 > deescape ('\\' : '&' : xs) = deescape xs
+> deescape ('\\' : 'a' : xs) = '\a' : deescape xs
+> deescape ('\\' : 'b' : xs) = '\b' : deescape xs
+> deescape ('\\' : 'f' : xs) = '\f' : deescape xs
+> deescape ('\\' : 'n' : xs) = '\n' : deescape xs
+> deescape ('\\' : 'r' : xs) = '\r' : deescape xs
+> deescape ('\\' : 't' : xs) = '\t' : deescape xs
+> deescape ('\\' : 'v' : xs) = '\v' : deescape xs
+> deescape ('\\' : '\\' : xs) = '\\' : deescape xs
 > deescape ('\\' : x : xs)
 >     | isEmpty digits  =  x : deescape xs
 >     | otherwise       =  toEnum (read digits) : deescape others
