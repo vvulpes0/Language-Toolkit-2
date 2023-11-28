@@ -13,7 +13,6 @@
 > import Control.Monad.Trans.Class (lift)
 > import Data.Char (isSpace, toLower)
 > import Data.List (intercalate, nub)
-> import Data.Maybe (fromMaybe)
 > import Data.Set (Set)
 > import System.Console.Haskeline ( InputT
 >                                 , Interrupt(..)
@@ -106,7 +105,6 @@
 >                         , restrictUniverse
 >                         , tokenize
 >                         )
-> import LTK.Tiers     (project)
 
 
 #if !MIN_VERSION_base(4,4,0)
@@ -240,50 +238,12 @@
 >              | WriteATT FilePath FilePath FilePath Expr
 >                deriving (Eq, Read, Show)
 
-> data Relation = CEqual Expr Expr
->               | CImply Expr Expr
->               | Equal Expr Expr
->               | IsAcom Expr
->               | IsB Expr
->               | IsCB Expr
->               | IsDef Expr
->               | IsDot1 Expr
->               | IsFin Expr
->               | IsFO2 Expr
->               | IsFO2B Expr
->               | IsFO2BF Expr
->               | IsFO2S Expr
->               | IsGD Expr
->               | IsGLPT Expr
->               | IsGLT Expr
->               | IsLAcom Expr
->               | IsLB Expr
->               | IsLT Expr
->               | IsLPT Expr
->               | IsLTT Expr
->               | IsMTDef Expr
->               | IsMTF Expr
->               | IsMTGD Expr
->               | IsMTRDef Expr
->               | IsPT Expr
->               | IsRDef Expr
->               | IsSF Expr
->               | IsSL Expr
->               | IsSP Expr
->               | IsTDef Expr
->               | IsTGD Expr
->               | IsTLAcom Expr
->               | IsTLB Expr
->               | IsTLT Expr
->               | IsTLPT Expr
->               | IsTLTT Expr
->               | IsTRDef Expr
->               | IsTrivial Expr
->               | IsTSL Expr
->               | IsVariety VType String Expr
->               | Subset Expr Expr
->               | SSubset Expr Expr -- Strict Subset
->                 deriving (Eq, Read, Show)
+> data Relation
+>     = RDyad (  FSA Integer (Maybe String)
+>             -> FSA Integer (Maybe String) -> Maybe [Parameter String])
+>       Expr Expr
+>     | RMono (FSA Integer (Maybe String) -> Maybe [Parameter String])
+>       Expr
 
 > data VType = VTStar | VTPlus | VTTier
 >              deriving (Eq, Ord, Read, Show)
@@ -303,6 +263,16 @@
 >                     . withInterrupt . lift
 >                     $ act pc e (processLine e line)
 
+> fromBool :: Bool -> Maybe [Parameter String]
+> fromBool x = if x then Just [] else Nothing
+
+> isV :: (Ord n, Ord e) => Bool -> String -> FSA n e
+>     -> Maybe [Parameter String]
+> isV a b = maybe Nothing fromBool . isVariety a b
+
+> apBoth :: (a -> b) -> (b -> b -> c) -> a -> a -> c
+> apBoth f g x y = f x `g` f y
+
 Always use "modwords" when FilePath objects are at issue,
 so that file names can be quoted or escaped
 in order to deal with spaces or other special characters.
@@ -315,17 +285,17 @@ in order to deal with spaces or other special characters.
 >     | isStartOf str ":isvarietym"
 >         = case words str
 >           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
->                            in g (M . IsVariety VTStar u <$> pe) v
+>                            in g (m (isV True u . n_d)) v
 >              _         ->  R d
 >     | isStartOf str ":isvarietys"
 >         = case words str
 >           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
->                            in g (M . IsVariety VTPlus u <$> pe) v
+>                            in g (m (isV False u . n_d)) v
 >              _         ->  R d
 >     | isStartOf str ":isvarietyt"
 >         = case words str
 >           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
->                            in g (M . IsVariety VTTier u <$> pe) v
+>                            in g (m (pTier (isV False u) . n_d)) v
 >              _         ->  R d
 >     | isStartOf str ":import"
 >         = case modwords str
@@ -410,6 +380,9 @@ in order to deal with spaces or other special characters.
 >           isStartOf xs x
 >               = isPrefixOf (map toLower xs) (map toLower x)
 >                 && (all isSpace . take 1 $ drop (length x) xs)
+>           m  x = M . (RMono x) <$> pe
+>           m2 x = M . uncurry (RDyad (fmap fromBool . x)) <$> p2e
+>           n_d = normalize . desemantify
 >           commands
 >               = [ ( ":bindings"
 >                   , pure $ L Bindings
@@ -417,12 +390,12 @@ in order to deal with spaces or other special characters.
 >                   , "print list of variables and their bindings"
 >                   )
 >                 , ( ":cequal"
->                   , M . uncurry CEqual <$> p2e
+>                   , m2 (==)
 >                   , [ArgE, ArgE]
 >                   , "compare two exprs for logical equivalence"
 >                   )
 >                 , ( ":cimplies"
->                   , M . uncurry CImply <$> p2e
+>                   , m2 isSupersetOf
 >                   , [ArgE, ArgE]
 >                   , "determine if expr1 logically implies expr2"
 >                   )
@@ -457,7 +430,7 @@ in order to deal with spaces or other special characters.
 >                   , "show egg-box of expr via external display program"
 >                   )
 >                 , ( ":equal"
->                   , M . uncurry Equal <$> p2e
+>                   , m2 (apBoth desemantify (==))
 >                   , [ArgE, ArgE]
 >                   , "compare two exprs for set-equality"
 >                   )
@@ -472,7 +445,7 @@ in order to deal with spaces or other special characters.
 >                   , "print this help"
 >                   )
 >                 , ( ":implies"
->                   , M . uncurry Subset <$> p2e
+>                   , m2 (apBoth desemantify isSupersetOf)
 >                   , [ArgE, ArgE]
 >                   , "synonym for :subset"
 >                   )
@@ -482,187 +455,187 @@ in order to deal with spaces or other special characters.
 >                   , "read file as plebby script"
 >                   )
 >                 , ( ":isAcom"
->                   , M . IsAcom <$> pe
+>                   , m (pAcom . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is k,1-LTT"
 >                   )
 >                 , ( ":isB"
->                   , M . IsB <$> pe
+>                   , m (fromBool . isB . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is a band"
 >                   )
 >                 , ( ":isCB"
->                   , M . IsCB <$> pe
+>                   , m (pCB . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is a semilattice language"
 >                   )
 >                 , ( ":isDef"
->                   , M . IsDef <$> pe
+>                   , m (pDef . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is a definite language"
 >                   )
 >                 , ( ":isDot1"
->                   , M . IsDot1 <$> pe
+>                   , m (fromBool . isDot1 . n_d)
 >                   , [ArgE]
 >                   , "determine if expr has dot-depth at most one"
 >                   )
 >                 , ( ":isFinite"
->                   , M . IsFin <$> pe
+>                   , m (fromBool . isFinite . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is finite"
 >                   )
 >                 , ( ":isFO2"
->                   , M . IsFO2 <$> pe
+>                   , m (fromBool . isFO2 . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is FO2[<]-definable"
 >                   )
 >                 , ( ":isFO2B"
->                   , M . IsFO2B <$> pe
+>                   , m (fromBool . isFO2B . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is FO2[<,bet]-definable"
 >                   )
 >                 , ( ":isFO2BF"
->                   , M . IsFO2BF <$> pe
+>                   , m (fromBool . isFO2BF . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is FO2[<,betfac]-definable"
 >                   )
 >                 , ( ":isFO2S"
->                   , M . IsFO2S <$> pe
+>                   , m (fromBool . isFO2S . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is FO2[<,+1]-definable"
 >                   )
 >                 , ( ":isGD"
->                   , M . IsGD <$> pe
+>                   , m (pGDef . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is generalized definite"
 >                   )
 >                 , ( ":isGLPT"
->                   , M . IsGLPT <$> pe
+>                   , m (fromBool . isGLPT . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is generalized locally PT"
 >                   )
 >                 , ( ":isGLT"
->                   , M . IsGLT <$> pe
+>                   , m (fromBool . isGLT . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is generalized locally testable"
 >                   )
 >                 , ( ":isLAcom"
->                   , M . IsLAcom <$> pe
+>                   , m (fromBool . isLAcom . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is locally Acom"
 >                   )
 >                 , ( ":isLB"
->                   , M . IsLB <$> pe
+>                   , m (fromBool . isLB . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is locally a band"
 >                   )
 >                 , ( ":isLPT"
->                   , M . IsLPT <$> pe
+>                   , m (fromBool . isLPT . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is locally piecewise testable"
 >                   )
 >                 , ( ":isLT"
->                   , M . IsLT <$> pe
+>                   , m (fromBool . isLT . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is locally testable"
 >                   )
 >                 , ( ":isLTT"
->                   , M . IsLTT <$> pe
+>                   , m (fromBool . isLTT . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is locally threshold testable"
 >                   )
 >                 , ( ":isMTDef"
->                   , M . IsMTDef <$> pe
+>                   , m (fromBool . isMTDef . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is multitier definite"
 >                   )
 >                 , ( ":isMTF"
->                   , M . IsMTF <$> pe
+>                   , m (fromBool . isMTF . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is multitier co/finite"
 >                   )
 >                 , ( ":isMTGD"
->                   , M . IsMTGD <$> pe
+>                   , m (fromBool . isMTGD . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is multitier gen. definite"
 >                   )
 >                 , ( ":isMTRDef"
->                   , M . IsMTRDef <$> pe
+>                   , m (fromBool . isMTRDef . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is multitier rev. definite"
 >                   )
 >                 , ( ":isPT"
->                   , M . IsPT <$> pe
+>                   , m (fromBool . isPT . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is piecewise testable"
 >                   )
 >                 , ( ":isRDef"
->                   , M . IsRDef <$> pe
+>                   , m (pRDef . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is a reverse definite language"
 >                   )
 >                 , ( ":isSF"
->                   , M . IsSF <$> pe
+>                   , m (fromBool . isSF . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is star-free"
 >                   )
 >                 , ( ":isSL"
->                   , M . IsSL <$> pe
+>                   , m (pSL . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is strictly local"
 >                   )
 >                 , ( ":isSP"
->                   , M . IsSP <$> pe
+>                   , m (pSP . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is strictly piecewise"
 >                   )
 >                 , ( ":isTDef"
->                   , M . IsTDef <$> pe
+>                   , m (pTier pDef . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is definite on a tier"
 >                   )
 >                 , ( ":isTGD"
->                   , M . IsTGD <$> pe
+>                   , m (pTier pGDef . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is generalized definite on a tier"
 >                   )
 >                 , ( ":isTLAcom"
->                   , M . IsTLAcom <$> pe
+>                   , m (pTier (fromBool . isLAcom) . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is tier-locally Acom"
 >                   )
 >                 , ( ":isTLB"
->                   , M . IsTLB <$> pe
+>                   , m (pTier (fromBool . isLB) . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is tier-locally a band"
 >                   )
 >                 , ( ":isTLPT"
->                   , M . IsTLPT <$> pe
+>                   , m (pTier (fromBool . isLPT) . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is tier-locally piecewise testable"
 >                   )
 >                 , ( ":isTLT"
->                   , M . IsTLT <$> pe
+>                   , m (pTier (fromBool . isLT) . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is tier-locally testable"
 >                   )
 >                 , ( ":isTLTT"
->                   , M . IsTLTT <$> pe
+>                   , m (pTier (fromBool . isLTT) . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is tier-LTT"
 >                   )
 >                 , ( ":isTRDef"
->                   , M . IsTRDef <$> pe
+>                   , m (pTier pRDef . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is reverse definite on a tier"
 >                   )
 >                 , ( ":isTrivial"
->                   , M . IsTrivial <$> pe
+>                   , m (fromBool . isTrivial . n_d)
 >                   , [ArgE]
 >                   , "determine if expr has only a single state"
 >                   )
 >                 , ( ":isTSL"
->                   , M . IsTSL <$> pe
+>                   , m (pTier pSL . n_d)
 >                   , [ArgE]
 >                   , "determine if expr is strictly tier-local"
 >                   )
@@ -782,12 +755,12 @@ in order to deal with spaces or other special characters.
 >                   , "print meaning(s) of var"
 >                   )
 >                 , ( ":strict-subset"
->                   , M . uncurry SSubset <$> p2e
+>                   , m2 (apBoth desemantify isProperSupersetOf)
 >                   , [ArgE, ArgE]
 >                   , "determine if expr1 is a strict subset of expr2"
 >                   )
 >                 , ( ":subset"
->                   , M . uncurry Subset <$> p2e
+>                   , m2 (apBoth desemantify isSupersetOf)
 >                   , [ArgE, ArgE]
 >                   , "determine if expr1 is a subset of expr2"
 >                   )
@@ -1099,71 +1072,11 @@ the inner Maybe is Nothing::False, (Just params)::True
 
 > doRelation :: Env -> Relation -> Maybe (Maybe [Parameter String])
 > doRelation e r
->     = case r
->       of CEqual p1 p2   ->  rel' id e (==) p1 p2
->          Equal p1 p2    ->  rel' desemantify e (==) p1 p2
->          CImply p1 p2   ->  rel' id e isSupersetOf p1 p2
->          IsAcom p       ->  check pAcom p
->          IsB p          ->  check (fromBool . isB) p
->          IsCB p         ->  check pCB p
->          IsDef p        ->  check pDef p
->          IsDot1 p       ->  check (fromBool . isDot1) p
->          IsFin p        ->  check (fromBool . isFinite) p
->          IsFO2 p        ->  check (fromBool . isFO2) p
->          IsFO2B p       ->  check (fromBool . isFO2B) p
->          IsFO2BF p      ->  check (fromBool . isFO2BF) p
->          IsFO2S p       ->  check (fromBool . isFO2S) p
->          IsGD p         ->  check pGDef p
->          IsGLPT p       ->  check (fromBool . isGLPT) p
->          IsGLT p        ->  check (fromBool . isGLT) p
->          IsLAcom p      ->  check (fromBool . isLAcom) p
->          IsLB p         ->  check (fromBool . isLB) p
->          IsLPT p        ->  check (fromBool . isLPT) p
->          IsLT p         ->  check (fromBool . isLT) p
->          IsLTT p        ->  check (fromBool . isLTT) p
->          IsMTDef p      ->  check (fromBool . isMTDef) p
->          IsMTF p        ->  check (fromBool . isMTF) p
->          IsMTGD p       ->  check (fromBool . isMTGD) p
->          IsMTRDef p     ->  check (fromBool . isMTRDef) p
->          IsPT p         ->  check (fromBool . isPT) p
->          IsRDef p       ->  check pRDef p
->          IsSF p         ->  check (fromBool . isSF) p
->          IsSL p         ->  check pSL p
->          IsSP p         ->  check pSP p
->          IsTDef p       ->  check (pTier pDef) p
->          IsTGD p        ->  check (pTier pGDef) p
->          IsTLAcom p     ->  check (tierX isLAcom) p
->          IsTLB p        ->  check (tierX isLB) p
->          IsTLT p        ->  check (tierX isLT) p
->          IsTLPT p       ->  check (tierX isLPT) p
->          IsTLTT p       ->  check (tierX isLTT) p
->          IsTRDef p      ->  check (pTier pRDef) p
->          IsTrivial p    ->  check (fromBool . isTrivial) p
->          IsTSL p        ->  check (pTier pSL) p
->          IsVariety t s p
->              -> case t of
->                   VTStar -> check (fromBool . isV True s) p
->                   VTPlus -> check (fromBool . isV False s) p
->                   VTTier -> check (fromBool . isV False s . project) p
->          Subset p1 p2   ->  rel' desemantify e isSupersetOf p1 p2
->          SSubset p1 p2  ->  rel' desemantify e isProperSupersetOf p1 p2
->     where check f = fmap (f . normalize . desemantify)
->                     . makeAutomaton e
->           isV a b = fromMaybe False . isVariety a b
->           fromBool x = if x then Just [] else Nothing
->           rel' u v x y z = fromBool <$> relate u v x y z
->           tierX f = pTier (fromBool . f)
-
-> relate :: (FSA Integer (Maybe String) -> x) ->
->           Env ->
->           (x -> x -> a) -> Expr -> Expr ->
->           Maybe a
-> relate g e f p1 p2
->     = f' <$> makeAutomaton e p1 <*> makeAutomaton e p2
->     where f' x y = let ss = collapse (maybe id insert) empty $
->                             union (alphabet x) (alphabet y)
->                    in f (g $ semanticallyExtendAlphabetTo ss x)
->                         (g $ semanticallyExtendAlphabetTo ss y)
+>     = case r of
+>         RMono f p ->  fmap f $ makeAutomaton e p
+>         RDyad f p1 p2
+>             ->  let e' = insertExpr (insertExpr e p1) p2
+>                 in f <$> makeAutomaton e' p1 <*> makeAutomaton e' p2
 
 > act :: PlebConfig ->  Env -> Trither Command Relation Env -> IO Env
 > act pc d = trither
