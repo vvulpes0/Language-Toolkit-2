@@ -83,35 +83,25 @@
 
 > -- |An expression, the root of an expression tree.
 > data Expr
->     = NAry NAryExpr
->     | Unary UnaryExpr
+>     = Automaton (FSA Integer (Maybe String))
+>     | Concatenation [Expr]
+>     | Conjunction [Expr]
+>     | Disjunction [Expr]
+>     | Domination [Expr]
+>     | DownClose Expr            -- ^@since 1.0
 >     | Factor PLFactor
->     | Automaton (FSA Integer (Maybe String))
->     | Variable String
->       deriving (Eq, Ord, Read, Show)
-
-> -- |A subexpression that consists of an n-ary operator and its operands.
-> data NAryExpr
->     = Concatenation [Expr]
->     | Conjunction   [Expr]
->     | Disjunction   [Expr]
->     | Domination    [Expr]
->     | Infiltration  [Expr] -- ^@since 1.1
->     | Shuffle       [Expr] -- ^@since 1.1
->     | StrictOrder   [Expr]
->     | QuotientL     [Expr] -- ^@since 1.0
->     | QuotientR     [Expr] -- ^@since 1.0
->       deriving (Eq, Ord, Read, Show)
-
-> -- |A subexpression that consists of a unary operator and its operand.
-> data UnaryExpr
->     = DownClose Expr -- ^@since 1.0
+>     | Infiltration [Expr]       -- ^@since 1.1
 >     | Iteration Expr
 >     | Negation Expr
->     | Neutralize [SymSet] Expr -- ^@since 1.1
->     | Reversal Expr -- ^@since 1.1
+>     | Neutralize [SymSet] Expr  -- ^@since 1.1
+>     | Reversal Expr             -- ^@since 1.1
+>     | Shuffle [Expr]            -- ^@since 1.1
+>     | StrictOrder [Expr]
 >     | Tierify [SymSet] Expr
->     | UpClose Expr -- ^@since 1.1
+>     | QuotientL [Expr]          -- ^@since 1.0
+>     | QuotientR [Expr]          -- ^@since 1.0
+>     | UpClose Expr              -- ^@since 1.1
+>     | Variable String
 >       deriving (Eq, Ord, Read, Show)
 
 > -- |A subexpression representing a single Piecewise-Local factor.
@@ -193,38 +183,30 @@
 > fillVars :: Env -> Expr -> Either String Expr
 > fillVars d@(_,subexprs,_) e
 >     = case e of
->         NAry n         ->  NAry <$> (fillVarsN d n)
->         Unary u        ->  Unary <$> (fillVarsU d u)
->         Automaton x    ->  Right $ Automaton x
->         Variable v     ->  fillVars d =<< definition v subexprs
->         Factor f       ->  Factor <$> (fillVarsF d f)
-> fillVarsN :: Env -> NAryExpr -> Either String NAryExpr
-> fillVarsN d n
->     = case n of
->         Concatenation es  ->  Concatenation <$> f es
->         Conjunction es    ->  Conjunction <$> f es
->         Disjunction es    ->  Disjunction <$> f es
->         Domination es     ->  Domination  <$> f es
->         Infiltration es   ->  Infiltration <$> f es
->         Shuffle es        ->  Shuffle <$> f es
->         StrictOrder es    ->  StrictOrder <$> f es
->         QuotientL es      ->  QuotientL <$> f es
->         QuotientR es      ->  QuotientR <$> f es
->     where f es = sequence $ map (fillVars d) es
-> fillVarsU :: Env -> UnaryExpr -> Either String UnaryExpr
-> fillVarsU d u
->     = case u of
->         DownClose e  ->  DownClose <$> fillVars d e
->         Iteration e  ->  Iteration <$> fillVars d e
->         Negation e   ->  Negation <$> fillVars d e
->         Reversal e   ->  Reversal <$> fillVars d e
->         UpClose e    ->  UpClose <$> fillVars d e
->         Neutralize ts e
+>         Automaton x       ->  Right $ Automaton x
+>         Concatenation xs  ->  Concatenation <$> f xs
+>         Conjunction xs    ->  Conjunction <$> f xs
+>         Disjunction xs    ->  Disjunction <$> f xs
+>         Domination xs     ->  Domination  <$> f xs
+>         DownClose x       ->  DownClose <$> fillVars d x
+>         Factor x          ->  Factor <$> (fillVarsF d x)
+>         Infiltration xs   ->  Infiltration <$> f xs
+>         Iteration x       ->  Iteration <$> fillVars d x
+>         Negation x        ->  Negation <$> fillVars d x
+>         Neutralize ts x
 >             -> Neutralize <$> sequence (map (fillVarsS d) ts)
->                <*> fillVars d e
->         Tierify ts e
+>                <*> fillVars d x
+>         QuotientL xs      ->  QuotientL <$> f xs
+>         QuotientR xs      ->  QuotientR <$> f xs
+>         Reversal x        ->  Reversal <$> fillVars d x
+>         Shuffle xs        ->  Shuffle <$> f xs
+>         StrictOrder xs    ->  StrictOrder <$> f xs
+>         Tierify ts x
 >             -> Tierify <$> sequence (map (fillVarsS d) ts)
->                <*> fillVars d e
+>                <*> fillVars d x
+>         UpClose x         ->  UpClose <$> fillVars d x
+>         Variable v        ->  fillVars d =<< definition v subexprs
+>     where f es = sequence $ map (fillVars d) es
 > fillVarsF :: Env -> PLFactor -> Either String PLFactor
 > fillVarsF d (PLFactor h t ps)
 >     = fmap (PLFactor h t)
@@ -260,12 +242,13 @@
 > -- This action effectively removes metadata describing constraint types
 > -- from the environment.
 > groundEnv :: Env -> Env
-> groundEnv (dict, subexprs, e) = (dict, tmap (mapsnd f) subexprs, f <$> e)
->     where f = Automaton .
->               renameSymbolsBy Just
->               . renameStates . minimizeDeterministic .
->               desemantify . semanticallyExtendAlphabetTo universe .
->               automatonFromExpr
+> groundEnv (dict, subexprs, e)
+>     = (dict, tmap (mapsnd f) subexprs, f <$> e)
+>     where f = Automaton
+>               . renameSymbolsBy Just
+>               . renameStates . minimizeDeterministic
+>               . desemantify . semanticallyExtendAlphabetTo universe
+>               . automatonFromExpr
 >           universe = either (const Set.empty) id
 >                      (definition "universe" dict)
 
@@ -307,29 +290,29 @@ Therefore, this cleanup step has been removed.
 >                           contractAlphabetTo
 >                           (insert Nothing (tmap Just universe))
 >                           x
+>                   Concatenation es  ->  f Concatenation es
+>                   Conjunction es    ->  f Conjunction es
+>                   Disjunction es    ->  f Disjunction es
+>                   Domination es     ->  f Domination es
+>                   DownClose ex      ->  g DownClose ex
 >                   Factor pf
 >                       ->  Factor $ restrictUniverseF pf
->                   NAry (Concatenation es)  ->  f Concatenation es
->                   NAry (Conjunction es)    ->  f Conjunction es
->                   NAry (Disjunction es)    ->  f Disjunction es
->                   NAry (Domination es)     ->  f Domination es
->                   NAry (Infiltration es)   ->  f Infiltration es
->                   NAry (Shuffle es)        ->  f Shuffle es
->                   NAry (StrictOrder es)    ->  f StrictOrder es
->                   NAry (QuotientL es)      ->  f QuotientL es
->                   NAry (QuotientR es)      ->  f QuotientR es
->                   Unary (DownClose ex)     ->  g DownClose ex
->                   Unary (Iteration ex)     ->  g Iteration ex
->                   Unary (Negation ex)      ->  g Negation ex
->                   Unary (Neutralize ts ex)
+>                   Infiltration es   ->  f Infiltration es
+>                   Iteration ex      ->  g Iteration ex
+>                   Negation ex       ->  g Negation ex
+>                   Neutralize ts ex
 >                       -> g (Neutralize (tmap restrictUniverseS ts)) ex
->                   Unary (Reversal ex)      ->  g Reversal ex
->                   Unary (Tierify ts ex)
+>                   QuotientL es      ->  f QuotientL es
+>                   QuotientR es      ->  f QuotientR es
+>                   Reversal ex       ->  g Reversal ex
+>                   Shuffle es        ->  f Shuffle es
+>                   StrictOrder es    ->  f StrictOrder es
+>                   Tierify ts ex
 >                       -> g (Tierify (tmap restrictUniverseS ts)) ex
->                   Unary (UpClose ex)       ->  g UpClose ex
->                   Variable x               ->  Variable x
->           f t es = NAry (t $ tmap restrictUniverseE es)
->           g t e  = Unary (t $ restrictUniverseE e)
+>                   UpClose ex        ->  g UpClose ex
+>                   Variable x        ->  Variable x
+>           f t es = t $ map restrictUniverseE es
+>           g t e  = t $ restrictUniverseE e
 
 > -- |Create an t'FSA' from an expression tree and environment,
 > -- complete with metadata regarding the constraint(s) it represents.
@@ -360,47 +343,47 @@ prevents having to descend through the tree to find this information.
 > automatonFromExpr e
 >     = case e
 >       of Automaton x             -> x
->          Factor x
->              -> automatonFromPLFactor (simplifyPL x)
->          NAry (Concatenation es) -> f emptyStr mconcat es
->          NAry (Conjunction es)   -> f univLang flatIntersection es
->          NAry (Disjunction es)   -> f emptyLanguage flatUnion es
->          NAry (Domination es)
+>          Concatenation es -> f emptyStr mconcat es
+>          Conjunction es   -> f univLang flatIntersection es
+>          Disjunction es   -> f emptyLanguage flatUnion es
+>          Domination es
 >              -> f emptyStr
 >                 (mconcat .
 >                  intersperse (totalWithAlphabet (singleton Nothing))
 >                 ) es
->          NAry (Infiltration es)  -> f emptyStr flatInfiltration es
->          NAry (Shuffle es)       -> f emptyStr flatShuffle es
->          NAry (StrictOrder es)   -> foldr
+>          DownClose ex
+>              -> renameStates . minimize . subsequenceClosure $
+>                 automatonFromExpr ex
+>          Factor x
+>              -> automatonFromPLFactor (simplifyPL x)
+>          Infiltration es  -> f emptyStr flatInfiltration es
+>          Iteration ex
+>              -> renameStates . minimize . kleeneClosure $
+>                 automatonFromExpr ex
+>          Negation ex
+>              -> complementDeterministic $ automatonFromExpr ex
+>          Neutralize ts ex
+>              -> renameStates . minimize
+>                 . neutralize
+>                   (Set.mapMonotonic Just . unionAll $ map getSyms ts)
+>                 $ automatonFromExpr ex
+>          QuotientL es     -> f emptyStr ql es
+>          QuotientR es     -> f emptyStr qr es
+>          Reversal ex
+>              -> renameStates . minimize . LTK.FSA.reverse
+>                 $ automatonFromExpr ex
+>          Shuffle es       -> f emptyStr flatShuffle es
+>          StrictOrder es   -> foldr
 >                                     (\x y ->
 >                                      renameStates . minimize
 >                                      $ autStrictOrderOverlay x y)
 >                                     emptyStr
 >                                     $ automata es
->          NAry (QuotientL es)     -> f emptyStr ql es
->          NAry (QuotientR es)     -> f emptyStr qr es
->          Unary (DownClose ex)
->              -> renameStates . minimize . subsequenceClosure $
->                 automatonFromExpr ex
->          Unary (Iteration ex)
->              -> renameStates . minimize . kleeneClosure $
->                 automatonFromExpr ex
->          Unary (Negation ex)
->              -> complementDeterministic $ automatonFromExpr ex
->          Unary (Neutralize ts ex)
->              -> renameStates . minimize
->                 . neutralize
->                   (Set.mapMonotonic Just . unionAll $ map getSyms ts)
->                 $ automatonFromExpr ex
->          Unary (Reversal ex)
->              -> renameStates . minimize . LTK.FSA.reverse
->                 $ automatonFromExpr ex
->          Unary (Tierify ts ex)
+>          Tierify ts ex
 >              -> renameStates . minimize
 >                 . tierify (unionAll $ map getSyms ts)
 >                 $ automatonFromExpr ex
->          Unary (UpClose ex)
+>          UpClose ex
 >              -> renameStates . minimize . loopify $
 >                 automatonFromExpr ex
 >          Variable _
@@ -452,32 +435,31 @@ prevents having to descend through the tree to find this information.
 > getSyms (SSVar _) = error "free variable in symset"
 
 > usedSymbols :: Expr -> Set String
-> usedSymbols e = case e
->                 of Automaton a  ->  collapse (maybe id insert) Set.empty $
->                                     alphabet a
->                    Factor f     ->  usedSymbolsF f
->                    NAry n       ->  usedSymbolsN n
->                    Unary u      ->  usedSymbolsU u
->                    Variable _   ->  Set.empty
+> usedSymbols e
+>     = case e of
+>         Automaton a
+>              ->  collapse (maybe id insert) Set.empty $ alphabet a
+>         Concatenation es  ->  us es
+>         Conjunction es    ->  us es
+>         Disjunction es    ->  us es
+>         Domination es     ->  us es
+>         DownClose ex      ->  usedSymbols ex
+>         Factor f          ->  usedSymbolsF f
+>         Infiltration es   ->  us es
+>         Iteration ex      ->  usedSymbols ex
+>         Negation ex       ->  usedSymbols ex
+>         Neutralize ts ex
+>             -> Set.unions (usedSymbols ex : map usedSymsInSet ts)
+>         Reversal ex       ->  usedSymbols ex
+>         Shuffle es        ->  us es
+>         StrictOrder es    ->  us es
+>         Tierify ts _
+>             -> Set.unions $ map usedSymsInSet ts
+>         QuotientL es      ->  us es
+>         QuotientR es      ->  us es
+>         UpClose ex        ->  usedSymbols ex
+>         Variable _        ->  Set.empty
 >     where us = collapse (union . usedSymbols) Set.empty
->           usedSymbolsN (Concatenation es)  =  us es
->           usedSymbolsN (Conjunction es)    =  us es
->           usedSymbolsN (Disjunction es)    =  us es
->           usedSymbolsN (Domination es)     =  us es
->           usedSymbolsN (Infiltration es)   =  us es
->           usedSymbolsN (Shuffle es)        =  us es
->           usedSymbolsN (StrictOrder es)    =  us es
->           usedSymbolsN (QuotientL es)      =  us es
->           usedSymbolsN (QuotientR es)      =  us es
->           usedSymbolsU (DownClose ex)      =  usedSymbols ex
->           usedSymbolsU (Iteration ex)      =  usedSymbols ex
->           usedSymbolsU (Negation ex)       =  usedSymbols ex
->           usedSymbolsU (Neutralize ts ex)
->               = Set.unions (usedSymbols ex : map usedSymsInSet ts)
->           usedSymbolsU (Reversal ex)       =  usedSymbols ex
->           usedSymbolsU (Tierify ts _)
->               = Set.unions $ map usedSymsInSet ts
->           usedSymbolsU (UpClose ex)        =  usedSymbols ex
 >           usedSymbolsF (PLFactor _ _ ps)
 >               = Set.unions . map usedSymsInSet $ concat ps
 >           usedSymbolsF (PLCat xs)
@@ -536,15 +518,15 @@ prevents having to descend through the tree to find this information.
 > parseNAryExpr :: Parse Expr
 > parseNAryExpr
 >     = makeLifter
->       [ (["⋀", "⋂", "∧", "∩", "/\\"],  NAry . Conjunction)
->       , (["⋁", "⋃", "∨", "∪", "\\/"],  NAry . Disjunction)
->       , (["\\\\"],                     NAry . QuotientL)
->       , (["//"],                       NAry . QuotientR)
->       , ([".∙.", ".@."],               NAry . StrictOrder)
->       , (["∙∙", "@@"],                 NAry . Domination)
->       , (["∙" , "@" ],                 NAry . Concatenation)
->       , (["⧢", "|_|_|"],               NAry . Shuffle)
->       , (["⇑", ".^."],                 NAry . Infiltration)
+>       [ (["⋀", "⋂", "∧", "∩", "/\\"],  Conjunction)
+>       , (["⋁", "⋃", "∨", "∪", "\\/"],  Disjunction)
+>       , (["\\\\"],                     QuotientL)
+>       , (["//"],                       QuotientR)
+>       , ([".∙.", ".@."],               StrictOrder)
+>       , (["∙∙", "@@"],                 Domination)
+>       , (["∙" , "@" ],                 Concatenation)
+>       , (["⧢", "|_|_|"],               Shuffle)
+>       , (["⇑", ".^."],                 Infiltration)
 >       ] <*> pd
 >     where pd = parseEmpty
 >                <|> parseDelimited ['(', '{']
@@ -558,18 +540,18 @@ prevents having to descend through the tree to find this information.
 > parseUnaryExpr :: Parse Expr
 > parseUnaryExpr
 >     = (makeLifter
->        [ (["↓", "$"],       Unary . DownClose)
->        , (["↑", "^"],       Unary . UpClose)
->        , (["*", "∗"],       Unary . Iteration)
->        , (["+"],            NAry  . plus)
->        , (["¬", "~", "!"],  Unary . Negation)
->        , (["⇄", "-"],       Unary . Reversal)
+>        [ (["↓", "$"],       DownClose)
+>        , (["↑", "^"],       UpClose)
+>        , (["*", "∗"],       Iteration)
+>        , (["+"],            plus)
+>        , (["¬", "~", "!"],  Negation)
+>        , (["⇄", "-"],       Reversal)
 >        ] <*> parseExpr
->       ) <|> (Unary <$> (Tierify <$> pt <*> parseExpr))
->         <|> (Unary <$> (Neutralize <$> pn <*> parseExpr))
+>       ) <|> (Tierify <$> pt <*> parseExpr)
+>         <|> (Neutralize <$> pn <*> parseExpr)
 >     where pt = parseDelimited ['['] (parseSeparated "," parseSymExpr)
 >           pn = parseDelimited ['|'] (parseSeparated "," parseSymExpr)
->           plus e = Concatenation [e, Unary $ Iteration e]
+>           plus e = Concatenation [e, Iteration e]
 
 > parsePLFactor :: Parse PLFactor
 > parsePLFactor = combine ".." PLGap <|> combine "‥" PLGap
