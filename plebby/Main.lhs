@@ -53,6 +53,7 @@
 > import System.IO.Error (IOError, catch) -- We'll make our own
 #endif
 
+> import qualified Data.Map as Map
 > import qualified Data.Set as Set
 
 > import LTK.Decide       ( isLT
@@ -101,6 +102,7 @@
 >                         , makeAutomaton
 >                         , makeAutomatonE
 >                         , parseExpr
+>                         , restoreUniverse
 >                         , restrictUniverse
 >                         , tokenize
 >                         )
@@ -146,7 +148,7 @@
 > main = do
 >   pc <- getConfig
 >   runInputT defaultSettings
->        $ (writeVersion >> processLines pc (empty, empty))
+>        $ (writeVersion >> processLines pc (Map.empty, Map.empty))
 
 
 > getConfig :: IO PlebConfig
@@ -824,9 +826,10 @@ in order to deal with spaces or other special characters.
 >                 >> mapM_ (\(n, s) ->
 >                           writeStrLn
 >                           (n ++ " <- " ++ deescape (formatSet s))
->                          ) dict
+>                          ) (Map.assocs dict)
 >                 >> writeStrLn "# Expression aliases:"
->                 >> writeStrLn (formatSet $ tmap fst subexprs)
+>                 >> writeStrLn
+>                    (formatSet . Set.fromList $ Map.keys subexprs)
 >                 >> return e
 >          Display x -> disp id x
 >          D_EB x -> disp' (display' pc) (to EggBox) x
@@ -904,25 +907,8 @@ in order to deal with spaces or other special characters.
 >                     ("failed to read \"" ++ file ++ "\"")
 >                  >> return e
 >                 )
->          Reset -> return (empty, empty)
->          --
->          -- Note: RestoreUniverse is implemented in a probably-inefficient
->          --       way, by making use of the side-effect that all assignments
->          --       properly update the universe.  The code currently just
->          --       rebinds every bound variable by creating and evaluating
->          --       assignment statements.  This should be done differently.
->          --
->          RestoreUniverse
->              -> let d' = keep ((/= "universe") . fst) dict
->                 in return . doStatements (d', subexprs) .
->                    unlines . fromCollapsible $
->                    union
->                    (tmap
->                     (\(a, _) ->
->                      "= " ++ a ++ " { " ++ a ++ " } "
->                     ) d'
->                    )
->                    (tmap (\(a, _) -> "= " ++ a ++ " " ++ a) subexprs)
+>          Reset -> return (Map.empty, Map.empty)
+>          RestoreUniverse -> return (restoreUniverse e)
 >          RestrictUniverse -> return (restrictUniverse e)
 >          Savestate file
 >              -> catchIOError (writeAndCreateDir file . unlines $ [show e])
@@ -932,25 +918,25 @@ in order to deal with spaces or other special characters.
 >                 ) >> return e
 >          Show name
 >              -> if both
->                    (isNotIn (tmap fst subexprs))
->                    (isNotIn (tmap fst dict))
+>                    (flip Map.notMember subexprs)
+>                    (flip Map.notMember dict)
 >                    name
 >                 then writeStrLn
 >                      ("undefined variable \"" ++ name ++ "\"")
 >                      >> return e
 >                 else mapM_
->                      (\(_,a) ->
+>                      (\a ->
 >                       writeStrLn (name ++ " <- " ++ show a)
->                      ) (keep ((== name) . fst) subexprs)
+>                      ) (Map.filterWithKey (\k _ -> k == name) subexprs)
 >                      >> mapM_
->                      (\(_,s) ->
+>                      (\s ->
 >                       writeStrLn
 >                       (name ++ " <- " ++ deescape (formatSet s))
->                      ) (keep ((== name) . fst) dict)
+>                      ) (Map.filterWithKey (\k _ -> k == name) dict)
 >                      >> return e
 >          Unset name
->              -> return ( keep ((/= name) . fst) dict
->                        , keep ((/= name) . fst) subexprs
+>              -> return ( Map.filterWithKey (\k _ -> k /= name) dict
+>                        , Map.filterWithKey (\k _ -> k /= name) subexprs
 >                        )
 >          Write file x
 >              -> let aut = makeAutomaton e x

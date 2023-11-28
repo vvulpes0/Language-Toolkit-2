@@ -40,6 +40,7 @@
 >        , doStatementsWithError
 >        , parseExpr
 >        , readPleb
+>        , restoreUniverse
 >        , restrictUniverse
 >        , tokenize
 >        ) where
@@ -54,7 +55,9 @@
 > import Data.Char (isLetter, isSpace)
 > import Data.Foldable (asum)
 > import Data.List (intersperse,foldl1')
+> import Data.Map (Map)
 > import Data.Set (Set)
+> import qualified Data.Map as Map
 > import qualified Data.Set as Set
 
 > import LTK.FSA
@@ -130,7 +133,7 @@
 > readPleb :: String -> Either String (FSA Integer String)
 > readPleb = fmap desemantify
 >            . (=<<) (flip makeAutomatonE (Variable "it"))
->            . (=<<) (evaluateS (Set.empty, Set.empty) . fst)
+>            . (=<<) (evaluateS (Map.empty, Map.empty) . fst)
 >            . doParse parseStatements
 >            . tokenize
 
@@ -230,7 +233,7 @@
 
 > -- |Transform all saved expressions into automata to prevent reevaluation.
 > compileEnv :: Env -> Env
-> compileEnv (dict, subexprs) = (dict, tmap (mapsnd f) subexprs)
+> compileEnv (dict, subexprs) = (dict, Map.map f subexprs)
 >     where f = Automaton . renameStates
 >               . minimizeDeterministic . automatonFromExpr
 
@@ -239,7 +242,7 @@
 > -- This action effectively removes metadata describing constraint types
 > -- from the environment.
 > groundEnv :: Env -> Env
-> groundEnv (dict, subexprs) = (dict, tmap (mapsnd f) subexprs)
+> groundEnv (dict, subexprs) = (dict, Map.map f subexprs)
 >     where f = Automaton
 >               . renameSymbolsBy Just
 >               . renameStates . minimizeDeterministic
@@ -247,6 +250,12 @@
 >               . automatonFromExpr
 >           universe = either (const Set.empty) id
 >                      (definition "universe" dict)
+
+> restoreUniverse :: Env -> Env
+> restoreUniverse (d, s) = (define "universe" syms d, s)
+>     where syms = Map.foldr (Set.union . usedSymbols)
+>                  (Set.unions . Map.elems $ Map.filterWithKey
+>                   (\k _ -> k /= "universe") d) s
 
 =====
 Note:
@@ -259,8 +268,8 @@ Therefore, this cleanup step has been removed.
 > -- |Remove any symbols not present in @(universe)@ from the environment.
 > restrictUniverse :: Env -> Env
 > restrictUniverse (dict, subexprs)
->     = ( tmap (mapsnd (Set.intersection universe)) dict 
->       , tmap (mapsnd restrictUniverseE) subexprs
+>     = ( Map.map (Set.intersection universe) dict
+>       , Map.map restrictUniverseE subexprs
 >       )
 >     where universe = either (const Set.empty) id
 >                      $ definition "universe" dict
@@ -654,20 +663,14 @@ prevents having to descend through the tree to find this information.
 
 
 > -- |An association between names and values.
-> type Dictionary a = Set (String, a)
+> type Dictionary a = Map String a
 
 > define :: (Ord a) => String -> a -> Dictionary a -> Dictionary a
-> define name value = insert (name, value) . keep ((/= name) . fst)
+> define name value = Map.insert name value
 
 > definition :: (Ord a) => String -> Dictionary a -> Either String a
-> definition a = maybe
->                (Left . unlines . pure
->                 $ "undefined variable \"" ++ a ++ "\"")
->                Right .
->                lookupMin . tmap snd . keep ((== a) . fst)
->     where lookupMin xs
->               | xs == Set.empty = Nothing
->               | otherwise       = Just (Set.findMin xs)
+> definition a = maybe (Left undef) Right . Map.lookup a
+>     where undef = unlines ["undefined variable \"" ++ a ++ "\""]
 
 > -- |The base type for a combinatorial parser.
 > newtype Parse a = Parse
@@ -722,9 +725,6 @@ prevents having to descend through the tree to find this information.
 
 > mapfst :: (a -> b) -> (a, c) -> (b, c)
 > mapfst f (a, c) = (f a, c)
-
-> mapsnd :: (b -> c) -> (a, b) -> (a, c)
-> mapsnd f (a, b) = (a, f b)
 
 > matchingDelimiter :: Char -> Char
 > matchingDelimiter x = foldr f x delimiters
