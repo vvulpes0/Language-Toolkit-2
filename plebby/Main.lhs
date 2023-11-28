@@ -146,7 +146,7 @@
 > main = do
 >   pc <- getConfig
 >   runInputT defaultSettings
->        $ (writeVersion >> processLines pc (empty, empty, Nothing))
+>        $ (writeVersion >> processLines pc (empty, empty))
 
 
 > getConfig :: IO PlebConfig
@@ -817,7 +817,7 @@ in order to deal with spaces or other special characters.
 >                 ]
 
 > doCommand :: PlebConfig -> Env -> Command -> IO Env
-> doCommand pc e@(dict, subexprs, ex) c
+> doCommand pc e@(dict, subexprs) c
 >     = case c
 >       of Bindings
 >              -> writeStrLn "# Symbol aliases:"
@@ -828,20 +828,20 @@ in order to deal with spaces or other special characters.
 >                 >> writeStrLn "# Expression aliases:"
 >                 >> writeStrLn (formatSet $ tmap fst subexprs)
 >                 >> return e
->          Display expr -> disp id expr
->          D_EB expr -> disp' (display' pc) (to EggBox) expr
->          D_JE expr -> disp (renameStatesBy (formatSet . tmap f)
->                             . minimizeOver jEquivalence
->                             . syntacticMonoid) expr
->          D_OJ expr -> disp' (display' pc) greenOrderJ expr
->          D_OL expr -> disp' (display' pc) greenOrderL expr
->          D_OR expr -> disp' (display' pc) greenOrderR expr
->          D_PSG expr -> disp (renameStatesBy formatSet . powersetGraph) expr
->          D_SM expr -> disp (renameStatesBy f . syntacticMonoid) expr
->          D_SO expr -> disp' (display' pc) (to SyntacticOrder) expr
->          Dotify expr -> dot id expr
->          DT_PSG expr -> dot (renameStatesBy formatSet . powersetGraph) expr
->          DT_SM expr -> dot (renameStatesBy f . syntacticMonoid) expr
+>          Display x -> disp id x
+>          D_EB x -> disp' (display' pc) (to EggBox) x
+>          D_JE x -> disp (renameStatesBy (formatSet . tmap f)
+>                         . minimizeOver jEquivalence
+>                         . syntacticMonoid) x
+>          D_OJ x -> disp' (display' pc) greenOrderJ x
+>          D_OL x -> disp' (display' pc) greenOrderL x
+>          D_OR x -> disp' (display' pc) greenOrderR x
+>          D_PSG x -> disp (renameStatesBy formatSet . powersetGraph) x
+>          D_SM x -> disp (renameStatesBy f . syntacticMonoid) x
+>          D_SO x -> disp' (display' pc) (to SyntacticOrder) x
+>          Dotify x -> dot id x
+>          DT_PSG x -> dot (renameStatesBy formatSet . powersetGraph) x
+>          DT_SM x -> dot (renameStatesBy f . syntacticMonoid) x
 >          ErrorMsg str -> hPutStr stderr str >> return e
 >          Help xs -> lessHelp pc xs >> return e
 >          Import file
@@ -864,7 +864,8 @@ in order to deal with spaces or other special characters.
 >                  >> return e
 >                 )
 >          Read file
->              -> catchIOError (doStatements e <$> readFileWithExpansion file)
+>              -> catchIOError
+>                 (doStatements e <$> readFileWithExpansion file)
 >                 (const
 >                  $  hPutStrLn stderr
 >                     ("failed to read \"" ++ file ++ "\"")
@@ -903,7 +904,7 @@ in order to deal with spaces or other special characters.
 >                     ("failed to read \"" ++ file ++ "\"")
 >                  >> return e
 >                 )
->          Reset -> return (empty, empty, Nothing)
+>          Reset -> return (empty, empty)
 >          --
 >          -- Note: RestoreUniverse is implemented in a probably-inefficient
 >          --       way, by making use of the side-effect that all assignments
@@ -913,7 +914,7 @@ in order to deal with spaces or other special characters.
 >          --
 >          RestoreUniverse
 >              -> let d' = keep ((/= "universe") . fst) dict
->                 in return . doStatements (d', subexprs, ex) .
+>                 in return . doStatements (d', subexprs) .
 >                    unlines . fromCollapsible $
 >                    union
 >                    (tmap
@@ -950,19 +951,15 @@ in order to deal with spaces or other special characters.
 >          Unset name
 >              -> return ( keep ((/= name) . fst) dict
 >                        , keep ((/= name) . fst) subexprs
->                        , if name == "it"
->                          then Nothing
->                          else ex
 >                        )
->          Write file expr
->              -> let aut = makeAutomaton $ insertExpr e expr
+>          Write file x
+>              -> let aut = makeAutomaton e x
 >                 in maybe
 >                    (hPutStrLn stderr "could not make automaton")
 >                    (\a -> werr file (unlines [show a]))
 >                    aut >> return e
->          WriteATT f1 f2 f3 expr
->              -> let aut  =  fmap desemantify . makeAutomaton $
->                             insertExpr e expr
+>          WriteATT f1 f2 f3 x
+>              -> let aut  =  fmap desemantify $ makeAutomaton e x
 >                     w2   =  if f2 == "_" then const (return ()) else werr f2
 >                     w3   =  if f3 == "_" then const (return ()) else werr f3
 >                 in maybe
@@ -978,7 +975,7 @@ in order to deal with spaces or other special characters.
 >           disp' how x expr
 >               = either (hPutStr stderr . deescape)
 >                 (how . x . normalize . desemantify)
->                 (makeAutomatonE (dict, subexprs, Just expr))
+>                 (makeAutomatonE e expr)
 >                 >> return e
 >           dot :: (Ord n, Show n) =>
 >                  (FSA Integer String -> FSA n String) -> Expr -> IO Env
@@ -1164,9 +1161,8 @@ the inner Maybe is Nothing::False, (Just params)::True
 >                   VTTier -> check (fromBool . isV False s . project) p
 >          Subset p1 p2   ->  rel' desemantify e isSupersetOf p1 p2
 >          SSubset p1 p2  ->  rel' desemantify e isProperSupersetOf p1 p2
->     where check f p = fmap (f . normalize . desemantify)
->                       . makeAutomaton
->                       $ (\(a, b, _) -> (a, b, Just p)) e
+>     where check f = fmap (f . normalize . desemantify)
+>                     . makeAutomaton e
 >           isV a b = fromMaybe False . isVariety a b
 >           fromBool x = if x then Just [] else Nothing
 >           rel' u v x y z = fromBool <$> relate u v x y z
@@ -1176,10 +1172,9 @@ the inner Maybe is Nothing::False, (Just params)::True
 >           Env ->
 >           (x -> x -> a) -> Expr -> Expr ->
 >           Maybe a
-> relate g (a,b,_) f p1 p2 = f' <$> makeAutomaton e1 <*> makeAutomaton e2
->     where e1 = (a, b, Just p1)
->           e2 = (a, b, Just p2)
->           f' x y = let ss = collapse (maybe id insert) empty $
+> relate g e f p1 p2
+>     = f' <$> makeAutomaton e p1 <*> makeAutomaton e p2
+>     where f' x y = let ss = collapse (maybe id insert) empty $
 >                             union (alphabet x) (alphabet y)
 >                    in f (g $ semanticallyExtendAlphabetTo ss x)
 >                         (g $ semanticallyExtendAlphabetTo ss y)

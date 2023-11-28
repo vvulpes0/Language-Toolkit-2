@@ -77,9 +77,8 @@
 >     | otherwise   =  TSymbol x : tokenize xs
 >     where isDelim c = matchingDelimiter c /= c || c == '|'
 
-> -- |The environment: defined sets of symbols, defined expressions, and
-> -- possibly a value for the special variable @(it)@.
-> type Env = (Dictionary (Set String), Dictionary Expr, Maybe Expr)
+> -- |The environment: defined sets of symbols and defined expressions.
+> type Env = (Dictionary (Set String), Dictionary Expr)
 
 > -- |An expression, the root of an expression tree.
 > data Expr
@@ -130,8 +129,8 @@
 > -- If there is an error while parsing, the result is the string "no parse".
 > readPleb :: String -> Either String (FSA Integer String)
 > readPleb = fmap desemantify
->            . (=<<) makeAutomatonE
->            . (=<<) (evaluateS (Set.empty, Set.empty, Nothing) . fst)
+>            . (=<<) (flip makeAutomatonE (Variable "it"))
+>            . (=<<) (evaluateS (Set.empty, Set.empty) . fst)
 >            . doParse parseStatements
 >            . tokenize
 
@@ -157,19 +156,17 @@
 > -- |Act upon a statement, reporting any semantic errors
 > -- (i.e. undefined variables)
 > evaluate :: Env -> Statement -> Either String Env
-> evaluate d@(dict,subexprs,it) stmt
+> evaluate d@(dict,subexprs) stmt
 >     = case stmt of
 >         EAssignment name e
 >             -> (\x -> ( mkUniverse $ usedSymbols x
 >                       , define name x subexprs
->                       , if name == "it" then Just x else it
 >                       )
 >                ) <$> fillVars d e
 >         SAssignment name s
 >             -> (\x -> ( let x' = getSyms x
 >                         in define name x' $ mkUniverse x'
 >                       , subexprs
->                       , it
 >                       )
 >                ) <$> fillVarsS d s
 >     where u = either (const Set.empty) id $ definition "universe" dict
@@ -181,7 +178,7 @@
 
 > -- |Instantiate variables in an expression.
 > fillVars :: Env -> Expr -> Either String Expr
-> fillVars d@(_,subexprs,_) e
+> fillVars d@(_,subexprs) e
 >     = case e of
 >         Automaton x       ->  Right $ Automaton x
 >         Concatenation xs  ->  Concatenation <$> f xs
@@ -215,7 +212,7 @@
 >           = fmap PLCat . sequence $ map (fillVarsF d) fs
 > fillVarsF d (PLGap fs)
 >           = fmap PLGap . sequence $ map (fillVarsF d) fs
-> fillVarsF d@(_,subexprs,_) (PLVariable s)
+> fillVarsF d@(_,subexprs) (PLVariable s)
 >     = case definition s subexprs of
 >         Left msg -> Left msg
 >         Right (Variable v) -> fillVarsF d (PLVariable v)
@@ -224,7 +221,7 @@
 >                    ["attempted to use the non-factor "
 >                     ++ s ++ " as a factor"]
 > fillVarsS :: Env -> SymSet -> Either String SymSet
-> fillVarsS d@(dict,_,_) s
+> fillVarsS d@(dict,_) s
 >     = case s of
 >         SSSet xs -> Right $ SSSet xs
 >         SSUni xs -> fmap SSUni . sequence $ map (fillVarsS d) xs
@@ -233,7 +230,7 @@
 
 > -- |Transform all saved expressions into automata to prevent reevaluation.
 > compileEnv :: Env -> Env
-> compileEnv (dict, subexprs, e) = (dict, tmap (mapsnd f) subexprs, f <$> e)
+> compileEnv (dict, subexprs) = (dict, tmap (mapsnd f) subexprs)
 >     where f = Automaton . renameStates
 >               . minimizeDeterministic . automatonFromExpr
 
@@ -242,8 +239,7 @@
 > -- This action effectively removes metadata describing constraint types
 > -- from the environment.
 > groundEnv :: Env -> Env
-> groundEnv (dict, subexprs, e)
->     = (dict, tmap (mapsnd f) subexprs, f <$> e)
+> groundEnv (dict, subexprs) = (dict, tmap (mapsnd f) subexprs)
 >     where f = Automaton
 >               . renameSymbolsBy Just
 >               . renameStates . minimizeDeterministic
@@ -262,10 +258,9 @@ Therefore, this cleanup step has been removed.
 
 > -- |Remove any symbols not present in @(universe)@ from the environment.
 > restrictUniverse :: Env -> Env
-> restrictUniverse (dict, subexprs, v)
+> restrictUniverse (dict, subexprs)
 >     = ( tmap (mapsnd (Set.intersection universe)) dict 
 >       , tmap (mapsnd restrictUniverseE) subexprs
->       , restrictUniverseE <$> v
 >       )
 >     where universe = either (const Set.empty) id
 >                      $ definition "universe" dict
@@ -316,22 +311,19 @@ Therefore, this cleanup step has been removed.
 
 > -- |Create an t'FSA' from an expression tree and environment,
 > -- complete with metadata regarding the constraint(s) it represents.
-> makeAutomaton :: Env -> Maybe (FSA Integer (Maybe String))
-> makeAutomaton = either (const Nothing) Just . makeAutomatonE
+> makeAutomaton :: Env -> Expr -> Maybe (FSA Integer (Maybe String))
+> makeAutomaton e = either (const Nothing) Just . makeAutomatonE e
 
 > -- |Create an t'FSA' from an expression tree and environment,
 > -- complete with metadata regarding the constraint(s) it represents.
-> makeAutomatonE :: Env -> Either String (FSA Integer (Maybe String))
-> makeAutomatonE d@(dict, _, e)
+> makeAutomatonE :: Env -> Expr
+>                -> Either String (FSA Integer (Maybe String))
+> makeAutomatonE d@(dict, _) e
 >     = renameStates . minimizeDeterministic
 >       . semanticallyExtendAlphabetTo symsets
->       . automatonFromExpr <$> filled
+>       . automatonFromExpr <$> fillVars d e
 >     where symsets = either (const Set.empty) id
 >                     $ definition "universe" dict
->           filled = case fillVars d <$> e of
->                      Just (Right x) -> Right x
->                      Just (Left s)  -> Left s
->                      _ -> Left "attempted to build nothing"
 
 The properties of semantic automata are used here to prevent having to
 pass alphabet information to the individual constructors, which in turn
