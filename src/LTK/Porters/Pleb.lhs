@@ -125,8 +125,8 @@
 >             | SSVar String
 >               deriving (Eq, Ord, Read, Show)
 
-> -- |Parse an input string and create a stringset-automaton from the result.
-> -- If there is an error while parsing, the result is the string "no parse".
+> -- |Parse an input string and create a stringset-automaton
+> -- from the result.
 > readPleb :: String -> Either String (FSA Integer String)
 > readPleb = fmap desemantify
 >            . (=<<) (flip makeAutomatonE (Variable "it"))
