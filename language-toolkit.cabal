@@ -167,6 +167,7 @@ executable make-non-strict-constraints
 executable plebby
   hs-source-dirs: plebby
   main-is: Main.lhs
+  other-modules: LTK.Plebby.Help
   build-depends: base >=4.2 && <5.0
                , containers >=0.1 && <0.8
                , exceptions >=0.1 && <0.11

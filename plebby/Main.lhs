@@ -81,6 +81,7 @@
 >                         , pCB, pAcom
 >                         , pSL, pSP
 >                         )
+> import LTK.Plebby.Help
 > import LTK.Porters      ( ATT(ATT), ATTO(ATTO), Dot(Dot)
 >                         , EggBox(EggBox)
 >                         , SyntacticOrder(SyntacticOrder)
@@ -196,13 +197,6 @@
 >                    | R c
 >                      deriving (Eq, Ord, Read, Show)
 
-> data ArgType = ArgE
->              | ArgF
->              | ArgI
->              | ArgS
->              | ArgV
->                deriving (Eq, Ord, Read, Show)
-
 > data Command = Bindings
 >              | D_EB Expr -- Display EggBox
 >              | D_JE Expr -- Display J-minimized Form
@@ -217,7 +211,7 @@
 >              | DT_PSG Expr -- Dotify Powerset Graph
 >              | DT_SM Expr -- Dotify Syntactic Monoid
 >              | ErrorMsg String
->              | Help [(String, [ArgType], String)]
+>              | Help String
 >              | Import FilePath
 >              | LearnSL Int FilePath
 >              | LearnSP Int FilePath
@@ -282,6 +276,8 @@ in order to deal with spaces or other special characters.
 >     | not (isPrefixOf str ":")
 >         = either (L . ErrorMsg . deescape) R
 >           $ doStatementsWithError d str
+>     | isStartOf str ":help"
+>         = L . Help . dropWhile isSpace $ drop (length ":help") str
 >     | isStartOf str ":isvarietym"
 >         = case words str
 >           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
@@ -363,7 +359,7 @@ in order to deal with spaces or other special characters.
 >         = case modwords str
 >           of (_:a:as) -> g (L . Write a <$> pe) (unwords as)
 >              _        -> R d
->     | otherwise =  doOne . filter (isStartOf str . fst) $ p12 commands
+>     | otherwise =  doOne $ filter (isStartOf str . fst) commands
 >     where pe        =  parseExpr
 >           p2e       =  (,) <$> pe <*> pe
 >           f (s, p)  =  g p (drop (length s) str)
@@ -371,8 +367,6 @@ in order to deal with spaces or other special characters.
 >                        . doParse p $ tokenize x
 >           getVDesc  =  (\(a,b) -> (a ++ take 1 b, drop 1 b))
 >                        . break (== ']')
->           p12       =  map (\(a,b,_,_) -> (a,b))
->           p134      =  map (\(w,_,y,z) -> (w,y,z))
 >           doOne xs  =  case xs
 >                        of (x:_)  ->  f x
 >                           _      ->  L . ErrorMsg $
@@ -384,411 +378,88 @@ in order to deal with spaces or other special characters.
 >           m2 x = M . uncurry (RDyad (fmap fromBool . x)) <$> p2e
 >           n_d = normalize . desemantify
 >           commands
->               = [ ( ":bindings"
->                   , pure $ L Bindings
->                   , []
->                   , "print list of variables and their bindings"
->                   )
->                 , ( ":cequal"
->                   , m2 (==)
->                   , [ArgE, ArgE]
->                   , "compare two exprs for logical equivalence"
->                   )
->                 , ( ":cimplies"
->                   , m2 isSupersetOf
->                   , [ArgE, ArgE]
->                   , "determine if expr1 logically implies expr2"
->                   )
->                 , ( ":compile"
->                   , pure . R $ compileEnv d
->                   , []
->                   , "convert all expr variables to automata"
->                   )
->                 , ( ":display"
->                   , L . Display <$> pe
->                   , [ArgE]
->                   , "show expr graphically via external display program"
->                   )
->                 , ( ":dot-psg"
->                   , L . DT_PSG <$> pe
->                   , [ArgE]
->                   , ":dot the powerset graph of expr"
->                   )
->                 , ( ":dot-synmon"
->                   , L . DT_SM <$> pe
->                   , [ArgE]
->                   , ":dot the syntactic monoid of expr"
->                   )
->                 , ( ":dot"
->                   , L . Dotify <$> pe
->                   , [ArgE]
->                   , "print a Dot file of expr"
->                   )
->                 , ( ":eggbox"
->                   , L . D_EB <$> pe
->                   , [ArgE]
->                   , "show egg-box of expr via external display program"
->                   )
->                 , ( ":equal"
->                   , m2 (apBoth desemantify (==))
->                   , [ArgE, ArgE]
->                   , "compare two exprs for set-equality"
->                   )
->                 , ( ":ground"
->                   , pure . R $ groundEnv d
->                   , []
->                   , "convert all expr variables to grounded automata"
->                   )
->                 , ( ":help"
->                   , pure . L . Help $ p134 commands
->                   , []
->                   , "print this help"
->                   )
->                 , ( ":implies"
->                   , m2 (apBoth desemantify isSupersetOf)
->                   , [ArgE, ArgE]
->                   , "synonym for :subset"
->                   )
->                 , ( ":import"
->                   , error ":import not defined here"
->                   , [ArgF]
->                   , "read file as plebby script"
->                   )
->                 , ( ":isAcom"
->                   , m (pAcom . n_d)
->                   , [ArgE]
->                   , "determine if expr is k,1-LTT"
->                   )
->                 , ( ":isB"
->                   , m (fromBool . isB . n_d)
->                   , [ArgE]
->                   , "determine if expr is a band"
->                   )
->                 , ( ":isCB"
->                   , m (pCB . n_d)
->                   , [ArgE]
->                   , "determine if expr is a semilattice language"
->                   )
->                 , ( ":isDef"
->                   , m (pDef . n_d)
->                   , [ArgE]
->                   , "determine if expr is a definite language"
->                   )
->                 , ( ":isDot1"
->                   , m (fromBool . isDot1 . n_d)
->                   , [ArgE]
->                   , "determine if expr has dot-depth at most one"
->                   )
->                 , ( ":isFinite"
->                   , m (fromBool . isFinite . n_d)
->                   , [ArgE]
->                   , "determine if expr is finite"
->                   )
->                 , ( ":isFO2"
->                   , m (fromBool . isFO2 . n_d)
->                   , [ArgE]
->                   , "determine if expr is FO2[<]-definable"
->                   )
->                 , ( ":isFO2B"
->                   , m (fromBool . isFO2B . n_d)
->                   , [ArgE]
->                   , "determine if expr is FO2[<,bet]-definable"
->                   )
->                 , ( ":isFO2BF"
->                   , m (fromBool . isFO2BF . n_d)
->                   , [ArgE]
->                   , "determine if expr is FO2[<,betfac]-definable"
->                   )
->                 , ( ":isFO2S"
->                   , m (fromBool . isFO2S . n_d)
->                   , [ArgE]
->                   , "determine if expr is FO2[<,+1]-definable"
->                   )
->                 , ( ":isGD"
->                   , m (pGDef . n_d)
->                   , [ArgE]
->                   , "determine if expr is generalized definite"
->                   )
->                 , ( ":isGLPT"
->                   , m (fromBool . isGLPT . n_d)
->                   , [ArgE]
->                   , "determine if expr is generalized locally PT"
->                   )
->                 , ( ":isGLT"
->                   , m (fromBool . isGLT . n_d)
->                   , [ArgE]
->                   , "determine if expr is generalized locally testable"
->                   )
->                 , ( ":isLAcom"
->                   , m (fromBool . isLAcom . n_d)
->                   , [ArgE]
->                   , "determine if expr is locally Acom"
->                   )
->                 , ( ":isLB"
->                   , m (fromBool . isLB . n_d)
->                   , [ArgE]
->                   , "determine if expr is locally a band"
->                   )
->                 , ( ":isLPT"
->                   , m (fromBool . isLPT . n_d)
->                   , [ArgE]
->                   , "determine if expr is locally piecewise testable"
->                   )
->                 , ( ":isLT"
->                   , m (fromBool . isLT . n_d)
->                   , [ArgE]
->                   , "determine if expr is locally testable"
->                   )
->                 , ( ":isLTT"
->                   , m (fromBool . isLTT . n_d)
->                   , [ArgE]
->                   , "determine if expr is locally threshold testable"
->                   )
->                 , ( ":isMTDef"
->                   , m (fromBool . isMTDef . n_d)
->                   , [ArgE]
->                   , "determine if expr is multitier definite"
->                   )
->                 , ( ":isMTF"
->                   , m (fromBool . isMTF . n_d)
->                   , [ArgE]
->                   , "determine if expr is multitier co/finite"
->                   )
->                 , ( ":isMTGD"
->                   , m (fromBool . isMTGD . n_d)
->                   , [ArgE]
->                   , "determine if expr is multitier gen. definite"
->                   )
->                 , ( ":isMTRDef"
->                   , m (fromBool . isMTRDef . n_d)
->                   , [ArgE]
->                   , "determine if expr is multitier rev. definite"
->                   )
->                 , ( ":isPT"
->                   , m (fromBool . isPT . n_d)
->                   , [ArgE]
->                   , "determine if expr is piecewise testable"
->                   )
->                 , ( ":isRDef"
->                   , m (pRDef . n_d)
->                   , [ArgE]
->                   , "determine if expr is a reverse definite language"
->                   )
->                 , ( ":isSF"
->                   , m (fromBool . isSF . n_d)
->                   , [ArgE]
->                   , "determine if expr is star-free"
->                   )
->                 , ( ":isSL"
->                   , m (pSL . n_d)
->                   , [ArgE]
->                   , "determine if expr is strictly local"
->                   )
->                 , ( ":isSP"
->                   , m (pSP . n_d)
->                   , [ArgE]
->                   , "determine if expr is strictly piecewise"
->                   )
->                 , ( ":isTDef"
->                   , m (pTier pDef . n_d)
->                   , [ArgE]
->                   , "determine if expr is definite on a tier"
->                   )
->                 , ( ":isTGD"
->                   , m (pTier pGDef . n_d)
->                   , [ArgE]
->                   , "determine if expr is generalized definite on a tier"
->                   )
->                 , ( ":isTLAcom"
->                   , m (pTier (fromBool . isLAcom) . n_d)
->                   , [ArgE]
->                   , "determine if expr is tier-locally Acom"
->                   )
->                 , ( ":isTLB"
->                   , m (pTier (fromBool . isLB) . n_d)
->                   , [ArgE]
->                   , "determine if expr is tier-locally a band"
->                   )
->                 , ( ":isTLPT"
->                   , m (pTier (fromBool . isLPT) . n_d)
->                   , [ArgE]
->                   , "determine if expr is tier-locally piecewise testable"
->                   )
->                 , ( ":isTLT"
->                   , m (pTier (fromBool . isLT) . n_d)
->                   , [ArgE]
->                   , "determine if expr is tier-locally testable"
->                   )
->                 , ( ":isTLTT"
->                   , m (pTier (fromBool . isLTT) . n_d)
->                   , [ArgE]
->                   , "determine if expr is tier-LTT"
->                   )
->                 , ( ":isTRDef"
->                   , m (pTier pRDef . n_d)
->                   , [ArgE]
->                   , "determine if expr is reverse definite on a tier"
->                   )
->                 , ( ":isTrivial"
->                   , m (fromBool . isTrivial . n_d)
->                   , [ArgE]
->                   , "determine if expr has only a single state"
->                   )
->                 , ( ":isTSL"
->                   , m (pTier pSL . n_d)
->                   , [ArgE]
->                   , "determine if expr is strictly tier-local"
->                   )
->                 , ( ":isVarietyM"
->                   , error ":isVarietyM not defined here"
->                   , [ArgS, ArgE]
->                   , "determine if expr is in the *-variety"
->                   )
->                 , ( ":isVarietyS"
->                   , error ":isVarietyS not defined here"
->                   , [ArgS, ArgE]
->                   , "determine if expr is in the +-variety"
->                   )
->                 , ( ":isVarietyT"
->                   , error ":isVarietyT not defined here"
->                   , [ArgS, ArgE]
->                   , "determine if expr is in the +-variety on a tier"
->                   )
->                 , ( ":Jmin"
->                   , L . D_JE <$> pe
->                   , [ArgE]
->                   , ":display the J-minimized version of expr"
->                   )
->                 , ( ":learnSL"
->                   , error ":learnSL not defined here"
->                   , [ArgI, ArgF]
->                   , "infer k-SL grammar, bind result to 'it'"
->                   )
->                 , ( ":learnSP"
->                   , error ":learnSP not defined here"
->                   , [ArgI, ArgF]
->                   , "infer k-SP grammar, bind result to 'it'"
->                   )
->                 , ( ":learnTSL"
->                   , error ":learnTSL not defined here"
->                   , [ArgI, ArgF]
->                   , "infer k-TSL grammar, bind result to 'it'"
->                   )
->                 , ( ":loadstate"
->                   , error ":loadstate not defined here"
->                   , [ArgF]
->                   , "restore state from file"
->                   )
->                 , ( ":orderJ"
->                   , L . D_OJ <$> pe
->                   , [ArgE]
->                   , "display Green's J-order of expr"
->                   )
->                 , ( ":orderL"
->                   , L . D_OL <$> pe
->                   , [ArgE]
->                   , "display Green's L-order of expr"
->                   )
->                 , ( ":orderR"
->                   , L . D_OR <$> pe
->                   , [ArgE]
->                   , "display Green's R-order of expr"
->                   )
->                 , ( ":psg"
->                   , L . D_PSG <$> pe
->                   , [ArgE]
->                   , ":display the powerset graph of expr"
->                   )
->                 , ( ":quit"
->                   , error ":quit not defined here"
->                   , []
->                   , "exit plebby"
->                   )
->                 , ( ":readATT"
->                   , error ":readatt not defined here"
->                   , [ArgF, ArgF, ArgF]
->                   , "read AT&T files, bind input-projection to 'it'"
->                   )
->                 , ( ":readATTO"
->                   , error ":readatto not defined here"
->                   , [ArgF, ArgF, ArgF]
->                   , "read AT&T files, bind output-projection to 'it'"
->                   )
->                 , ( ":readBin"
->                   , error ":readbin not defined here"
->                   , [ArgF]
->                   , "read binary expr from file, bind to 'it'"
->                   )
->                 , ( ":readJeff"
->                   , error ":readjeff not defined here"
->                   , [ArgF]
->                   , "read Jeff format automaton file, bind to 'it'"
->                   )
->                 , ( ":read"
->                   , error ":read not defined here"
->                   , [ArgF]
->                   , "read Pleb file"
->                   )
->                 , ( ":reset"
->                   , pure $ L Reset
->                   , []
->                   , "purge the current environment"
->                   )
->                 , ( ":restore-universe"
->                   , pure $ L RestoreUniverse
->                   , []
->                   , "set universe to all and only necessary symbols"
->                   )
->                 , ( ":restrict"
->                   , pure $ L RestrictUniverse
->                   , []
->                   , "remove non-universe symbols from the environment"
->                   )
->                 , ( ":savestate"
->                   , error ":savestate not defined here"
->                   , [ArgF]
->                   , "write current state to file"
->                   )
->                 , ( ":show"
->                   , error ":show not defined here"
->                   , [ArgV]
->                   , "print meaning(s) of var"
->                   )
->                 , ( ":strict-subset"
->                   , m2 (apBoth desemantify isProperSupersetOf)
->                   , [ArgE, ArgE]
->                   , "determine if expr1 is a strict subset of expr2"
->                   )
->                 , ( ":subset"
->                   , m2 (apBoth desemantify isSupersetOf)
->                   , [ArgE, ArgE]
->                   , "determine if expr1 is a subset of expr2"
->                   )
->                 , ( ":synmon"
->                   , L . D_SM <$> pe
->                   , [ArgE]
->                   , ":display the syntactic monoid of expr"
->                   )
->                 , ( ":synord"
->                   , L . D_SO <$> pe
->                   , [ArgE]
->                   , "display the syntactic order of expr"
->                   )
->                 , ( ":unset"
->                   , error ":unset not defined here"
->                   , [ArgV]
->                   , "remove a single var from the environment"
->                   )
->                 , ( ":writeatt"
->                   , error ":writeatt not defined here"
->                   , [ArgF, ArgF, ArgF, ArgE]
->                   , "write AT&T form of expr to files (edges, ins, outs)"
->                   )
->                 , ( ":write"
->                   , error ":write not defined here"
->                   , [ArgF, ArgE]
->                   , "write binary form of expr to file"
->                   )
+>               = [ (":bindings", pure $ L Bindings)
+>                 , (":cequal", m2 (==))
+>                 , (":cimplies", m2 isSupersetOf)
+>                 , (":compile", pure . R $ compileEnv d)
+>                 , (":display", L . Display <$> pe)
+>                 , (":dot", L . Dotify <$> pe)
+>                 , (":dotPSG", L . DT_PSG <$> pe)
+>                 , (":dotSynmon", L . DT_SM <$> pe)
+>                 , (":eggbox", L . D_EB <$> pe)
+>                 , (":equal", m2 (apBoth desemantify (==)))
+>                 , (":ground", pure . R $ groundEnv d)
+>                 , (":help", error ":help not defined here")
+>                 , (":implies", m2 (apBoth desemantify isSupersetOf))
+>                 , (":import", error ":import not defined here")
+>                 , (":isAcom", m (pAcom . n_d))
+>                 , (":isB", m (fromBool . isB . n_d))
+>                 , (":isCB", m (pCB . n_d))
+>                 , (":isDef", m (pDef . n_d))
+>                 , (":isDot1", m (fromBool . isDot1 . n_d))
+>                 , (":isFinite", m (fromBool . isFinite . n_d))
+>                 , (":isFO2", m (fromBool . isFO2 . n_d))
+>                 , (":isFO2B", m (fromBool . isFO2B . n_d))
+>                 , (":isFO2BF", m (fromBool . isFO2BF . n_d))
+>                 , (":isFO2S", m (fromBool . isFO2S . n_d))
+>                 , (":isGD", m (pGDef . n_d))
+>                 , (":isGLPT", m (fromBool . isGLPT . n_d))
+>                 , (":isGLT", m (fromBool . isGLT . n_d))
+>                 , (":isLAcom", m (fromBool . isLAcom . n_d))
+>                 , (":isLB", m (fromBool . isLB . n_d))
+>                 , (":isLPT", m (fromBool . isLPT . n_d))
+>                 , (":isLT", m (fromBool . isLT . n_d))
+>                 , (":isLTT", m (fromBool . isLTT . n_d))
+>                 , (":isMTDef", m (fromBool . isMTDef . n_d))
+>                 , (":isMTF", m (fromBool . isMTF . n_d))
+>                 , (":isMTGD", m (fromBool . isMTGD . n_d))
+>                 , (":isMTRDef", m (fromBool . isMTRDef . n_d))
+>                 , (":isPT", m (fromBool . isPT . n_d))
+>                 , (":isRDef", m (pRDef . n_d))
+>                 , (":isSF", m (fromBool . isSF . n_d))
+>                 , (":isSL", m (pSL . n_d))
+>                 , (":isSP", m (pSP . n_d))
+>                 , (":isTDef", m (pTier pDef . n_d))
+>                 , (":isTGD", m (pTier pGDef . n_d))
+>                 , (":isTLAcom", m (pTier (fromBool . isLAcom) . n_d))
+>                 , (":isTLB", m (pTier (fromBool . isLB) . n_d))
+>                 , (":isTLPT", m (pTier (fromBool . isLPT) . n_d))
+>                 , (":isTLT", m (pTier (fromBool . isLT) . n_d))
+>                 , (":isTLTT", m (pTier (fromBool . isLTT) . n_d))
+>                 , (":isTRDef", m (pTier pRDef . n_d))
+>                 , (":isTrivial", m (fromBool . isTrivial . n_d))
+>                 , (":isTSL", m (pTier pSL . n_d))
+>                 , (":isVarietyM", error ":isVarietyM not defined here")
+>                 , (":isVarietyS", error ":isVarietyS not defined here")
+>                 , (":isVarietyT", error ":isVarietyT not defined here")
+>                 , (":Jmin", L . D_JE <$> pe)
+>                 , (":learnSL", error ":learnSL not defined here")
+>                 , (":learnSP", error ":learnSP not defined here")
+>                 , (":learnTSL", error ":learnTSL not defined here")
+>                 , (":loadstate", error ":loadstate not defined here")
+>                 , (":orderJ", L . D_OJ <$> pe)
+>                 , (":orderL", L . D_OL <$> pe)
+>                 , (":orderR", L . D_OR <$> pe)
+>                 , (":psg", L . D_PSG <$> pe)
+>                 , (":quit", error ":quit not defined here")
+>                 , (":readATT", error ":readatt not defined here")
+>                 , (":readATTO", error ":readatto not defined here")
+>                 , (":readBin", error ":readbin not defined here")
+>                 , (":readJeff", error ":readjeff not defined here")
+>                 , (":read", error ":read not defined here")
+>                 , (":reset", pure $ L Reset)
+>                 , (":restoreUniverse", pure $ L RestoreUniverse)
+>                 , (":restrict", pure $ L RestrictUniverse)
+>                 , (":savestate", error ":savestate not defined here")
+>                 , (":show", error ":show not defined here")
+>                 , (":strictSubset"
+>                   , m2 (apBoth desemantify isProperSupersetOf))
+>                 , (":subset", m2 (apBoth desemantify isSupersetOf))
+>                 , (":synmon", L . D_SM <$> pe)
+>                 , (":synord", L . D_SO <$> pe)
+>                 , (":unset", error ":unset not defined here")
+>                 , (":writeATT", error ":writeatt not defined here")
+>                 , (":write", error ":write not defined here")
 >                 ]
 
 > doCommand :: PlebConfig -> Env -> Command -> IO Env
@@ -994,56 +665,26 @@ in order to deal with spaces or other special characters.
 >                  >> return e
 >                 )
 
-
-> doHelp :: Bool -> [(String, [ArgType], String)] -> String
-> doHelp format xs
->     = showArg ArgE ++ " = expression, "  ++
->       showArg ArgF ++ " = file, "        ++
->       showArg ArgI ++ " = int, "         ++
->       showArg ArgS ++ " = string, "      ++
->       showArg ArgV ++ " = variable\n\n"  ++
->       unlines s2
->     where cs = zipWith (++) (map bold $ p1 xs) (map showArgs (p2 xs))
->           s1 = let l = foldr (max . lengthsgr) 0 cs
->                in map (alignl (l + 2) . alignr l) cs
->           s2 = zipWith (++) s1 (p3 xs)
->           alignr l s = takesgr (l - lengthsgr s) (cycle " ") ++ s
->           alignl l s = takesgr l (s ++ cycle " ")
->           wrap s = '<' : s ++ ">"
->           sgr :: Int -> String -> String
->           sgr n s = if format
->                     then "\27[" ++ shows n ('m' : s ++ "\27[m")
->                     else s
->           bold = (++ sgr 0 "") . sgr 1
->           showArg ArgE  =  wrap $ sgr 4 "e"
->           showArg ArgF  =  wrap $ sgr 4 "f"
->           showArg ArgI  =  wrap $ sgr 4 "i"
->           showArg ArgS  =  wrap $ sgr 4 "s"
->           showArg _     =  wrap $ sgr 4 "v"
->           showArgs = concatMap ((' ':) . showArg)
->           p1 = map (\(a,_,_) -> a)
->           p2 = map (\(_,b,_) -> b)
->           p3 = map (\(_,_,c) -> c)
-
-> lengthsgr :: String -> Int
-> lengthsgr ('\27':xs) = lengthsgr . drop 1 . snd $ break (== 'm') xs
-> lengthsgr (_:xs) = 1 + lengthsgr xs
-> lengthsgr _ = 0
-
-> takesgr :: Int -> String -> String
-> takesgr _ [] = []
-> takesgr n (x:xs)
->     | n < 1 = []
->     | otherwise = case x of
->                     '\27' -> sgrseq ++ takesgr n (drop 1 post)
->                     _     -> x : takesgr (n - 1) xs
->     where (pre,post) = break (== 'm') xs
->           sgrseq = '\27' : pre ++ take 1 post
-
-> lessHelp :: PlebConfig -> [(String, [ArgType], String)] -> IO ()
+> lessHelp :: PlebConfig -> String -> IO ()
 > lessHelp pc xs = do
 >   mpager <- (map snd . filter ((==) "PAGER" . fst)) <$> getEnvironment
->   let args   =  if formatting pc then ["-sR"] else ["-s"]
+>   lang' <- (map snd . filter ((==) "LANG" . fst)) <$> getEnvironment
+>   cols' <- (map snd . filter ((==) "COLUMNS" . fst)) <$> getEnvironment
+>   let topic  =  if null xs then ":help" else xs
+>       width  =  case cols' of
+>                   (x:_) -> if all (flip elem "0123456789") x
+>                            then (read x) - 2
+>                            else 78
+>                   _ -> 78
+>       lang   =  case lang' of
+>                   (x:_) -> x
+>                   _ -> ""
+>       text   =  map ( formatRS
+>                     $ if formatting pc
+>                       then spanTypes
+>                       else Map.fromList [('p',("","\n"))])
+>                 . showHelp width lang $ getTopic lang topic
+>       args   =  if formatting pc then ["-FsR"] else ["-Fs"]
 >       ps     =  case pagerProg pc of
 >                   Nothing  ->  case mpager of
 >                                  (x:_) -> words x
@@ -1059,7 +700,7 @@ in order to deal with spaces or other special characters.
 >                 }
 >   (Just p_stdin, _, Just p_stderr, less_ph) <- createProcess lessP
 >   _ <- hGetContents p_stderr
->   hPutStr p_stdin (doHelp (formatting pc) xs)
+>   hPutStr p_stdin $ unlines text
 >   hClose p_stdin
 >   _ <- waitForProcess less_ph
 >   return ()
