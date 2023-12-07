@@ -99,7 +99,6 @@
 >                         , fromSemanticAutomaton
 >                         , groundEnv
 >                         , insertExpr
->                         , makeAutomaton
 >                         , makeAutomatonE
 >                         , parseExpr
 >                         , restoreUniverse
@@ -583,17 +582,17 @@ in order to deal with spaces or other special characters.
 >                        , Map.filterWithKey (\k _ -> k /= name) subexprs
 >                        )
 >          Write file x
->              -> let aut = makeAutomaton e x
->                 in maybe
->                    (hPutStrLn stderr "could not make automaton")
+>              -> let aut = makeAutomatonE e x
+>                 in either
+>                    (hPutStr stderr)
 >                    (\a -> werr file (unlines [show a]))
 >                    aut >> return e
 >          WriteATT f1 f2 f3 x
->              -> let aut  =  fmap desemantify $ makeAutomaton e x
+>              -> let aut  =  fmap desemantify $ makeAutomatonE e x
 >                     w2   =  if f2 == "_" then const (return ()) else werr f2
 >                     w3   =  if f3 == "_" then const (return ()) else werr f3
->                 in maybe
->                    (hPutStrLn stderr "could not make automaton")
+>                 in either
+>                    (hPutStr stderr)
 >                    (\a ->
 >                     let (ts, i, o) = extractSymbolsATT $ to ATT a
 >                     in werr f1 ts >> w2 i >> w3 o
@@ -711,20 +710,21 @@ Pure relations need to be wrapped.
 The outer Maybe is for when parsing fails,
 the inner Maybe is Nothing::False, (Just params)::True
 
-> doRelation :: Env -> Relation -> Maybe (Maybe [Parameter String])
+> doRelation :: Env -> Relation
+>            -> Either String (Maybe [Parameter String])
 > doRelation e r
 >     = case r of
->         RMono f p ->  fmap f $ makeAutomaton e p
+>         RMono f p ->  fmap f $ makeAutomatonE e p
 >         RDyad f p1 p2
 >             ->  let e' = insertExpr (insertExpr e p1) p2
->                 in f <$> makeAutomaton e' p1 <*> makeAutomaton e' p2
+>                 in f <$> makeAutomatonE e' p1 <*> makeAutomatonE e' p2
 
 > act :: PlebConfig ->  Env -> Trither Command Relation Env -> IO Env
 > act pc d = trither
 >            (doCommand pc d)
->            (\r -> maybe err printP (doRelation d r) >> return d)
+>            (\r -> either err printP (doRelation d r) >> return d)
 >            return
->     where err = hPutStrLn stderr "could not parse relation"
+>     where err = hPutStr stderr
 >           printP = writeStrLn . showParameters
 
 > showParameters :: Show e => Maybe [Parameter e] -> String
