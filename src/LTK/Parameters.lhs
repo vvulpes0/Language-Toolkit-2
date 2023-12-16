@@ -78,7 +78,7 @@ but it follows from the extraction procedure.
 
 > -- |Return the length of the longest relevant subsequence.
 > pSP :: (Ord n, Ord e) => FSA n e -> Maybe [Parameter e]
-> pSP = fmap (wrap "k" . dagHeight . simplify) . predicated isSP
+> pSP = fmap (wrap "k" . succ . dagHeight . simplify) . predicated isSP
 >     where deloop f = f { transitions
 >                              = Set.filter
 >                                (\t -> source t /= destination t)

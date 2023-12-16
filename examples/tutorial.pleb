@@ -1,0 +1,23 @@
+=a /a =e /e =i /i =o /o =u /u
+=ã /ã =ẽ /ẽ =ĩ /ĩ =õ /õ =ũ /ũ
+=p /p =t /t =k /k
+=b /b =d /d =g /g
+=m /m =n /n
+
+=back+{o,õ,u,ũ}
+=back-{a,ã,e,ẽ,i,ĩ}
+=low+{a,ã}
+=low-{e,ẽ,i,ĩ,o,õ,u,ũ}
+=obs+{p,b,t,d,k,g}
+=obs-{back+,back-,m,n}
+=cons+{obs+,m,n}
+=cons-{back+,back-}
+=voi+{b,d,g,m,n,cons-}
+=voi-{p,t,k}
+=nas+{ã,ẽ,ĩ,õ,ũ,m,n}
+=nas-{a,e,i,o,u,p,b,t,d,k,g}
+
+=nspread ¬⋁{⟨[nas+,cons-] [nas-]⟩,⋉⟨[nas+,cons-]⟩,⟨[nas-,cons-] [nas+]⟩}
+=harmony ¬⋀{⟨[back+,low-]⟩,⟨[back-,low-]⟩}
+=wfd ¬⋉⟨[voi+,obs+]⟩
+⋀{nspread,harmony,wfd}
