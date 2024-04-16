@@ -1156,18 +1156,14 @@ reached by any path from the initial state.  We can trim those.
 >           qi     =  initials fsa
 >           fin    =  intersection reachables $ finals fsa
 >           trans  =  keep (isIn reachables . source) $ transitions fsa
->           reachables = reachables' qi
->           reachables' qs
->               | newqs == qs  =  qs
->               | otherwise    =  reachables' newqs
->               where initialIDs a = Set.mapMonotonic (`ID` [a]) qs
->                     next = collapse
->                            (union . tmap state . step fsa .
->                             initialIDs . Symbol
->                            )
->                            empty
->                            alpha
->                     newqs = next `union` qs
+>           reachables = reachables' Set.empty qi
+>           reachables' closed open
+>               | Set.null open = closed
+>               | otherwise = reachables' closed' (newqs Set.\\ closed')
+>               where closed' = closed `union` open
+>                     newqs = Set.map destination
+>                             . Set.filter (\t -> source t `elem` open)
+>                             $ transitions fsa
 
 An FSA will often contain states from which no path at all leads to an
 accepting state.  These represent failure to match a pattern, which
