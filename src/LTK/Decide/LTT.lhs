@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.LTT
-> Copyright : (c) 2019,2021-2022 Dakotah Lambert
+> Copyright : (c) 2019,2021-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -11,53 +11,38 @@
 >
 > @since 0.2
 > -}
-> module LTK.Decide.LTT (isLTT, isLTTM) where
+> module LTK.Decide.LTT (isLTT, isLTTM, isLTTs) where
 
-> import Data.Set (Set)
-> import qualified Data.Set as Set
+> import Data.Representation.FiniteSemigroup
+> import qualified Data.IntSet as IntSet
 
-> import LTK.Decide.SF (isSF)
 > import LTK.FSA
-> import LTK.Algebra
-
-> type S n e = (n, [Symbol e])
-> type T n e = State (S n e)
+> import LTK.Algebra(SynMon)
 
 > -- |True iff the automaton recognizes an LTT stringset.
 > isLTT :: (Ord n, Ord e) => FSA n e -> Bool
-> isLTT = isLTTM . syntacticMonoid
+> isLTT = isLTTs . syntacticSemigroup
 
 > -- |True iff the monoid recognizes an LTT stringset.
 > --
 > -- @since 1.0
 > isLTTM :: (Ord n, Ord e) => SynMon n e -> Bool
-> isLTTM = both isSF isSynMonOfLTT
+> isLTTM = isLTT
 
 A semigroup (S) [e.g. the syntactic semigroup] is
 locally threshold testable iff
 for all idempotent e and f, and for all a,b,u it holds that
 eafuebf = ebfueaf.
 
-> isSynMonOfLTT :: (Ord n, Ord e) => FSA (n, [Symbol e]) e -> Bool
-> isSynMonOfLTT s = allS (\(e,f) ->
->                         allS (\(a,b,u) ->
->                               lttTest s e f a u b
->                              ) . triples $ states s
->                        ) . pairs $ idempotents s
-
-> lttTest :: (Ord n, Ord e) =>
->            FSA (S n e) e ->
->            T n e -> T n e -> T n e -> T n e -> T n e ->
->            Bool
-> lttTest s e f a u b
->     = follow s (g a ++ g f ++ g u ++ g e ++ g b ++ g f) e ==
->       follow s (g b ++ g f ++ g u ++ g e ++ g a ++ g f) e
->     where g = snd . nodeLabel
-
-> pairs :: Ord a => Set a -> Set (a, a)
-> pairs xs = collapse (union . f) empty xs
->     where f x = Set.mapMonotonic ((,) x) xs
-
-> triples :: Ord a => Set a -> Set (a, a, a)
-> triples xs = collapse (union . f) empty (pairs xs)
->     where f (a, b) = Set.mapMonotonic (\x -> (x, a, b)) xs
+> -- |True iff the semigroup recognizes an LTT stringset.
+> --
+> -- @since 1.2
+> isLTTs :: FiniteSemigroupRep s => s -> Bool
+> isLTTs s = isAperiodic s && all (uncurry go) [(a,b) | a <- is, b <- is]
+>     where t = fstable s
+>           is = IntSet.toList $ idempotents t
+>           xs = [0..fssize t - 1]
+>           eval = foldr1 (fsappend t)
+>           go e f = let ps = map (\i -> eval [e,i,f]) xs
+>                    in all (uncurry check) [(a,b) | a <- ps, b <- ps]
+>           check a b = all (\i -> eval [a,i,b] == eval [b,i,a]) xs

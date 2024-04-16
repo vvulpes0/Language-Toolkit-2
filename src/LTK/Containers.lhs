@@ -86,7 +86,8 @@ multiplication differs between them.  In this module, a few classes
 are defined to allow such polymorphism.
 
 > -- |The 'Container' class is used for types that can contain objects
-> -- and can be combined with 'union', 'intersection', and 'difference'
+> -- and can be combined with 'LTK.Containers.union',
+> -- 'LTK.Containers.intersection', and 'LTK.Containers.difference'
 > -- (relative complement).  Instances of 'Container' should satisfy the
 > -- following laws:
 > --
@@ -227,11 +228,11 @@ Consequences
 A collapsible structure of containers may be merged into a single
 container with either unions or intersections:
 
-> -- |Combine 'Container's with 'union'.
+> -- |Combine 'Container's with 'LTK.Containers.union'.
 > unionAll :: (Container c a, Collapsible s) => s c -> c
 > unionAll = collapse union empty
 
-> -- |Combine 'Container's with 'intersection'.
+> -- |Combine 'Container's with 'LTK.Containers.intersection'.
 > -- An empty source yields an empty result.
 > intersectAll :: (Container c a, Eq a, Collapsible s) => s c -> c
 > intersectAll xs
@@ -364,11 +365,8 @@ Standard Prelude Types
 A Haskell list is a Collapsible Container:
 
 > instance Linearizable []
->     where choose xs = ( if null xs
->                         then error "cannot choose from an empty list"
->                         else head xs
->                       , drop 1 xs
->                       )
+>     where choose (x:xs) = (x, xs)
+>           choose _ = (error "cannot choose from an empty list", [])
 > instance Collapsible []
 >     where collapse = foldr
 > instance Container [a] a
@@ -410,14 +408,14 @@ A Set is like a list with no duplicates, so it should act similarly:
 A new Multiset type, able to contain duplicates but still have
 lookup-time logarithmic in the number of distinct elements.
 
-> -- |A 'Multiset' is a 'Set' that may contain more than one instance
+> -- |A t'Multiset' is a 'Set' that may contain more than one instance
 > -- of any given element.
 > newtype Multiset a = Multiset (Set (a, Integer)) deriving (Eq, Ord)
 
 > -- |Analogous to 'isIn', returning the number of occurrences of an
-> -- element in a 'Multiset'.
+> -- element in a t'Multiset'.
 > -- Time complexity is \(O(\log{n})\),
-> -- where \(n\) is the number of distinct elements in the 'Multiset'.
+> -- where \(n\) is the number of distinct elements in the t'Multiset'.
 > multiplicity :: (Ord a) => Multiset a -> a -> Integer
 > multiplicity (Multiset xs) x = maybe 0 (f . fst)  .
 >                                Set.minView . snd  $
@@ -598,11 +596,10 @@ Miscellaneous functions
 > -- generated in a breadth-first manner.
 > --
 > -- @since 0.3
-> sequencesOver :: [a] -> [[a]]
-> sequencesOver a = [] :
->                   if null a
->                   then []
->                   else concatMap (\w -> map (: w) a) (sequencesOver a)
+> sequencesOver :: [x] -> [[x]]
+> sequencesOver [] = [[]]
+> sequencesOver xs
+>     = [] : concatMap (\w -> map (: w) xs) (sequencesOver xs)
 
 A fast method to extract elements from a set
 that works to find elements whose image under a monotonic function

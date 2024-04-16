@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.GLT
-> Copyright : (c) 2021-2023 Dakotah Lambert
+> Copyright : (c) 2021-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -11,21 +11,25 @@
 >
 > @since 1.0
 > -}
-> module LTK.Decide.GLT (isGLT, isGLTM) where
+> module LTK.Decide.GLT (isGLT, isGLTM, isGLTs) where
 
-> import qualified Data.Set as Set
+> import Data.Representation.FiniteSemigroup
 
 > import LTK.FSA
-> import LTK.Algebra
+> import LTK.Algebra(SynMon)
 
 > -- |True iff the automaton recognizes a generalized locally-testable
 > -- stringset.
 > isGLT :: (Ord n, Ord e) => FSA n e -> Bool
-> isGLT = isGLTM . syntacticMonoid
+> isGLT = isGLTs . syntacticSemigroup
 
 > -- |True iff the monoid satisfies the generalized local testabiltiy
 > -- condition.
-> isGLTM :: (Ord n, Ord e) => FSA (n, [Symbol e]) e -> Bool
-> isGLTM f = all (commutativeBand . emee f) $ Set.toList i
->     where i = idempotents f
->           commutativeBand = both (isCommutative f) (isSubsetOf i)
+> isGLTM :: (Ord n, Ord e) => SynMon n e -> Bool
+> isGLTM = isGLT
+
+> -- |True iff the semigroup lies in \(M_e J_1\).
+> --
+> -- @since 1.2
+> isGLTs :: FiniteSemigroupRep s => s -> Bool
+> isGLTs = all (both isJTrivial isBand) . emee

@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
-> Module    : LTK.DecideM
-> Copyright : (c) 2021-2023 Dakotah Lambert
+> Module    : LTK.DecideS
+> Copyright : (c) 2023 Dakotah Lambert
 > License   : MIT
 >
 > Functions used for deciding the complexity class of a monoid.
@@ -15,34 +15,29 @@
 > by their syntactic monoids or semigroups, but by properties of
 > the automaton from which it was derived.
 >
-> @since 1.0
+> @since 1.2
 > -}
-> module LTK.DecideM (
->                    -- * Classes involving finiteness
->                    isFiniteM, isCofiniteM
->                    , isTFiniteM, isTCofiniteM
+> module LTK.DecideS (
 >                    -- * Piecewise classes
->                    , isPTM
+>                      isPTs
 >                    -- * Local classes
->                    , isDefM, isRDefM, isGDM
->                    , isLTM, isLTTM, isLAcomM
+>                    , isDefs, isRDefs, isGDs
+>                    , isLTs, isLTTs, isLAcoms
 >                    -- * Both Local and Piecewise
->                    , isAcomM
->                    , isCBM, isGLTM, isLPTM, isGLPTM, isSFM
->                    , isDot1M
+>                    , isAcoms
+>                    , isCBs, isGLTs, isLPTs, isGLPTs, isSFs
+>                    , isDot1s
 >                    -- * Tier-based generalizations
->                    , isTDefM, isTRDefM, isTGDM
->                    , isTLTM, isTLTTM, isTLAcomM, isTLPTM
->                    , isMTFM, isMTDefM, isMTRDefM, isMTGDM
+>                    , isTDefs, isTRDefs, isTGDs
+>                    , isTLTs, isTLTTs, isTLAcoms, isTLPTs
+>                    , isMTFs, isMTDefs, isMTRDefs, isMTGDs
 >                   -- * Others between CB and G
->                   , isBM, isLBM, isTLBM
+>                   , isBs, isLBs, isTLBs
 >                    -- * Two-Variable Logics
->                    , isFO2M, isFO2BM, isFO2BFM, isFO2SM
->                    -- * Generic Algebra
->                    , isVarietyM
+>                    , isFO2s, isFO2Bs, isFO2Ss
 >                   ) where
 
-> import LTK.Decide.Finite
+> --import LTK.Decide.Finite
 > import LTK.Decide.LT
 > import LTK.Decide.LPT
 > import LTK.Decide.LTT
@@ -63,4 +58,4 @@
 > import LTK.Decide.Definite
 > import LTK.Decide.DotDepth
 > import LTK.Decide.Multitier
-> import LTK.Decide.Variety
+> --import LTK.Decide.Variety

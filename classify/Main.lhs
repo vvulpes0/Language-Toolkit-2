@@ -6,6 +6,8 @@
 
 > module Main (main) where
 
+> import Data.Representation.FiniteSemigroup (FSMult, fstable)
+
 > import System.Console.GetOpt ( ArgDescr(NoArg, ReqArg)
 >                              , ArgOrder(RequireOrder)
 >                              , OptDescr(Option)
@@ -28,8 +30,7 @@
 > import qualified Data.Map.Strict as Map
 
 > import LTK
-> import LTK.Algebra
-> import LTK.DecideM
+> import LTK.DecideS
 > import LTK.Porters.ATT (embedSymbolsATT)
 
 > data Options = Options
@@ -140,7 +141,7 @@ The main meat:
 
 > mkChecklist :: [String] -> FSA Integer String -> [Bool]
 > mkChecklist toCheck aut = map (classify aut m) toCheck
->     where m = syntacticMonoid aut
+>     where m = fstable $ syntacticSemigroup aut
 
 > readAut :: Options -> String -> IO (FSA Integer String)
 > readAut opts b = fmap
@@ -157,7 +158,7 @@ The main meat:
 >                        force e `seq` return e
 
 > classify :: (Ord n, Ord e) =>
->             FSA n e -> SynMon n e -> String -> Bool
+>             FSA n e -> FSMult -> String -> Bool
 > classify aut mon cls = maybe False f (classmap Map.!? cls)
 >     where f = either ($ aut) ($ mon) . fst
 
@@ -172,44 +173,44 @@ so that results may be listed in topographic order.
 
 > classmap :: (Ord n, Ord e) =>
 >             Map String
->             ( Either (FSA n e -> Bool) (SynMon n e -> Bool)
+>             ( Either (FSA n e -> Bool) (FSMult -> Bool)
 >             , [String])
 > classmap = Map.fromList
 >            [ ("1", (Left isTrivial, ["Fin","CB","SP"]))
->            , ("Acom", (Right isAcomM, ["LTT","MTF"]))
->            , ("B", (Right isBM, ["FO2"]))
->            , ("CB", (Right isCBM, ["B","LT","Acom"]))
->            , ("Def", (Right isDefM, ["GD", "SL", "TDef"]))
->            , ("FO2", (Right isFO2M, ["FO2S", "GLT"]))
->            , ("FO2BF", (Right isFO2BFM, ["SF"]))
->            , ("FO2B", (Right isFO2BM, ["FO2BF"]))
->            , ("FO2S", (Right isFO2SM, ["FO2B"]))
+>            , ("Acom", (Right isAcoms, ["LTT","MTF"]))
+>            , ("B", (Right isBs, ["FO2"]))
+>            , ("CB", (Right isCBs, ["B","LT","Acom"]))
+>            , ("Def", (Right isDefs, ["GD", "SL", "TDef"]))
+>            , ("FO2", (Right isFO2s, ["FO2S", "GLT"]))
+>            , ("FO2BF", (Left isFO2BF, ["SF"]))
+>            , ("FO2B", (Right isFO2Bs, ["FO2BF"]))
+>            , ("FO2S", (Right isFO2Ss, ["FO2B"]))
 >            , ("Fin", (Left isFinite, ["Def", "PT", "RDef"]))
->            , ("GD", (Right isGDM, ["LT", "TGD"]))
->            , ("GLPT", (Right isGLPTM, ["FO2B"]))
->            , ("GLT", (Right isGLTM, ["GLPT"]))
->            , ("LAcom", (Right isLAcomM, ["LPT", "TLAcom"]))
->            , ("LB", (Right isLBM, ["FO2S"]))
->            , ("LPT", (Right isLPTM, ["GLPT"]))
->            , ("LT", (Right isLTM, ["LB", "LTT", "TLT"]))
->            , ("LTT", (Right isLTTM, ["LAcom", "TLTT"]))
->            , ("MTDef", (Right isMTDefM, ["MTGD"]))
->            , ("MTF", (Right isMTFM, ["MTDef","MTRdef","PT"]))
->            , ("MTGD", (Right isMTGDM, ["FO2"]))
->            , ("MTRDef", (Right isMTRDefM, ["MTGD"]))
->            , ("PT", (Right isPTM, ["FO2"]))
->            , ("RDef", (Right isRDefM, ["GD", "SL", "TRDef"]))
->            , ("SF", (Right isSFM, []))
+>            , ("GD", (Right isGDs, ["LT", "TGD"]))
+>            , ("GLPT", (Right isGLPTs, ["FO2B"]))
+>            , ("GLT", (Right isGLTs, ["GLPT"]))
+>            , ("LAcom", (Right isLAcoms, ["LPT", "TLAcom"]))
+>            , ("LB", (Right isLBs, ["FO2S"]))
+>            , ("LPT", (Right isLPTs, ["GLPT"]))
+>            , ("LT", (Right isLTs, ["LB", "LTT", "TLT"]))
+>            , ("LTT", (Right isLTTs, ["LAcom", "TLTT"]))
+>            , ("MTDef", (Right isMTDefs, ["MTGD"]))
+>            , ("MTF", (Right isMTFs, ["MTDef","MTRdef","PT"]))
+>            , ("MTGD", (Right isMTGDs, ["FO2"]))
+>            , ("MTRDef", (Right isMTRDefs, ["MTGD"]))
+>            , ("PT", (Right isPTs, ["FO2"]))
+>            , ("RDef", (Right isRDefs, ["GD", "SL", "TRDef"]))
+>            , ("SF", (Right isSFs, []))
 >            , ("SL", (Left isSL, ["LT", "TSL"]))
 >            , ("SP", (Left isSP, ["PT"]))
->            , ("TDef", (Right isTDefM, ["TGD", "TSL", "MTDef"]))
->            , ("TGD", (Right isTGDM, ["MTGD", "TLT"]))
->            , ("TLAcom", (Right isTLAcomM, ["TLPT"]))
->            , ("TLB", (Right isTLBM, ["FO2B"]))
->            , ("TLPT", (Right isTLPTM, ["GLPT"]))
->            , ("TLT", (Right isTLTM, ["GLT", "TLB", "TLTT"]))
->            , ("TLTT", (Right isTLTTM, ["TLAcom"]))
->            , ("TRDef", (Right isTRDefM, ["TGD", "TSL", "MTRDef"]))
+>            , ("TDef", (Right isTDefs, ["TGD", "TSL", "MTDef"]))
+>            , ("TGD", (Right isTGDs, ["MTGD", "TLT"]))
+>            , ("TLAcom", (Right isTLAcoms, ["TLPT"]))
+>            , ("TLB", (Right isTLBs, ["FO2B"]))
+>            , ("TLPT", (Right isTLPTs, ["GLPT"]))
+>            , ("TLT", (Right isTLTs, ["GLT", "TLB", "TLTT"]))
+>            , ("TLTT", (Right isTLTTs, ["TLAcom"]))
+>            , ("TRDef", (Right isTRDefs, ["TGD", "TSL", "MTRDef"]))
 >            , ("TSL", (Left isTSL, ["TLT"]))
 >            ]
 
@@ -218,7 +219,7 @@ so that results may be listed in topographic order.
 > inclusion = foldr (expand . fmap snd) [] $ Map.assocs cm
 >     where expand (x, ss) a = map ((,) x) ss ++ a
 >           cm :: Map String
->             ( Either (FSA () () -> Bool) (SynMon () () -> Bool)
+>             ( Either (FSA () () -> Bool) (FSMult -> Bool)
 >             , [String])
 >           cm = classmap
 
@@ -233,9 +234,11 @@ then A comes before B.
 > topo' :: Eq a => [a] -> [(a,a)] -> [a]
 > topo' s [] = s
 > topo' s xs
->     | null s = []
->     | null p = head s : topo' (drop 1 s) xs
->     | otherwise = p ++ topo' (filter (`notElem` p) s) next
+>     = case s of
+>         [] -> []
+>         (s1:sr) -> case p of
+>                      [] -> s1 : topo' sr xs
+>                      _ -> p ++ topo' (filter (`notElem` p) s) next
 >     where ins = filter (`elem` s) . nub $ map fst xs
 >           outs = nub $ map snd xs
 >           p = filter (`notElem` outs) ins -- in-degree 0
@@ -243,10 +246,10 @@ then A comes before B.
 >           noi f = filter ((`elem` s) . f) . filter ((`notElem` p) . f)
 >           next = noi snd $ noi fst xs
 
-Version numbers are per utility
+Version numbers are no longer per utility
 
 > printVersion :: IO ()
-> printVersion = putStrLn "Version 1.0"
+> printVersion = putStrLn "Version 1.2"
 
 > usageHeader :: String
 > usageHeader = "usage: classify [OPTION...] class ..."

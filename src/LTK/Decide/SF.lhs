@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.SF
-> Copyright : (c) 2019,2021-2022 Dakotah Lambert
+> Copyright : (c) 2019,2021-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -11,17 +11,25 @@
 >
 > @since 0.2
 > -}
-> module LTK.Decide.SF (isSF, isSFM) where
+> module LTK.Decide.SF (isSF, isSFM, isSFs) where
+
+> import Data.Representation.FiniteSemigroup
 
 > import LTK.FSA
-> import LTK.Algebra
+> import LTK.Algebra(SynMon)
 
 > -- |True iff the automaton recognizes a Star-Free stringset.
 > isSF :: (Ord n, Ord e) => FSA n e -> Bool
-> isSF = isSFM . syntacticMonoid
+> isSF = isSFs . syntacticSemigroup
 
 > -- |True iff the monoid is aperiodic.
 > --
 > -- @since 1.0
 > isSFM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isSFM = trivialUnder hEquivalence
+
+> -- |True iff the semigroup is aperiodic.
+> --
+> -- @since 1.2
+> isSFs :: FiniteSemigroupRep s => s -> Bool
+> isSFs = isAperiodic

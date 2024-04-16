@@ -31,7 +31,7 @@ these symbols are self loops on every state.
 >                   transitions fsa
 >           tc   =  intersectAll (tmap f $ states fsa)
 
-> -- |Remove symbols not relevant to the given FSA's associated projection
+> -- |Remove symbols not relevant to the FSA's associated projection
 > -- (as determined by @tier@).
 > -- Precondition: the given FSA must be in normal form.
 > project :: (Ord n, Ord e) => FSA n e -> FSA n e

@@ -86,7 +86,7 @@ Since we are often working with the full powerset graph anyway, we do not use
 the polynomial-time pair-graph version.
 
 
-> -- |Returns @True@ iff the stringset represented by the given 'FSA'
+> -- |Returns @True@ iff the stringset represented by the given t'FSA'
 > -- is Strictly Local, that is,
 > -- if it satisfies Suffix-Substition Closure for
 > -- some specific factor size \(k\).
@@ -94,7 +94,7 @@ the polynomial-time pair-graph version.
 > isSL = (> 0) . slQ
 
 > -- |Returns the smallest factor size for which
-> -- the stringset represented by the given 'FSA'
+> -- the stringset represented by the given t'FSA'
 > -- satisfies Suffix-Substitution Closure,
 > -- or @0@ if there is no such \(k\).
 > slQ :: (Ord e, Ord n) => FSA n e -> Integer
@@ -279,8 +279,8 @@ type of a singleton set.
   bounds be greater than $k$.  This error is not checked.
 \end{itemize}
 
-> -- |Forbidden substrings of the given 'FSA' relative to a domain alphabet
-> -- which must include the alphabet of the 'FSA'
+> -- |Forbidden substrings of the given t'FSA' relative to a domain alphabet
+> -- which must include the alphabet of the t'FSA'
 > forbiddenSubstringsWithAlphabet :: (Ord e, Ord n, Enum n) =>
 >                                    Set e -> FSA n e -> ForbiddenSubstrings e
 > forbiddenSubstringsWithAlphabet alph fsa =
@@ -295,7 +295,7 @@ type of a singleton set.
 >               fFrs  =  tmap unsymbols fFrS
 >               fFis  =  tmap unsymbols fFiS
 
-> -- |Forbidden substrings of the given 'FSA' relative to its alphabet
+> -- |Forbidden substrings of the given t'FSA' relative to its alphabet
 > forbiddenSubstrings :: (Ord e, Ord n, Enum n) =>
 >                        FSA n e -> ForbiddenSubstrings e
 > forbiddenSubstrings fsa = forbiddenSubstringsWithAlphabet (alphabet fsa) fsa
@@ -518,7 +518,7 @@ Note that the FFs here are actual forbidden substrings, not forbidden paths
 %% Since this uses renameStates the State type of the result will be Integer
 %% This really needs to be as strict as possible, which I hope it isn't
 
-> -- |Create an 'FSA' satisfying the conditions imposed by the
+> -- |Create an t'FSA' satisfying the conditions imposed by the
 > -- given sets of forbidden substrings.
 > buildFSA :: (NFData e, Ord e) => ForbiddenSubstrings e -> FSA Integer e
 > buildFSA = combineFSAs . buildFSAsFromFFs

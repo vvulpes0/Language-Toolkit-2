@@ -28,7 +28,7 @@
 >        , [forbidden (Substring [wplus, w0plus] False False)]
 >        , [forbidden (Substring [w0plus] True False)]
 >        ]
-> c146 = renameStates . minimize . determinize $ unionAll
+> c146 = renameStates . minimize $ unionAll
 >        [ compile wx [[forbidden (Substring [w0s2] False False)]]
 >        , c145
 >        , compile wx [[required (Substring [w0s2] True True)]]
@@ -37,9 +37,11 @@
 > desurfaceSecondary :: (Enum n1, Ord n, Ord n1) =>
 >                       FSA n String -> FSA n1 String
 > desurfaceSecondary
->     = renameStates . minimize . determinize . renameSymbolsBy f
->     where f = head . tr (Set.toAscList wxs1) (Set.toAscList wxs0) .
->               singleton
+>     = renameStates . minimize . renameSymbolsBy f
+>     where f x = case ( tr (Set.toAscList wxs1) (Set.toAscList wxs0)
+>                      $ singleton x) of
+>                   (a:_) -> a
+>                   _ -> x
 
 > nonEmptySubsets :: (Ord n, NFData e, Ord e) =>
 >                    [(String, FSA n e)] -> [(String, FSA Int e)]
@@ -49,11 +51,11 @@
 >     where xs'  =  nonEmptySubsets xs
 >           f    =  fmap renameStates
 >           combine (s1, f1) (s2, f2)
->               =  ( s1 `seq` s2 `seq` s1 ++ "_" ++ tail s2
+>               =  ( s1 `seq` s2 `seq` s1 ++ "_" ++ drop 1 s2
 >                  , normalize' $!! intersection f1 f2)
 
 > normalize' :: (Ord n, Ord e) => FSA n e -> FSA Int e
-> normalize' = renameStates . minimize . determinize
+> normalize' = renameStates . minimize
 
 > main :: IO ()
 > main = mapM_ (uncurry write) (constraints `using` parListChunk 1 rdeepseq)
@@ -117,7 +119,7 @@ Symbols
 > -- |Primary stress
 > wxs2 = unionAll [w0s2, w1s2, w2s2, w3s2, w4s2]
 
-> w0, w1, w2, w3, w4, wx, defaultAlphabet :: Set String
+> w0, w1, w2, w3, w4, wx :: Set String
 > -- |Light, any stress
 > w0 = unionAll [w0s0, w0s1, w0s2]
 > -- |Heavy, any stress
@@ -130,47 +132,15 @@ Symbols
 > w4 = unionAll [w4s0, w4s1, w4s2]
 > -- |Any weight or stress
 > wx = unionAll [w0, w1, w2, w3, w4]
-> -- |Equivalent to 'wx'.
-> defaultAlphabet = wx
 
-> w0plus, w1plus, w2plus, w3plus, w4plus, wxplus :: Set String
+> w0plus :: Set String
 > -- |Light, some stress
 > w0plus = unionAll [w0s1, w0s2]
-> -- |Heavy, some stress
-> w1plus = unionAll [w1s1, w1s2]
-> -- |Superheavy, some stress
-> w2plus = unionAll [w2s1, w2s2]
-> -- |Weight 3, some stress
-> w3plus = unionAll [w3s1, w3s2]
-> -- |Weight 4, some stress
-> w4plus = unionAll [w4s1, w4s2]
-> -- |Some stress
-> wxplus = unionAll [w0plus, w1plus, w2plus, w3plus, w4plus]
 
-> w0minus, w1minus, w2minus, w3minus, w4minus, wxminus :: Set String
-> -- |Light, non-primary stress
-> w0minus = unionAll [w0s0, w0s1]
-> -- |Heavy, non-primary stress
-> w1minus = unionAll [w1s0, w1s1]
-> -- |Superheavy, non-primary stress
-> w2minus = unionAll [w2s0, w2s1]
-> -- |Weight 3, non-primary stress
-> w3minus = unionAll [w3s0, w3s1]
-> -- |Weight 4, non-primary stress
-> w4minus = unionAll [w4s0, w4s1]
-> -- |Non-primary stress
-> wxminus = unionAll [w0minus, w1minus, w2minus, w3minus, w4minus]
-
-> wplus, wpluss0, wpluss1, wpluss2, wplusplus, wplusminus :: Set String
+> wplus, wpluss0, wpluss1 :: Set String
 > -- |Non-light, any stress
 > wplus = wx `difference` w0
 > -- |Non-light, unstressed
 > wpluss0 = wxs0 `difference` w0
 > -- |Non-light, secondary stress
 > wpluss1 = wxs1 `difference` w0
-> -- |Non-light, primary stress
-> wpluss2 = wxs2 `difference` w0
-> -- |Non-light, some-stress
-> wplusplus = wxplus `difference` w0
-> -- |Non-light, non-primary stress
-> wplusminus = wxminus `difference` w0

@@ -7,7 +7,7 @@ name:                language-toolkit
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             1.1.0.0
+version:             1.2.0.0
 
 synopsis:            A set of tools for analyzing languages via logic and automata
 category:            Formal Languages
@@ -43,17 +43,19 @@ homepage:            https://github.com/vvulpes0/Language-Toolkit-2
 license:             MIT
 license-file:        LICENSE
 author:              Dakotah Lambert, James Rogers
-copyright:           (c) 2014-2022 Dakotah Lambert
+copyright:           (c) 2014-2024 Dakotah Lambert
 maintainer:          Dakotah Lambert <dakotahlambert@acm.org>
-tested-with:         GHC ==8.0.2
-                   , GHC ==8.6.5
-                   , GHC ==8.10.1
-                   , GHC ==9.0.2
+tested-with:         GHC ==9.8.2
 build-type:          Simple
-extra-source-files:  man/classify.1
+extra-source-files:  CHANGELOG.md
+                   , man/classify.1
                    , man/dotify.1
                    , man/plebby.1
                    , man/pleb.5
+                   , man/fr/classify.1
+                   , man/fr/dotify.1
+                   , man/fr/plebby.1
+                   , man/fr/pleb.5
 
 source-repository head
   type:      git
@@ -71,6 +73,7 @@ library
                 , LTK.Decide.B
                 , LTK.Decide.CB
                 , LTK.Decide.Definite
+                , LTK.Decide.DotDepth
                 , LTK.Decide.Finite
                 , LTK.Decide.FO2
                 , LTK.Decide.GD
@@ -93,6 +96,7 @@ library
                 , LTK.Decide.TSL
                 , LTK.Decide.Variety
                 , LTK.DecideM
+                , LTK.DecideS
                 , LTK.Extract
                 , LTK.Extract.SL
                 , LTK.Extract.SP
@@ -105,6 +109,7 @@ library
                 , LTK.Learn.TSL
                 , LTK.Learn.TSL.AugmentedSubsequences
                 , LTK.Learn.TSL.ViaSL
+                , LTK.Parameters
                 , LTK.Porters
                 , LTK.Porters.ATT
                 , LTK.Porters.Corpus
@@ -117,65 +122,71 @@ library
                 , LTK.Traversals
   -- Modules included in this library but not exported.
   -- other-modules:
-  build-depends: base >=4.2 && <4.19
-               , containers >=0.5 && <0.7
-               , deepseq >=1.1 && <1.5
+  build-depends: array >=0.1 && <0.6
+               , base >=4.2 && <5.0
+               , containers >=0.5 && <0.8
+               , deepseq >=1.1 && <1.6
                , parallel >=1.0 && <3.3
+               , finite-semigroups >=0.1 && <0.2
   hs-source-dirs:      src
   default-language:    Haskell2010
-  ghc-options: -Wall -O2 -feager-blackholing
+  ghc-options: -Wall -feager-blackholing
 
 executable dotify
   hs-source-dirs: dotify
   main-is: Main.lhs
-  build-depends: base >=4.2 && <4.19
+  build-depends: base >=4.2 && <5.0
                , language-toolkit
   default-language: Haskell2010
-  ghc-options: -Wall -O2 -threaded "-with-rtsopts=-N -qg1 -C0.001"
+  ghc-options: -Wall -threaded "-with-rtsopts=-N -qg1 -C0.001"
 
 executable factorize
   hs-source-dirs: factorize
   main-is: Main.lhs
-  build-depends: base >=4.6 && <4.19
+  build-depends: base >=4.6 && <5.0
                , language-toolkit
-               , containers >=0.1 && <0.7
-               , deepseq >=1.2 && <1.5
+               , containers >=0.1 && <0.8
+               , deepseq >=1.2 && <1.6
                , directory >=1.0 && <1.4
-               , filepath >=1.0 && <1.5
+               , filepath >=1.0 && <1.6
   default-language: Haskell2010
-  ghc-options: -Wall -O2 -threaded -feager-blackholing
+  ghc-options: -Wall -threaded -feager-blackholing
                "-with-rtsopts=-N -qg1 -C0.001"
 
 executable make-non-strict-constraints
   hs-source-dirs: make-non-strict-constraints
   main-is: Main.lhs
   other-modules: LTK.ConstraintCompiler
-  build-depends: base >=4.0 && <4.19
+  build-depends: base >=4.0 && <5.0
                , language-toolkit
-               , containers >=0.1 && <0.7
-               , deepseq >=1.2 && <1.5
+               , containers >=0.1 && <0.8
+               , deepseq >=1.2 && <1.6
                , parallel >=2.0 && <3.3
   default-language: Haskell2010
-  ghc-options: -Wall -O2 -threaded "-with-rtsopts=-N -qg1 -C0.001"
+  ghc-options: -Wall -threaded "-with-rtsopts=-N -qg1 -C0.001"
 
 executable plebby
   hs-source-dirs: plebby
   main-is: Main.lhs
-  build-depends: base >=4.2 && <4.19
+  other-modules: LTK.Plebby.Help
+  build-depends: base >=4.2 && <5.0
+               , containers >=0.1 && <0.8
+               , exceptions >=0.1 && <0.11
                , language-toolkit
-               , haskeline >=0.2 && <0.9
+               , haskeline >=0.6.3 && <0.9
                , process >=1.1 && <1.7
                , transformers >=0.2 && <0.7
                , directory >=1.2.3 && <1.4
-               , filepath >=1.0 && <1.5
+               , filepath >=1.0 && <1.6
   default-language: Haskell2010
-  ghc-options: -Wall -O2 -threaded "-with-rtsopts=-N -qg1 -C0.001"
+  ghc-options: -Wall -threaded "-with-rtsopts=-N -qg1 -C0.001"
 
 executable classify
   hs-source-dirs: classify
   main-is: Main.lhs
-  build-depends: base >=4.2 && <4.19
-               , containers >=0.1 && <0.7
+  build-depends: base >=4.2 && <5.0
+               , containers >=0.1 && <0.8
+               , finite-semigroups >=0.1 && <0.2
                , language-toolkit
   default-language: Haskell2010
-  ghc-options: -Wall -O2 -threaded "-with-rtsopts=-N -qg1 -C0.001"
+  ghc-options: -Wall -threaded "-with-rtsopts=-N -qg1 -C0.001"

@@ -92,11 +92,11 @@
 >           makeLabel x  = show (idOf x) ++ " [label=\"" ++
 >                          (deescape . showish $ nodeLabel x) ++ "\"];"
 
-> -- |Convert an 'FSA' to its representation in the GraphViz @dot@ format.
+> -- |Convert an t'FSA' to its representation in the GraphViz @dot@ format.
 > exportDot :: (Ord e, Ord n, Show e, Show n) => FSA n e -> String
 > exportDot = exportDotWithName ""
 
-> -- |Convert an 'FSA' to its representation in the GraphViz @dot@ format,
+> -- |Convert an t'FSA' to its representation in the GraphViz @dot@ format,
 > -- with a provided name.
 > exportDotWithName :: (Ord e, Ord n, Show e, Show n) =>
 >                      String -> FSA n e -> String

@@ -1,5 +1,25 @@
 # Changelog
 
+## Version 1.2 — 2024-04-16
+### Added
+* commonPrefix and commonSuffix functions on automata
+* isDot1 (dot depth at most one)
+* syntacticSemigroup (interfacing with finite-semigroups)
+* syntacticOMonoid, syntacticOSemigroup (ordered monoid or semigroup)
+* isVarietyS (ordered varities from finite-semigroups)
+* plebby:
+  + new, more detailed :help system
+  + strict order (`.∙.(x,y)` asserts start of `x` precedes start of `y`)
+  + Ctrl+C interrupts handled, abort current computation
+### Changed
+* algebraic tools split and expanded in a new package (finite-semigroups)
+* plebby:
+  + inequalities supported in :isVarietyM/S/T for order
+  + better error messages
+  + bugfix: two-expression commands no longer break on "it"
+* many classification tasks now use semigroups from finite-semigroups
+* bugfix: trimUnreachables handles epsilon-edges and avoids recomputation
+
 ## Version 1.1 — 2023-06-18
 ### Added
 * preliminary French translation of manual pages

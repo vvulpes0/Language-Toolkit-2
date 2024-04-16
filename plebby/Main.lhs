@@ -12,10 +12,16 @@
 #endif
 > import Control.Monad.Trans.Class (lift)
 > import Data.Char (isSpace, toLower)
-> import Data.Maybe (fromMaybe)
+> import Data.List (intercalate, nub)
+> import Data.Set (Set)
 > import System.Console.Haskeline ( InputT
+>                                 , Interrupt(..)
+>                                 , withInterrupt
 >                                 , defaultSettings
 >                                 , getInputLine
+>                                 , haveTerminalUI
+>                                 , outputStr
+>                                 , outputStrLn
 >                                 , runInputT
 >                                 )
 > import System.Environment (getEnvironment)
@@ -39,31 +45,27 @@
 >                  , stderr
 >                  , stdout
 >                  )
+> import Control.Monad.Catch (handle)
 #if MIN_VERSION_base(4,4,0)
 > import System.IO.Error (catchIOError)
 #else
 > import System.IO.Error (IOError, catch) -- We'll make our own
 #endif
 
-> import LTK.Decide       ( isSL, isTSL
->                         , isLT, isTLT
->                         , isLTT, isTLTT
->                         , isLPT, isTLPT
->                         , isSP
+> import qualified Data.Map as Map
+> import qualified Data.Set as Set
+
+> import LTK.Decide       ( isLT
+>                         , isLTT
+>                         , isLPT
+>                         , isDot1
 >                         , isPT
 >                         , isFO2, isFO2B, isFO2BF, isFO2S
 >                         , isSF
 >                         , isGLT, isGLPT
 >                         , isFinite
->                         , isGD
->                         , isTGD
->                         , isCB
->                         , isAcom, isLAcom, isTLAcom
->                         , isB, isLB, isTLB
->                         , isDef
->                         , isRDef
->                         , isTDef
->                         , isTRDef
+>                         , isLAcom
+>                         , isB, isLB
 >                         , isTrivial
 >                         , isMTF, isMTDef, isMTRDef, isMTGD
 >                         , isVariety
@@ -73,6 +75,13 @@
 > import LTK.Learn.SP  (fSP)
 > import LTK.Learn.TSL (fTSL)
 > import LTK.Learn.StringExt (Grammar(..), learn)
+> import LTK.Parameters   ( Parameter(..)
+>                         , pTier
+>                         , pDef, pRDef, pGDef
+>                         , pCB, pAcom
+>                         , pSL, pSP
+>                         )
+> import LTK.Plebby.Help
 > import LTK.Porters      ( ATT(ATT), ATTO(ATTO), Dot(Dot)
 >                         , EggBox(EggBox)
 >                         , SyntacticOrder(SyntacticOrder)
@@ -85,16 +94,17 @@
 >                         , compileEnv
 >                         , doParse
 >                         , doStatements
+>                         , doStatementsWithError
 >                         , fromAutomaton
 >                         , fromSemanticAutomaton
 >                         , groundEnv
 >                         , insertExpr
->                         , makeAutomaton
+>                         , makeAutomatonE
 >                         , parseExpr
+>                         , restoreUniverse
 >                         , restrictUniverse
 >                         , tokenize
 >                         )
-> import LTK.Tiers     (project)
 
 
 #if !MIN_VERSION_base(4,4,0)
@@ -112,17 +122,32 @@
 > data PlebConfig = PlebConfig
 >     { dotProg :: (String, [String])
 >     , displayProg :: (String, [String])
+>     , pagerProg :: Maybe (String, [String])
+>     , formatting :: Bool
+>     , promptString :: String
 >     } deriving (Eq, Ord, Read, Show)
 
+> writeStrLn :: String -> IO ()
+> writeStrLn = runInputT defaultSettings . outputStrLn
+> writeStr :: String -> IO ()
+> writeStr = runInputT defaultSettings . outputStr
+
+> writeVersion :: InputT IO ()
+> writeVersion
+>     = (\x -> if x then outputStr $ unlines header else return ())
+>     =<< haveTerminalUI
+>     where header = [ name ++ ", version " ++ version ++ ": " ++ url
+>                    , ":help for help"
+>                    ]
+>           name = "plebby"
+>           version = "1.2"
+>           url = "https://hackage.haskell.org/package/language-toolkit"
 > main :: IO ()
 > main = do
->   putStrLn (name ++ ", version " ++ version ++ ": " ++ url)
->   putStrLn ":help for help"
 >   pc <- getConfig
->   runInputT defaultSettings $ processLines pc (empty, empty, Nothing)
->       where name = "plebby"
->             version = "1.1"
->             url = "https://hackage.haskell.org/package/language-toolkit"
+>   runInputT defaultSettings
+>        $ (writeVersion >> processLines pc (Map.empty, Map.empty))
+
 
 > getConfig :: IO PlebConfig
 > getConfig = do
@@ -137,36 +162,46 @@
 >        else return base
 >       where base = PlebConfig { dotProg = ("dot", ["-Tpng"])
 >                               , displayProg = ("display", [])
+>                               , pagerProg = Nothing
+>                               , formatting = True
+>                               , promptString = "> "
 >                               }
 
 > parseConfig :: PlebConfig -> String -> PlebConfig
 > parseConfig pc s = foldr go pc
->                    . map (\(a,b) -> (words a, words $ drop 1 b))
+>                    . map (\(a,b) -> (words a, words $ drop 1 b, b))
 >                    . filter (not . null . snd)
 >                    . map (break (== '=') . fst . break (== '#'))
 >                    $ lines s
->     where go (["dot"],(x:xs)) c = c { dotProg = (x, xs) }
->           go (["display"],(x:xs)) c = c { displayProg = (x, xs) }
+>     where go (["dot"],(x:xs),_) c = c { dotProg = (x, xs) }
+>           go (["display"],(x:xs),_) c = c { displayProg = (x, xs) }
+>           go (["formatting"],(x:_),_) c = c { formatting = mkBool x }
+>           go (["pager"],(x:xs),_) c = c { pagerProg = Just (x, xs) }
+>           go (["prompt"],_,b) c = c { promptString = extractString b }
 >           go _ c = c
+>           extractString = deescape . extractString'
+>                           . drop 1 . dropWhile (/= '"')
+>           extractString' [] = ""
+>           extractString' ('"':_) = []
+>           extractString' ('\\':x:xs) = '\\' : x : extractString' xs
+>           extractString' (x:xs) = x : extractString' xs
+>           mkBool x = map toLower x `elem` ["t","true","1"]
 
-> prompt :: String
-> prompt = "> "
+> prompt :: Monad m => PlebConfig -> InputT m String
+> prompt pc = (\x -> if x then promptString pc else "")
+>             <$> haveTerminalUI
 
 > data Trither a b c = L a
 >                    | M b
 >                    | R c
 >                      deriving (Eq, Ord, Read, Show)
 
-> data ArgType = ArgE
->              | ArgF
->              | ArgI
->              | ArgS
->              | ArgV
->                deriving (Eq, Ord, Read, Show)
-
 > data Command = Bindings
 >              | D_EB Expr -- Display EggBox
 >              | D_JE Expr -- Display J-minimized Form
+>              | D_OJ Expr -- Display Green's L Order
+>              | D_OL Expr -- Display Green's L Order
+>              | D_OR Expr -- Display Green's R Order
 >              | D_PSG Expr -- Display Powerset Graph
 >              | D_SM Expr -- Display Syntactic Monoid
 >              | D_SO Expr -- Display Syntactic Order
@@ -175,7 +210,7 @@
 >              | DT_PSG Expr -- Dotify Powerset Graph
 >              | DT_SM Expr -- Dotify Syntactic Monoid
 >              | ErrorMsg String
->              | Help [(String, [ArgType], String)]
+>              | Help String
 >              | Import FilePath
 >              | LearnSL Int FilePath
 >              | LearnSP Int FilePath
@@ -196,84 +231,66 @@
 >              | WriteATT FilePath FilePath FilePath Expr
 >                deriving (Eq, Read, Show)
 
-> data Relation = CEqual Expr Expr
->               | CImply Expr Expr
->               | Equal Expr Expr
->               | IsAcom Expr
->               | IsB Expr
->               | IsCB Expr
->               | IsDef Expr
->               | IsFin Expr
->               | IsFO2 Expr
->               | IsFO2B Expr
->               | IsFO2BF Expr
->               | IsFO2S Expr
->               | IsGD Expr
->               | IsGLPT Expr
->               | IsGLT Expr
->               | IsLAcom Expr
->               | IsLB Expr
->               | IsLT Expr
->               | IsLPT Expr
->               | IsLTT Expr
->               | IsMTDef Expr
->               | IsMTF Expr
->               | IsMTGD Expr
->               | IsMTRDef Expr
->               | IsPT Expr
->               | IsRDef Expr
->               | IsSF Expr
->               | IsSL Expr
->               | IsSP Expr
->               | IsTDef Expr
->               | IsTGD Expr
->               | IsTLAcom Expr
->               | IsTLB Expr
->               | IsTLT Expr
->               | IsTLPT Expr
->               | IsTLTT Expr
->               | IsTRDef Expr
->               | IsTrivial Expr
->               | IsTSL Expr
->               | IsVariety VType String Expr
->               | Subset Expr Expr
->               | SSubset Expr Expr -- Strict Subset
->                 deriving (Eq, Read, Show)
+> data Relation
+>     = RDyad (  FSA Integer (Maybe String)
+>             -> FSA Integer (Maybe String) -> Maybe [Parameter String])
+>       Expr Expr
+>     | RMono (FSA Integer (Maybe String) -> Maybe [Parameter String])
+>       Expr
 
 > data VType = VTStar | VTPlus | VTTier
 >              deriving (Eq, Ord, Read, Show)
 
 > processLines :: PlebConfig -> Env -> InputT IO ()
-> processLines pc e = f =<< getInputLine prompt
+> processLines pc e = f =<< getinput =<< prompt pc
 >     where f minput
 >               = case minput
 >                 of Nothing       ->  return ()
 >                    Just ":quit"  ->  return ()
 >                    Just line     ->  go line >>= processLines pc
->           go line = lift (act pc e (processLine e line))
+>           getinput p = handle (\Interrupt -> return (Just ""))
+>                        . withInterrupt $ getInputLine p
+>           go line = handle (\Interrupt ->
+>                             lift $ act pc e
+>                             (L . ErrorMsg $ unlines ["interrupted"]))
+>                     . withInterrupt . lift
+>                     $ act pc e (processLine e line)
+
+> fromBool :: Bool -> Maybe [Parameter String]
+> fromBool x = if x then Just [] else Nothing
+
+> isV :: (Ord n, Ord e) => Bool -> String -> FSA n e
+>     -> Maybe [Parameter String]
+> isV a b = maybe Nothing fromBool . isVariety a b
+
+> apBoth :: (a -> b) -> (b -> b -> c) -> a -> a -> c
+> apBoth f g x y = f x `g` f y
 
 Always use "modwords" when FilePath objects are at issue,
 so that file names can be quoted or escaped
 in order to deal with spaces or other special characters.
 
 > processLine :: Env -> String -> Trither Command Relation Env
-> processLine d@(dict, subexprs, _) str
->     | null str = R d
->     | not (isPrefixOf str ":") = R $ doStatements d str
+> processLine d str
+>     | not (isPrefixOf str ":")
+>         = either (L . ErrorMsg . deescape) R
+>           $ doStatementsWithError d str
+>     | isStartOf str ":help"
+>         = L . Help . dropWhile isSpace $ drop (length ":help") str
 >     | isStartOf str ":isvarietym"
 >         = case words str
 >           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
->                            in g (M . IsVariety VTStar u <$> pe) v
+>                            in g (m (isV True u . n_d)) v
 >              _         ->  R d
 >     | isStartOf str ":isvarietys"
 >         = case words str
 >           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
->                            in g (M . IsVariety VTPlus u <$> pe) v
+>                            in g (m (isV False u . n_d)) v
 >              _         ->  R d
 >     | isStartOf str ":isvarietyt"
 >         = case words str
 >           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
->                            in g (M . IsVariety VTTier u <$> pe) v
+>                            in g (m (pTier (isV False u) . n_d)) v
 >              _         ->  R d
 >     | isStartOf str ":import"
 >         = case modwords str
@@ -341,436 +358,138 @@ in order to deal with spaces or other special characters.
 >         = case modwords str
 >           of (_:a:as) -> g (L . Write a <$> pe) (unwords as)
 >              _        -> R d
->     | otherwise =  doOne . filter (isStartOf str . fst) $ p12 commands
->     where pe        =  parseExpr dict subexprs
+>     | otherwise =  doOne $ filter (isStartOf str . fst) commands
+>     where pe        =  parseExpr
 >           p2e       =  (,) <$> pe <*> pe
 >           f (s, p)  =  g p (drop (length s) str)
->           g p x     =  either (L . err) fst . doParse p $ tokenize x
+>           g p x     =  either (L . ErrorMsg . deescape) fst
+>                        . doParse p $ tokenize x
 >           getVDesc  =  (\(a,b) -> (a ++ take 1 b, drop 1 b))
 >                        . break (== ']')
->           p12       =  map (\(a,b,_,_) -> (a,b))
->           p134      =  map (\(w,_,y,z) -> (w,y,z))
 >           doOne xs  =  case xs
 >                        of (x:_)  ->  f x
 >                           _      ->  L . ErrorMsg $
 >                                      "unknown interpreter command\n"
->           err       =  ErrorMsg -- "failed to evaluate"
 >           isStartOf xs x
 >               = isPrefixOf (map toLower xs) (map toLower x)
 >                 && (all isSpace . take 1 $ drop (length x) xs)
+>           m  x = M . (RMono x) <$> pe
+>           m2 x = M . uncurry (RDyad (fmap fromBool . x)) <$> p2e
+>           n_d = normalize . desemantify
 >           commands
->               = [ ( ":bindings"
->                   , pure $ L Bindings
->                   , []
->                   , "print list of variables and their bindings"
->                   )
->                 , ( ":cequal"
->                   , M . uncurry CEqual <$> p2e
->                   , [ArgE, ArgE]
->                   , "compare two exprs for logical equivalence"
->                   )
->                 , ( ":cimplies"
->                   , M . uncurry CImply <$> p2e
->                   , [ArgE, ArgE]
->                   , "determine if expr1 logically implies expr2"
->                   )
->                 , ( ":compile"
->                   , pure . R $ compileEnv d
->                   , []
->                   , "convert all expr variables to automata"
->                   )
->                 , ( ":display"
->                   , L . Display <$> pe
->                   , [ArgE]
->                   , "show expr graphically via external display program"
->                   )
->                 , ( ":dot-psg"
->                   , L . DT_PSG <$> pe
->                   , [ArgE]
->                   , ":dot the powerset graph of expr"
->                   )
->                 , ( ":dot-synmon"
->                   , L . DT_SM <$> pe
->                   , [ArgE]
->                   , ":dot the syntactic monoid of expr"
->                   )
->                 , ( ":dot"
->                   , L . Dotify <$> pe
->                   , [ArgE]
->                   , "print a Dot file of expr"
->                   )
->                 , ( ":eggbox"
->                   , L . D_EB <$> pe
->                   , [ArgE]
->                   , "show egg-box of expr via external display program"
->                   )
->                 , ( ":equal"
->                   , M . uncurry Equal <$> p2e
->                   , [ArgE, ArgE]
->                   , "compare two exprs for set-equality"
->                   )
->                 , ( ":ground"
->                   , pure . R $ groundEnv d
->                   , []
->                   , "convert all expr variables to grounded automata"
->                   )
->                 , ( ":help"
->                   , pure . L . Help $ p134 commands
->                   , []
->                   , "print this help"
->                   )
->                 , ( ":implies"
->                   , M . uncurry Subset <$> p2e
->                   , [ArgE, ArgE]
->                   , "synonym for :subset"
->                   )
->                 , ( ":import"
->                   , error ":import not defined here"
->                   , [ArgF]
->                   , "read file as plebby script"
->                   )
->                 , ( ":isAcom"
->                   , M . IsAcom <$> pe
->                   , [ArgE]
->                   , "determine if expr is k,1-LTT"
->                   )
->                 , ( ":isB"
->                   , M . IsB <$> pe
->                   , [ArgE]
->                   , "determine if expr is a band"
->                   )
->                 , ( ":isCB"
->                   , M . IsCB <$> pe
->                   , [ArgE]
->                   , "determine if expr is a semilattice language"
->                   )
->                 , ( ":isDef"
->                   , M . IsDef <$> pe
->                   , [ArgE]
->                   , "determine if expr is a definite language"
->                   )
->                 , ( ":isFinite"
->                   , M . IsFin <$> pe
->                   , [ArgE]
->                   , "determine if expr is finite"
->                   )
->                 , ( ":isFO2"
->                   , M . IsFO2 <$> pe
->                   , [ArgE]
->                   , "determine if expr is FO2[<]-definable"
->                   )
->                 , ( ":isFO2B"
->                   , M . IsFO2B <$> pe
->                   , [ArgE]
->                   , "determine if expr is FO2[<,bet]-definable"
->                   )
->                 , ( ":isFO2BF"
->                   , M . IsFO2BF <$> pe
->                   , [ArgE]
->                   , "determine if expr is FO2[<,betfac]-definable"
->                   )
->                 , ( ":isFO2S"
->                   , M . IsFO2S <$> pe
->                   , [ArgE]
->                   , "determine if expr is FO2[<,+1]-definable"
->                   )
->                 , ( ":isGD"
->                   , M . IsGD <$> pe
->                   , [ArgE]
->                   , "determine if expr is Generalized Definite"
->                   )
->                 , ( ":isGLPT"
->                   , M . IsGLPT <$> pe
->                   , [ArgE]
->                   , "determine if expr is Generalized Locally PT"
->                   )
->                 , ( ":isGLT"
->                   , M . IsGLT <$> pe
->                   , [ArgE]
->                   , "determine if expr is Generalized Locally Testable"
->                   )
->                 , ( ":isLAcom"
->                   , M . IsLAcom <$> pe
->                   , [ArgE]
->                   , "determine if expr is locally Acom"
->                   )
->                 , ( ":isLB"
->                   , M . IsLB <$> pe
->                   , [ArgE]
->                   , "determine if expr is locally a band"
->                   )
->                 , ( ":isLPT"
->                   , M . IsLPT <$> pe
->                   , [ArgE]
->                   , "determine if expr is locally Piecewise Testable"
->                   )
->                 , ( ":isLT"
->                   , M . IsLT <$> pe
->                   , [ArgE]
->                   , "determine if expr is Locally Testable"
->                   )
->                 , ( ":isLTT"
->                   , M . IsLTT <$> pe
->                   , [ArgE]
->                   , "determine if expr is Locally Threshold Testable"
->                   )
->                 , ( ":isMTDef"
->                   , M . IsMTDef <$> pe
->                   , [ArgE]
->                   , "determine if expr is a combination of TDef things"
->                   )
->                 , ( ":isMTF"
->                   , M . IsMTF <$> pe
->                   , [ArgE]
->                   , "determine if expr is a combination of tier-(co)finite things"
->                   )
->                 , ( ":isMTGD"
->                   , M . IsMTGD <$> pe
->                   , [ArgE]
->                   , "determine if expr is a combination of TGD things"
->                   )
->                 , ( ":isMTRDef"
->                   , M . IsMTRDef <$> pe
->                   , [ArgE]
->                   , "determine if expr is a combination of TRDef things"
->                   )
->                 , ( ":isPT"
->                   , M . IsPT <$> pe
->                   , [ArgE]
->                   , "determine if expr is Piecewise Testable"
->                   )
->                 , ( ":isRDef"
->                   , M . IsRDef <$> pe
->                   , [ArgE]
->                   , "determine if expr is a reverse definite language"
->                   )
->                 , ( ":isSF"
->                   , M . IsSF <$> pe
->                   , [ArgE]
->                   , "determine if expr is Star-Free"
->                   )
->                 , ( ":isSL"
->                   , M . IsSL <$> pe
->                   , [ArgE]
->                   , "determine if expr is Strictly Local"
->                   )
->                 , ( ":isSP"
->                   , M . IsSP <$> pe
->                   , [ArgE]
->                   , "determine if expr is Strictly Piecewise"
->                   )
->                 , ( ":isTDef"
->                   , M . IsTDef <$> pe
->                   , [ArgE]
->                   , "determine if expr is definite on a tier"
->                   )
->                 , ( ":isTGD"
->                   , M . IsTGD <$> pe
->                   , [ArgE]
->                   , "determine if expr is Generalized Definite on a tier"
->                   )
->                 , ( ":isTLAcom"
->                   , M . IsTLAcom <$> pe
->                   , [ArgE]
->                   , "determine if expr is tier-locally Acom"
->                   )
->                 , ( ":isTLB"
->                   , M . IsTLB <$> pe
->                   , [ArgE]
->                   , "determine if expr is tier-locally a band"
->                   )
->                 , ( ":isTLPT"
->                   , M . IsTLPT <$> pe
->                   , [ArgE]
->                   , "determine if expr is tier-locally Piecewise Testable"
->                   )
->                 , ( ":isTLT"
->                   , M . IsTLT <$> pe
->                   , [ArgE]
->                   , "determine if expr is Tier-Locally Testable"
->                   )
->                 , ( ":isTLTT"
->                   , M . IsTLTT <$> pe
->                   , [ArgE]
->                   , "determine if expr is Tier-LTT"
->                   )
->                 , ( ":isTRDef"
->                   , M . IsTRDef <$> pe
->                   , [ArgE]
->                   , "determine if expr is reverse definite on a tier"
->                   )
->                 , ( ":isTrivial"
->                   , M . IsTrivial <$> pe
->                   , [ArgE]
->                   , "determine if expr has only a single state"
->                   )
->                 , ( ":isTSL"
->                   , M . IsTSL <$> pe
->                   , [ArgE]
->                   , "determine if expr is Strictly Tier-Local"
->                   )
->                 , ( ":isVarietyM"
->                   , error ":isVarietyM not defined here"
->                   , [ArgS, ArgE]
->                   , "determine if expr is in the *-variety"
->                   )
->                 , ( ":isVarietyS"
->                   , error ":isVarietyS not defined here"
->                   , [ArgS, ArgE]
->                   , "determine if expr is in the +-variety"
->                   )
->                 , ( ":isVarietyT"
->                   , error ":isVarietyT not defined here"
->                   , [ArgS, ArgE]
->                   , "determine if expr is in the +-variety on a tier"
->                   )
->                 , ( ":Jmin"
->                   , L . D_JE <$> pe
->                   , [ArgE]
->                   , ":display the J-minimized version of expr"
->                   )
->                 , ( ":learnSL"
->                   , error ":learnSL not defined here"
->                   , [ArgI, ArgF]
->                   , "infer k-SL grammar, bind result to 'it'"
->                   )
->                 , ( ":learnSP"
->                   , error ":learnSP not defined here"
->                   , [ArgI, ArgF]
->                   , "infer k-SP grammar, bind result to 'it'"
->                   )
->                 , ( ":learnTSL"
->                   , error ":learnTSL not defined here"
->                   , [ArgI, ArgF]
->                   , "infer k-TSL grammar, bind result to 'it'"
->                   )
->                 , ( ":loadstate"
->                   , error ":loadstate not defined here"
->                   , [ArgF]
->                   , "restore state from file"
->                   )
->                 , ( ":psg"
->                   , L . D_PSG <$> pe
->                   , [ArgE]
->                   , ":display the powerset graph of expr"
->                   )
->                 , ( ":quit"
->                   , error ":quit not defined here"
->                   , []
->                   , "exit plebby"
->                   )
->                 , ( ":readATT"
->                   , error ":readatt not defined here"
->                   , [ArgF, ArgF, ArgF]
->                   , "read AT&T files, bind input-projection to 'it'"
->                   )
->                 , ( ":readATTO"
->                   , error ":readatto not defined here"
->                   , [ArgF, ArgF, ArgF]
->                   , "read AT&T files, bind output-projection to 'it'"
->                   )
->                 , ( ":readBin"
->                   , error ":readbin not defined here"
->                   , [ArgF]
->                   , "read binary expr from file, bind to 'it'"
->                   )
->                 , ( ":readJeff"
->                   , error ":readjeff not defined here"
->                   , [ArgF]
->                   , "read Jeff format automaton file, bind to 'it'"
->                   )
->                 , ( ":read"
->                   , error ":read not defined here"
->                   , [ArgF]
->                   , "read Pleb file"
->                   )
->                 , ( ":reset"
->                   , pure $ L Reset
->                   , []
->                   , "purge the current environment"
->                   )
->                 , ( ":restore-universe"
->                   , pure $ L RestoreUniverse
->                   , []
->                   , "set universe to all and only necessary symbols"
->                   )
->                 , ( ":restrict"
->                   , pure $ L RestrictUniverse
->                   , []
->                   , "remove non-universe symbols from the environment"
->                   )
->                 , ( ":savestate"
->                   , error ":savestate not defined here"
->                   , [ArgF]
->                   , "write current state to file"
->                   )
->                 , ( ":show"
->                   , error ":show not defined here"
->                   , [ArgV]
->                   , "print meaning(s) of var"
->                   )
->                 , ( ":strict-subset"
->                   , M . uncurry SSubset <$> p2e
->                   , [ArgE, ArgE]
->                   , "determine if expr1 is a strict subset of expr2"
->                   )
->                 , ( ":subset"
->                   , M . uncurry Subset <$> p2e
->                   , [ArgE, ArgE]
->                   , "determine if expr1 is a subset of expr2"
->                   )
->                 , ( ":synmon"
->                   , L . D_SM <$> pe
->                   , [ArgE]
->                   , ":display the syntactic monoid of expr"
->                   )
->                 , ( ":synord"
->                   , L . D_SO <$> pe
->                   , [ArgE]
->                   , "display teh syntactic order of expr"
->                   )
->                 , ( ":unset"
->                   , error ":unset not defined here"
->                   , [ArgV]
->                   , "remove a single var from the environment"
->                   )
->                 , ( ":writeatt"
->                   , error ":writeatt not defined here"
->                   , [ArgF, ArgF, ArgF, ArgE]
->                   , "write AT&T form of expr to files (edges, ins, outs)"
->                   )
->                 , ( ":write"
->                   , error ":write not defined here"
->                   , [ArgF, ArgE]
->                   , "write binary form of expr to file"
->                   )
+>               = [ (":bindings", pure $ L Bindings)
+>                 , (":cequal", m2 (==))
+>                 , (":cimplies", m2 isSupersetOf)
+>                 , (":compile", pure . R $ compileEnv d)
+>                 , (":display", L . Display <$> pe)
+>                 , (":dot", L . Dotify <$> pe)
+>                 , (":dotPSG", L . DT_PSG <$> pe)
+>                 , (":dotSynmon", L . DT_SM <$> pe)
+>                 , (":eggbox", L . D_EB <$> pe)
+>                 , (":equal", m2 (apBoth desemantify (==)))
+>                 , (":ground", pure . R $ groundEnv d)
+>                 , (":help", error ":help not defined here")
+>                 , (":implies", m2 (apBoth desemantify isSupersetOf))
+>                 , (":import", error ":import not defined here")
+>                 , (":isAcom", m (pAcom . n_d))
+>                 , (":isB", m (fromBool . isB . n_d))
+>                 , (":isCB", m (pCB . n_d))
+>                 , (":isDef", m (pDef . n_d))
+>                 , (":isDot1", m (fromBool . isDot1 . n_d))
+>                 , (":isFinite", m (fromBool . isFinite . n_d))
+>                 , (":isFO2", m (fromBool . isFO2 . n_d))
+>                 , (":isFO2B", m (fromBool . isFO2B . n_d))
+>                 , (":isFO2BF", m (fromBool . isFO2BF . n_d))
+>                 , (":isFO2S", m (fromBool . isFO2S . n_d))
+>                 , (":isGD", m (pGDef . n_d))
+>                 , (":isGLPT", m (fromBool . isGLPT . n_d))
+>                 , (":isGLT", m (fromBool . isGLT . n_d))
+>                 , (":isLAcom", m (fromBool . isLAcom . n_d))
+>                 , (":isLB", m (fromBool . isLB . n_d))
+>                 , (":isLPT", m (fromBool . isLPT . n_d))
+>                 , (":isLT", m (fromBool . isLT . n_d))
+>                 , (":isLTT", m (fromBool . isLTT . n_d))
+>                 , (":isMTDef", m (fromBool . isMTDef . n_d))
+>                 , (":isMTF", m (fromBool . isMTF . n_d))
+>                 , (":isMTGD", m (fromBool . isMTGD . n_d))
+>                 , (":isMTRDef", m (fromBool . isMTRDef . n_d))
+>                 , (":isPT", m (fromBool . isPT . n_d))
+>                 , (":isRDef", m (pRDef . n_d))
+>                 , (":isSF", m (fromBool . isSF . n_d))
+>                 , (":isSL", m (pSL . n_d))
+>                 , (":isSP", m (pSP . n_d))
+>                 , (":isTDef", m (pTier pDef . n_d))
+>                 , (":isTGD", m (pTier pGDef . n_d))
+>                 , (":isTLAcom", m (pTier (fromBool . isLAcom) . n_d))
+>                 , (":isTLB", m (pTier (fromBool . isLB) . n_d))
+>                 , (":isTLPT", m (pTier (fromBool . isLPT) . n_d))
+>                 , (":isTLT", m (pTier (fromBool . isLT) . n_d))
+>                 , (":isTLTT", m (pTier (fromBool . isLTT) . n_d))
+>                 , (":isTRDef", m (pTier pRDef . n_d))
+>                 , (":isTrivial", m (fromBool . isTrivial . n_d))
+>                 , (":isTSL", m (pTier pSL . n_d))
+>                 , (":isVarietyM", error ":isVarietyM not defined here")
+>                 , (":isVarietyS", error ":isVarietyS not defined here")
+>                 , (":isVarietyT", error ":isVarietyT not defined here")
+>                 , (":Jmin", L . D_JE <$> pe)
+>                 , (":learnSL", error ":learnSL not defined here")
+>                 , (":learnSP", error ":learnSP not defined here")
+>                 , (":learnTSL", error ":learnTSL not defined here")
+>                 , (":loadstate", error ":loadstate not defined here")
+>                 , (":orderJ", L . D_OJ <$> pe)
+>                 , (":orderL", L . D_OL <$> pe)
+>                 , (":orderR", L . D_OR <$> pe)
+>                 , (":psg", L . D_PSG <$> pe)
+>                 , (":quit", error ":quit not defined here")
+>                 , (":readATT", error ":readatt not defined here")
+>                 , (":readATTO", error ":readatto not defined here")
+>                 , (":readBin", error ":readbin not defined here")
+>                 , (":readJeff", error ":readjeff not defined here")
+>                 , (":read", error ":read not defined here")
+>                 , (":reset", pure $ L Reset)
+>                 , (":restoreUniverse", pure $ L RestoreUniverse)
+>                 , (":restrict", pure $ L RestrictUniverse)
+>                 , (":savestate", error ":savestate not defined here")
+>                 , (":show", error ":show not defined here")
+>                 , (":strictSubset"
+>                   , m2 (apBoth desemantify isProperSupersetOf))
+>                 , (":subset", m2 (apBoth desemantify isSupersetOf))
+>                 , (":synmon", L . D_SM <$> pe)
+>                 , (":synord", L . D_SO <$> pe)
+>                 , (":unset", error ":unset not defined here")
+>                 , (":writeATT", error ":writeatt not defined here")
+>                 , (":write", error ":write not defined here")
 >                 ]
 
 > doCommand :: PlebConfig -> Env -> Command -> IO Env
-> doCommand pc e@(dict, subexprs, ex) c
+> doCommand pc e@(dict, subexprs) c
 >     = case c
 >       of Bindings
->              -> putStrLn "# Symbol aliases:"
+>              -> writeStrLn "# Symbol aliases:"
 >                 >> mapM_ (\(n, s) ->
->                           putStrLn
+>                           writeStrLn
 >                           (n ++ " <- " ++ deescape (formatSet s))
->                          ) dict
->                 >> putStrLn "# Expression aliases:"
->                 >> putStrLn (formatSet $ tmap fst subexprs)
+>                          ) (Map.assocs dict)
+>                 >> writeStrLn "# Expression aliases:"
+>                 >> writeStrLn
+>                    (formatSet . Set.fromList $ Map.keys subexprs)
 >                 >> return e
->          Display expr -> disp id expr
->          D_EB expr -> disp' (display' pc) (to EggBox) expr
->          D_JE expr -> disp (renameStatesBy (formatSet . tmap f)
->                             . minimizeOver jEquivalence
->                             . syntacticMonoid) expr
->          D_PSG expr -> disp (renameStatesBy formatSet . powersetGraph) expr
->          D_SM expr -> disp (renameStatesBy f . syntacticMonoid) expr
->          D_SO expr -> disp' (display' pc) (to SyntacticOrder) expr
->          Dotify expr -> dot id expr
->          DT_PSG expr -> dot (renameStatesBy formatSet . powersetGraph) expr
->          DT_SM expr -> dot (renameStatesBy f . syntacticMonoid) expr
+>          Display x -> disp id x
+>          D_EB x -> disp' (display' pc) (to EggBox) x
+>          D_JE x -> disp (renameStatesBy (formatSet . tmap f)
+>                         . minimizeOver jEquivalence
+>                         . syntacticMonoid) x
+>          D_OJ x -> disp' (display' pc) greenOrderJ x
+>          D_OL x -> disp' (display' pc) greenOrderL x
+>          D_OR x -> disp' (display' pc) greenOrderR x
+>          D_PSG x -> disp (renameStatesBy formatSet . powersetGraph) x
+>          D_SM x -> disp (renameStatesBy f . syntacticMonoid) x
+>          D_SO x -> disp' (display' pc) (to SyntacticOrder) x
+>          Dotify x -> dot id x
+>          DT_PSG x -> dot (renameStatesBy formatSet . powersetGraph) x
+>          DT_SM x -> dot (renameStatesBy f . syntacticMonoid) x
 >          ErrorMsg str -> hPutStr stderr str >> return e
->          Help xs -> lessHelp xs >> return e
+>          Help xs -> lessHelp pc xs >> return e
 >          Import file
 >              -> catchIOError
 >                 (importScript pc e . lines
@@ -791,7 +510,8 @@ in order to deal with spaces or other special characters.
 >                  >> return e
 >                 )
 >          Read file
->              -> catchIOError (doStatements e <$> readFileWithExpansion file)
+>              -> catchIOError
+>                 (doStatements e <$> readFileWithExpansion file)
 >                 (const
 >                  $  hPutStrLn stderr
 >                     ("failed to read \"" ++ file ++ "\"")
@@ -830,25 +550,8 @@ in order to deal with spaces or other special characters.
 >                     ("failed to read \"" ++ file ++ "\"")
 >                  >> return e
 >                 )
->          Reset -> return (empty, empty, Nothing)
->          --
->          -- Note: RestoreUniverse is implemented in a probably-inefficient
->          --       way, by making use of the side-effect that all assignments
->          --       properly update the universe.  The code currently just
->          --       rebinds every bound variable by creating and evaluating
->          --       assignment statements.  This should be done differently.
->          --
->          RestoreUniverse
->              -> let d' = keep ((/= "universe") . fst) dict
->                 in return . doStatements (d', subexprs, ex) .
->                    unlines . fromCollapsible $
->                    union
->                    (tmap
->                     (\(a, _) ->
->                      "= " ++ a ++ " { " ++ a ++ " } "
->                     ) d'
->                    )
->                    (tmap (\(a, _) -> "= " ++ a ++ " " ++ a) subexprs)
+>          Reset -> return (Map.empty, Map.empty)
+>          RestoreUniverse -> return (restoreUniverse e)
 >          RestrictUniverse -> return (restrictUniverse e)
 >          Savestate file
 >              -> catchIOError (writeAndCreateDir file . unlines $ [show e])
@@ -858,40 +561,38 @@ in order to deal with spaces or other special characters.
 >                 ) >> return e
 >          Show name
 >              -> if both
->                    (isNotIn (tmap fst subexprs))
->                    (isNotIn (tmap fst dict))
+>                    (flip Map.notMember subexprs)
+>                    (flip Map.notMember dict)
 >                    name
->                 then putStrLn ("undefined variable \"" ++ name ++ "\"")
+>                 then writeStrLn
+>                      ("undefined variable \"" ++ name ++ "\"")
 >                      >> return e
 >                 else mapM_
->                      (\(_,a) ->
->                       putStrLn (name ++ " <- " ++ show a)
->                      ) (keep ((== name) . fst) subexprs)
+>                      (\a ->
+>                       writeStrLn (name ++ " <- " ++ show a)
+>                      ) (Map.filterWithKey (\k _ -> k == name) subexprs)
 >                      >> mapM_
->                      (\(_,s) ->
->                       putStrLn (name ++ " <- " ++ deescape (formatSet s))
->                      ) (keep ((== name) . fst) dict)
+>                      (\s ->
+>                       writeStrLn
+>                       (name ++ " <- " ++ deescape (formatSet s))
+>                      ) (Map.filterWithKey (\k _ -> k == name) dict)
 >                      >> return e
 >          Unset name
->              -> return ( keep ((/= name) . fst) dict
->                        , keep ((/= name) . fst) subexprs
->                        , if name == "it"
->                          then Nothing
->                          else ex
+>              -> return ( Map.filterWithKey (\k _ -> k /= name) dict
+>                        , Map.filterWithKey (\k _ -> k /= name) subexprs
 >                        )
->          Write file expr
->              -> let aut = makeAutomaton $ insertExpr e expr
->                 in maybe
->                    (hPutStrLn stderr "could not make automaton")
+>          Write file x
+>              -> let aut = makeAutomatonE e x
+>                 in either
+>                    (hPutStr stderr)
 >                    (\a -> werr file (unlines [show a]))
 >                    aut >> return e
->          WriteATT f1 f2 f3 expr
->              -> let aut  =  fmap desemantify . makeAutomaton $
->                             insertExpr e expr
+>          WriteATT f1 f2 f3 x
+>              -> let aut  =  fmap desemantify $ makeAutomatonE e x
 >                     w2   =  if f2 == "_" then const (return ()) else werr f2
 >                     w3   =  if f3 == "_" then const (return ()) else werr f3
->                 in maybe
->                    (hPutStrLn stderr "could not make automaton")
+>                 in either
+>                    (hPutStr stderr)
 >                    (\a ->
 >                     let (ts, i, o) = extractSymbolsATT $ to ATT a
 >                     in werr f1 ts >> w2 i >> w3 o
@@ -901,13 +602,13 @@ in order to deal with spaces or other special characters.
 >                   (FSA Integer String -> FSA n String) -> Expr -> IO Env
 >           disp = disp' (display pc)
 >           disp' how x expr
->               = maybe err (how . x . normalize . desemantify)
->                 (makeAutomaton (dict, subexprs, Just expr))
+>               = either (hPutStr stderr . deescape)
+>                 (how . x . normalize . desemantify)
+>                 (makeAutomatonE e expr)
 >                 >> return e
 >           dot :: (Ord n, Show n) =>
 >                  (FSA Integer String -> FSA n String) -> Expr -> IO Env
->           dot = disp' (putStr . to Dot)
->           err = hPutStrLn stderr "could not parse expression"
+>           dot = disp' (writeStr . to Dot)
 >           f (_, xs) = '<' : unwords (map f' xs) ++ ">"
 >           f' Epsilon = "ε"
 >           f' (Symbol x) = x
@@ -963,37 +664,34 @@ in order to deal with spaces or other special characters.
 >                  >> return e
 >                 )
 
-
-> doHelp :: [(String, [ArgType], String)] -> String
-> doHelp xs = showArg ArgE ++ " = expression, "  ++
->             showArg ArgF ++ " = file, "        ++
->             showArg ArgI ++ " = int, "         ++
->             showArg ArgS ++ " = string, "      ++
->             showArg ArgV ++ " = variable\n\n"  ++
->             unlines s2
->     where cs = zipWith (++) (p1 xs) (map showArgs (p2 xs))
->           s1 = let l = foldr (max . length) 0 cs
->                in map (alignl (l + 2) . alignr l) cs
->           s2 = zipWith (++) s1 (p3 xs)
->           alignr l s = take (l - length s) (cycle " ") ++ s
->           alignl l s = take l (s ++ cycle " ")
->           showArg ArgE  =  "<e>"
->           showArg ArgF  =  "<f>"
->           showArg ArgI  =  "<i>"
->           showArg ArgS  =  "<s>"
->           showArg _     =  "<v>"
->           showArgs = concatMap ((' ':) . showArg)
->           p1 = map (\(a,_,_) -> a)
->           p2 = map (\(_,b,_) -> b)
->           p3 = map (\(_,_,c) -> c)
-
-> lessHelp :: [(String, [ArgType], String)] -> IO ()
-> lessHelp xs = do
->   mpager <- fmap (map snd . filter ((==) "PAGER" . fst)) getEnvironment
->   let ps     =  words $ head (mpager ++ ["less"])
+> lessHelp :: PlebConfig -> String -> IO ()
+> lessHelp pc xs = do
+>   mpager <- (map snd . filter ((==) "PAGER" . fst)) <$> getEnvironment
+>   lang' <- (map snd . filter ((==) "LANG" . fst)) <$> getEnvironment
+>   cols' <- (map snd . filter ((==) "COLUMNS" . fst)) <$> getEnvironment
+>   let topic  =  if null xs then ":help" else xs
+>       width  =  case cols' of
+>                   (x:_) -> if all (flip elem "0123456789") x
+>                            then (read x) - 2
+>                            else 78
+>                   _ -> 78
+>       lang   =  case lang' of
+>                   (x:_) -> x
+>                   _ -> ""
+>       text   =  map ( formatRS
+>                     $ if formatting pc
+>                       then spanTypes
+>                       else Map.fromList [('p',("","\n"))])
+>                 . showHelp width lang $ getTopic lang topic
+>       args   =  if formatting pc then ["-FsR"] else ["-Fs"]
+>       ps     =  case pagerProg pc of
+>                   Nothing  ->  case mpager of
+>                                  (x:_) -> words x
+>                                  _ -> []
+>                   Just ys -> uncurry (:) ys
 >       (p,s)  =  case ps of
 >                   (y:ys) -> (y,ys)
->                   _ -> ("less",[])
+>                   _ -> ("less",args)
 >       lessP  =  (proc p s)
 >                 { std_in = CreatePipe
 >                 , std_out = UseHandle stdout
@@ -1001,83 +699,49 @@ in order to deal with spaces or other special characters.
 >                 }
 >   (Just p_stdin, _, Just p_stderr, less_ph) <- createProcess lessP
 >   _ <- hGetContents p_stderr
->   hPutStr p_stdin (doHelp xs)
+>   hPutStr p_stdin $ unlines text
 >   hClose p_stdin
 >   _ <- waitForProcess less_ph
 >   return ()
 
-> doRelation :: Env -> Relation -> Maybe Bool
-> doRelation e r
->     = case r
->       of CEqual p1 p2   ->  relate id e (==) p1 p2
->          Equal p1 p2    ->  relate desemantify e (==) p1 p2
->          CImply p1 p2   ->  relate id e isSupersetOf p1 p2
->          IsAcom p       ->  check isAcom p
->          IsB p          ->  check isB p
->          IsCB p         ->  check isCB p
->          IsDef p        ->  check isDef p
->          IsFin p        ->  check isFinite p
->          IsFO2 p        ->  check isFO2 p
->          IsFO2B p       ->  check isFO2B p
->          IsFO2BF p      ->  check isFO2BF p
->          IsFO2S p       ->  check isFO2S p
->          IsGD p         ->  check isGD p
->          IsGLPT p       ->  check isGLPT p
->          IsGLT p        ->  check isGLT p
->          IsLAcom p      ->  check isLAcom p
->          IsLB p         ->  check isLB p
->          IsLPT p        ->  check isLPT p
->          IsLT p         ->  check isLT p
->          IsLTT p        ->  check isLTT p
->          IsMTDef p      ->  check isMTDef p
->          IsMTF p        ->  check isMTF p
->          IsMTGD p       ->  check isMTGD p
->          IsMTRDef p     ->  check isMTRDef p
->          IsPT p         ->  check isPT p
->          IsRDef p       ->  check isRDef p
->          IsSF p         ->  check isSF p
->          IsSL p         ->  check isSL p
->          IsSP p         ->  check isSP p
->          IsTDef p       ->  check isTDef p
->          IsTGD p        ->  check isTGD p
->          IsTLAcom p     ->  check isTLAcom p
->          IsTLB p        ->  check isTLB p
->          IsTLT p        ->  check isTLT p
->          IsTLPT p       ->  check isTLPT p
->          IsTLTT p       ->  check isTLTT p
->          IsTRDef p      ->  check isTRDef p
->          IsTrivial p    ->  check isTrivial p
->          IsTSL p        ->  check isTSL p
->          IsVariety t s p
->              -> case t of
->                   VTStar -> check (isV True s) p
->                   VTPlus -> check (isV False s) p
->                   VTTier -> check (isV False s . project) p
->          Subset p1 p2   ->  relate desemantify e isSupersetOf p1 p2
->          SSubset p1 p2  ->  relate desemantify e isProperSupersetOf p1 p2
->     where check f p = fmap (f . normalize . desemantify)
->                       . makeAutomaton
->                       $ (\(a, b, _) -> (a, b, Just p)) e
->           isV a b = fromMaybe False . isVariety a b
+"Relation" isn't really just a "relation" anymore,
+as it carries along a set of parameters.
+Pure relations need to be wrapped.
+The outer Either is for when parsing fails,
+the inner Maybe is Nothing::False, (Just params)::True
+For RDyad: can't just insert both, as we need equal alphabets,
+and insertion overrides "it", so if "it" appears in an expression,
+things go wonky.
+Create, then extend, then operate.
 
-> relate :: (FSA Integer (Maybe String) -> x) ->
->           Env ->
->           (x -> x -> a) -> Expr -> Expr ->
->           Maybe a
-> relate g (a,b,_) f p1 p2 = f' <$> makeAutomaton e1 <*> makeAutomaton e2
->     where e1 = (a, b, Just p1)
->           e2 = (a, b, Just p2)
->           f' x y = let ss = collapse (maybe id insert) empty $
->                             union (alphabet x) (alphabet y)
->                    in f (g $ semanticallyExtendAlphabetTo ss x)
->                         (g $ semanticallyExtendAlphabetTo ss y)
+> doRelation :: Env -> Relation
+>            -> Either String (Maybe [Parameter String])
+> doRelation e r
+>     = case r of
+>         RMono f p ->  f <$> makeAutomatonE e p
+>         RDyad f p1 p2
+>             ->  let m1 = makeAutomatonE e p1
+>                     m2 = makeAutomatonE e p2
+>                     ax = foldr (maybe id insert) Set.empty . alphabet
+>                     u  = Set.union <$> (ax <$> m1) <*> (ax <$> m2)
+>                     s  = semanticallyExtendAlphabetTo <$> u
+>                 in f <$> (s <*> m1) <*> (s <*> m2)
 
 > act :: PlebConfig ->  Env -> Trither Command Relation Env -> IO Env
 > act pc d = trither
 >            (doCommand pc d)
->            (\r -> maybe err print (doRelation d r) >> return d)
+>            (\r -> either err printP (doRelation d r) >> return d)
 >            return
->     where err = hPutStrLn stderr "could not parse relation"
+>     where err = hPutStr stderr
+>           printP = writeStrLn . showParameters
+
+> showParameters :: Show e => Maybe [Parameter e] -> String
+> showParameters Nothing = "False"
+> showParameters (Just []) = "True"
+> showParameters (Just xs)
+>     = "True: " ++ intercalate ", " (map showP xs)
+>     where showP (PInt s x) = s ++ "=" ++ show x
+>           showP (PSymSet s x) = s ++ "=" ++ deescape (formatSet x)
 
 > importScript :: PlebConfig -> Env -> [String] -> IO Env
 > importScript _ e [] = return e
@@ -1088,6 +752,14 @@ in order to deal with spaces or other special characters.
 
 > deescape :: String -> String
 > deescape ('\\' : '&' : xs) = deescape xs
+> deescape ('\\' : 'a' : xs) = '\a' : deescape xs
+> deescape ('\\' : 'b' : xs) = '\b' : deescape xs
+> deescape ('\\' : 'f' : xs) = '\f' : deescape xs
+> deescape ('\\' : 'n' : xs) = '\n' : deescape xs
+> deescape ('\\' : 'r' : xs) = '\r' : deescape xs
+> deescape ('\\' : 't' : xs) = '\t' : deescape xs
+> deescape ('\\' : 'v' : xs) = '\v' : deescape xs
+> deescape ('\\' : '\\' : xs) = '\\' : deescape xs
 > deescape ('\\' : x : xs)
 >     | isEmpty digits  =  x : deescape xs
 >     | otherwise       =  toEnum (read digits) : deescape others
@@ -1187,3 +859,77 @@ in order to deal with spaces or other special characters.
 >                     <$> catchIOError getHomeDirectory (const (pure "~"))
 >         _ -> pure fp
 >     where parts = splitDirectories fp
+
+
+
+
+
+> greenOrderL :: (Ord n, Ord e, Show e) => FSA n e -> String
+> greenOrderL = greenOrder gl
+>     where gl m x y = State x `Set.member` primitiveIdealL m (State y)
+> greenOrderR :: (Ord n, Ord e, Show e) => FSA n e -> String
+> greenOrderR = greenOrder gr
+>     where gr m x y = State x `Set.member` primitiveIdealR m (State y)
+> greenOrderJ :: (Ord n, Ord e, Show e) => FSA n e -> String
+> greenOrderJ = greenOrder gj
+>     where gj m x y = State x `Set.member` primitiveIdeal2 m (State y)
+
+> greenOrder :: (Ord n, Ord e, Show e) =>
+>               (  FSA ([Maybe n], [Symbol e]) e
+>               -> ([Maybe n], [Symbol e])
+>               -> ([Maybe n], [Symbol e]) -> Bool)
+>            -> FSA n e -> String
+> greenOrder o f = showOrder isMonoid . sccGraph
+>                  . renameStatesBy (unsymbols . snd)
+>                  $ orderGraph (o m) m
+>     where m = syntacticMonoid f
+>           isMonoid
+>               = case Set.toList (initials m) of
+>                   (y:_) -> any ((==y) . destination) (transitions m)
+>                   _ -> False
+
+> -- |Draw the Hasse diagram of the given ordered graph
+> -- in GraphViz @dot@ format.
+> showOrder :: (Ord n, Show n) => Bool -> FSA (Set [n]) () -> String
+> showOrder i g
+>     = unlines
+>       ([ "digraph {", "graph [rankdir=BT]"
+>        , "node [shape=box]", "edge [dir=none]" ]
+>       ++ sts
+>       ++ map (uncurry showtr) (reduce rel)
+>       ++ ["}"]
+>       )
+>     where qs = zip (map show [1::Integer ..]) . Set.toList $ states g
+>           rel = [ (fst x, fst y)
+>                 | x <- qs, y <- qs
+>                 , x /= y
+>                 , Transition { source = snd x
+>                              , destination = snd y
+>                              , edgeLabel = Symbol () }
+>                   `elem` transitions g
+>                 ]
+>           showstr s = if null s then
+>                           if i then "*" else ""
+>                       else
+>                           intercalate "\x2009" $ map showish s
+>           showset x = '{' : intercalate ", " (map showstr x) ++ "}"
+>           sts = map
+>                 (\(x,y) ->
+>                  concat [ x
+>                         , " [label=\""
+>                         , showset . Set.toList $ nodeLabel y
+>                         , "\"];"]
+>                 ) qs
+>           showish = deescape . filter (/= '"') . show
+>           showtr x y = x ++ " -> " ++ y ++ ";"
+
+Compute the transitive reduction of an acyclic graph
+which is specified by source/destination pairs.
+The precondition, that the graph be acyclic, is not checked.
+
+> reduce :: (Eq a) => [(a,a)] -> [(a,a)]
+> reduce ps = [(x,y) | x <- nodes, y <- nodes, y `elem` ex x,
+>              all ((`notElem` ps) . flip (,) y) (ex x)]
+>     where nodes = nub $ map fst ps ++ map snd ps
+>           ex p = let n = map snd $ filter ((p ==) . fst) ps
+>                  in n ++ concatMap ex n
