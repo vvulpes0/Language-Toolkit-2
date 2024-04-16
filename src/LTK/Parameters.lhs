@@ -36,6 +36,7 @@
 > import LTK.Extract.SL (slQ)
 > import LTK.Tiers (project, tier)
 
+> -- |A named parameter.
 > data Parameter e = PInt String Int
 >                  | PSymSet String (Set e)
 >                    deriving (Eq, Ord, Read, Show)

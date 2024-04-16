@@ -7,7 +7,7 @@
 
 > {-|
 > Module:    LTK.Porters.Pleb
-> Copyright: (c) 2018-2023 Dakotah Lambert
+> Copyright: (c) 2018-2024 Dakotah Lambert
 > License:   MIT
 
 > The (P)iecewise / (L)ocal (E)xpression (B)uilder.
@@ -251,6 +251,9 @@
 >           universe = either (const Set.empty) id
 >                      (definition "universe" dict)
 
+> -- |Reset the "@universe@" to contain all and only other symbols used.
+> --
+> -- @since 1.2
 > restoreUniverse :: Env -> Env
 > restoreUniverse (d, s) = (define "universe" syms d, s)
 >     where syms = Map.foldr (Set.union . usedSymbols)
