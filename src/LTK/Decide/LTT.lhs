@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.LTT
-> Copyright : (c) 2019,2021-2023 Dakotah Lambert
+> Copyright : (c) 2019,2021-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -35,6 +35,8 @@ for all idempotent e and f, and for all a,b,u it holds that
 eafuebf = ebfueaf.
 
 > -- |True iff the semigroup recognizes an LTT stringset.
+> --
+> -- @since 1.2
 > isLTTs :: FiniteSemigroupRep s => s -> Bool
 > isLTTs s = isAperiodic s && all (uncurry go) [(a,b) | a <- is, b <- is]
 >     where t = fstable s

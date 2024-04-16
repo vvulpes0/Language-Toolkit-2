@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.Acom
-> Copyright : (c) 2022-2023 Dakotah Lambert
+> Copyright : (c) 2022-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -32,6 +32,8 @@
 > isAcomM = isAcom
 
 > -- |True iff the semigroup is aperiodic and commutative
+> --
+> -- @since 1.2
 > isAcoms :: FiniteSemigroupRep s => s -> Bool
 > isAcoms = both isAperiodic isCommutative
 

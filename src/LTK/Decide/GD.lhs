@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.GD
-> Copyright : (c) 2021-2023 Dakotah Lambert
+> Copyright : (c) 2021-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -29,6 +29,8 @@
 
 > -- |True iff the semigroup satisfies \(eSe=e\)
 > -- for all idempotents \(e\).
+> --
+> -- @since 1.2
 > isGDs :: FiniteSemigroupRep s => s -> Bool
 > isGDs = locally isTrivial
 
@@ -41,5 +43,7 @@
 > isTGDM = isGDM . project
 
 > -- |True iff the projected subsemigroup satisfies eSe=e
+> --
+> -- @since 1.2
 > isTGDs :: FiniteSemigroupRep s => s -> Bool
 > isTGDs = isGDs . projectedSubsemigroup

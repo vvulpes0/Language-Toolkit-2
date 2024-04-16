@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEB 5 "2023-06-06" "Version 1.1" "Language Toolkit"
+.TH PLEB 5 "2024-04-16" "Version 1.2" "Language Toolkit"
 .SH NOM
 pleb \- Piecewise / Local Expression Builder
 .SH DESCRIPTION
@@ -313,6 +313,12 @@ Quotients à droit d'opérandes, qui s'associent à droite.
 Le quotient à droit B/A est l'ensemble de chaînes
 qui peuve faire un mot en B en prefixant
 à quelquechose en A.
+.TP
+.B .@.
+Ordre.
+La position la plus à gauche correspondant à chaque operande
+se trouve plus à droite que
+la position la plus à gauche correspondant à l'operande précédent.
 .SS Les opérateurs unaire
 Cette section décrit les opérations unaires
 telles que la précédente décrit les n-aires.
@@ -399,6 +405,9 @@ Les synonymes suivent.
 .TP
 .B @
 <U+2219> [bullet operator]
+.TP
+.B .@.
+.<U+2219>. [bullet operator]
 .TP
 .B !
 <U+00AC> [not sign]

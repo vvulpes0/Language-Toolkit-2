@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEB 5 "2023-06-06" "Version 1.1" "Language Toolkit"
+.TH PLEB 5 "2024-04-16" "Version 1.2" "Language Toolkit"
 .SH NAME
 pleb \- Piecewise / Local Expression Builder
 .SH DESCRIPTION
@@ -306,6 +306,12 @@ a generalization of the Brzozowski derivative.
 Right-quotients of the operands, associating to the right.
 The right-quotient B/A is the set of strings that can be
 prepended to strings in A to get a string in B.
+.TP
+.B .@.
+Strictly ordered overlay of the operands.
+Accepts strings for which each operand has a match
+whose leftmost position is further to the right
+than that of the preceding operand.
 .SS Unary Operators
 This section describes the unary relations just as
 the previous section described the n-ary ones.
@@ -398,6 +404,9 @@ there is a unicode syntax that provides the following synonyms:
 .TP
 .B @
 <U+2219> [bullet operator]
+.TP
+.B .@.
+.<U+2219>. [bullet operator]
 .TP
 .B !
 <U+00AC> [not sign]

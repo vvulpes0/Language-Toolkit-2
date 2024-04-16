@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.DotDepth
-> Copyright : (c) 2021-2023 Dakotah Lambert
+> Copyright : (c) 2021-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implement algorithms to decide whether a given FSA
@@ -9,6 +9,8 @@
 > using the equations presented by Knast's 1983 "A semigroup
 > characterization of dot-depth one languages"
 > https://doi.org/10.1051/ita/1983170403211
+>
+> @since 1.2
 > -}
 > module LTK.Decide.DotDepth (isDot1, isDot1M, isDot1s) where
 

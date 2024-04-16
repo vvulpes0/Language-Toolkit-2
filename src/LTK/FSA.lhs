@@ -13,7 +13,7 @@
 
 > {-|
 > Module    : LTK.FSA
-> Copyright : (c) 2014-2023 Dakotah Lambert
+> Copyright : (c) 2014-2024 Dakotah Lambert
 > License   : MIT
 
 > The purpose of this module is to define an interface to a generic,
@@ -600,6 +600,8 @@ function `delta` from an FSA, a symbol, and a state to a set of states:
 > -- |Return Just the longest sequence \(u\) of symbols
 > -- such that every word in the language is \(uv\) for some \(v\).
 > -- If the language is empty, return None.
+> --
+> -- @since 1.2
 > commonPrefix :: (Ord e, Ord n) => FSA n e -> Maybe [e]
 > commonPrefix f' = fmap go q
 >     where f = normalize f'
@@ -618,6 +620,8 @@ function `delta` from an FSA, a symbol, and a state to a set of states:
 > -- |Return Just the longest sequence \(v\) of symbols
 > -- such that every word in the language is \(uv\) for some \(u\).
 > -- If the language is empty, return None.
+> --
+> -- @since 1.2
 > commonSuffix :: (Ord e, Ord n) => FSA n e -> Maybe [e]
 > commonSuffix = fmap Prelude.reverse . commonPrefix . LTK.FSA.reverse
 
@@ -959,6 +963,8 @@ Other Combinations
 > -- such that the beginning of \(y\)
 > -- lies strictly later than the beginning of \(x\)
 > -- yet no later than the end of \(x\).
+> --
+> -- @since 1.2
 > autStrictOrderOverlay :: (Ord n1, Ord n2, Ord e) =>
 >                          FSA n1 e
 >                       -> FSA n2 e
@@ -1531,6 +1537,8 @@ this is not necessarily represented as a graph.
 > -- Return the transition semigroup: this is syntactic
 > -- if the automaton is minimal
 > -- or shaped like the Cayley graph of its monoid.
+> --
+> -- @since 1.2
 > syntacticSemigroup :: (Ord n, Ord e) => FSA n e -> GeneratedAction
 > syntacticSemigroup = unordered . syntacticOSemigroup
 
@@ -1541,6 +1549,8 @@ this is not necessarily represented as a graph.
 > -- Return the transition semigroup: this is syntactic
 > -- if the automaton is minimal
 > -- or shaped like the Cayley graph of its monoid.
+> --
+> -- @since 1.2
 > syntacticOSemigroup :: (Ord n, Ord e) =>
 >                        FSA n e -> OrderedSemigroup GeneratedAction
 > syntacticOSemigroup = syntacticO False
@@ -1550,6 +1560,8 @@ this is not necessarily represented as a graph.
 > -- Return the transition monoid: this is syntactic
 > -- if the automaton is minimal
 > -- or shaped like the Cayley graph of its monoid.
+> --
+> -- @since 1.2
 > syntacticOMonoid :: (Ord n, Ord e) =>
 >                     FSA n e -> OrderedSemigroup GeneratedAction
 > syntacticOMonoid = syntacticO True
@@ -1577,6 +1589,8 @@ Graphing an Order
 > -- |Create a graph whose vertices are states of the given FSA
 > -- and where a directed edge exists from \(p\) to \(q\)
 > -- if and only if \(p\mathcal{R}q\) under the given relation.
+> --
+> -- @since 1.2
 > orderGraph :: (Ord n, Ord e) =>
 >               (n -> n -> Bool) -> FSA n e -> FSA n ()
 > orderGraph (#) f
@@ -1596,6 +1610,8 @@ Graphing an Order
 
 > -- |Return the set of states in the same strongly connected component
 > -- as the given state.
+> --
+> -- @since 1.2
 > scc :: (Ord n, Ord e) => FSA n e -> n -> Set n
 > scc f n = Set.map nodeLabel
 >           . Set.filter (Set.member (State n) . primitiveIdealR f)
@@ -1603,6 +1619,8 @@ Graphing an Order
 
 > -- |Return a graph of the strongly connected components
 > -- of the given FSA and the directed connections between them.
+> --
+> -- @since 1.2
 > sccGraph :: (Ord n, Ord e) => FSA n e -> FSA (Set n) ()
 > sccGraph f = g . renameSymbolsBy (const ()) $ renameStatesBy (scc f) f
 >     where g m = m { transitions = Set.filter

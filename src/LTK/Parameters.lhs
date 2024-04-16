@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Parameters
-> Copyright : (c) 2023 Dakotah Lambert
+> Copyright : (c) 2023-2024 Dakotah Lambert
 > License   : MIT
 > 
 > Many subregular classes are parameterized.
@@ -16,6 +16,8 @@
 >
 > All arguments should be given in minimal form.
 > This is never checked.
+>
+> @since 1.2
 > -}
 > module LTK.Parameters ( Parameter(..)
 >                       , pTier
@@ -34,6 +36,7 @@
 > import LTK.Extract.SL (slQ)
 > import LTK.Tiers (project, tier)
 
+> -- |A named parameter.
 > data Parameter e = PInt String Int
 >                  | PSymSet String (Set e)
 >                    deriving (Eq, Ord, Read, Show)

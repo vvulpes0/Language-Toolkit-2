@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.CB
-> Copyright : (c) 2021-2023 Dakotah Lambert
+> Copyright : (c) 2021-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -27,5 +27,7 @@
 > isCBM = isCB
 
 > -- |True iff the semigroup is a semilattice.
+> --
+> -- @since 1.2
 > isCBs :: FiniteSemigroupRep s => s -> Bool
 > isCBs = both isJTrivial isBand

@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.GLPT
-> Copyright : (c) 2021-2023 Dakotah Lambert
+> Copyright : (c) 2021-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a syntactic
@@ -31,5 +31,7 @@
 > isGLPTM = isGLPT
 
 > -- |True iff the given semigroup is in \(\mathbf{M_e J}\).
+> --
+> -- @since 1.2
 > isGLPTs :: FiniteSemigroupRep s => s -> Bool
 > isGLPTs = all isJTrivial . emee

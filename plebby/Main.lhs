@@ -140,7 +140,7 @@
 >                    , ":help for help"
 >                    ]
 >           name = "plebby"
->           version = "1.1"
+>           version = "1.2"
 >           url = "https://hackage.haskell.org/package/language-toolkit"
 > main :: IO ()
 > main = do
@@ -707,17 +707,25 @@ in order to deal with spaces or other special characters.
 "Relation" isn't really just a "relation" anymore,
 as it carries along a set of parameters.
 Pure relations need to be wrapped.
-The outer Maybe is for when parsing fails,
+The outer Either is for when parsing fails,
 the inner Maybe is Nothing::False, (Just params)::True
+For RDyad: can't just insert both, as we need equal alphabets,
+and insertion overrides "it", so if "it" appears in an expression,
+things go wonky.
+Create, then extend, then operate.
 
 > doRelation :: Env -> Relation
 >            -> Either String (Maybe [Parameter String])
 > doRelation e r
 >     = case r of
->         RMono f p ->  fmap f $ makeAutomatonE e p
+>         RMono f p ->  f <$> makeAutomatonE e p
 >         RDyad f p1 p2
->             ->  let e' = insertExpr (insertExpr e p1) p2
->                 in f <$> makeAutomatonE e' p1 <*> makeAutomatonE e' p2
+>             ->  let m1 = makeAutomatonE e p1
+>                     m2 = makeAutomatonE e p2
+>                     ax = foldr (maybe id insert) Set.empty . alphabet
+>                     u  = Set.union <$> (ax <$> m1) <*> (ax <$> m2)
+>                     s  = semanticallyExtendAlphabetTo <$> u
+>                 in f <$> (s <*> m1) <*> (s <*> m2)
 
 > act :: PlebConfig ->  Env -> Trither Command Relation Env -> IO Env
 > act pc d = trither

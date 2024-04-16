@@ -14,6 +14,8 @@
 > The classes not closed under complementation are not classified
 > by their syntactic monoids or semigroups, but by properties of
 > the automaton from which it was derived.
+>
+> @since 1.2
 > -}
 > module LTK.DecideS (
 >                    -- * Piecewise classes

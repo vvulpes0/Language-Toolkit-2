@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.SF
-> Copyright : (c) 2019,2021-2023 Dakotah Lambert
+> Copyright : (c) 2019,2021-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -29,5 +29,7 @@
 > isSFM = trivialUnder hEquivalence
 
 > -- |True iff the semigroup is aperiodic.
+> --
+> -- @since 1.2
 > isSFs :: FiniteSemigroupRep s => s -> Bool
 > isSFs = isAperiodic

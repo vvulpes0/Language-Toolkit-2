@@ -246,10 +246,10 @@ then A comes before B.
 >           noi f = filter ((`elem` s) . f) . filter ((`notElem` p) . f)
 >           next = noi snd $ noi fst xs
 
-Version numbers are per utility
+Version numbers are no longer per utility
 
 > printVersion :: IO ()
-> printVersion = putStrLn "Version 1.0"
+> printVersion = putStrLn "Version 1.2"
 
 > usageHeader :: String
 > usageHeader = "usage: classify [OPTION...] class ..."
