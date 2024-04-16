@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.TLPT
-> Copyright : (c) 2021-2023 Dakotah Lambert
+> Copyright : (c) 2021-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a syntactic
@@ -28,5 +28,7 @@
 > isTLPTM = isLPTM . project
 
 > -- |True iff the semigroup recognizes a TLPT stringset.
+> --
+> -- @since 1.2
 > isTLPTs :: FiniteSemigroupRep s => s -> Bool
 > isTLPTs = isLPTs . projectedSubsemigroup

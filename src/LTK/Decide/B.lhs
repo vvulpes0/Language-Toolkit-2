@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.B
-> Copyright : (c) 2022-2023 Dakotah Lambert
+> Copyright : (c) 2022-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -30,6 +30,8 @@
 > isBM = isB
 
 > -- |True iff the semigroup is a band.
+> --
+> -- @since 1.2
 > isBs :: FiniteSemigroupRep s => s -> Bool
 > isBs = isBand
 
@@ -42,6 +44,8 @@
 > isLBM = isLB
 
 > -- |True iff the semigroup is locally a band.
+> --
+> -- @since 1.2
 > isLBs :: FiniteSemigroupRep s => s -> Bool
 > isLBs = locally isBand
 
@@ -54,5 +58,7 @@
 > isTLBM = isLBM . project
 
 > -- |True iff the semigroup is locally a band on some tier.
+> --
+> -- @since 1.2
 > isTLBs :: FiniteSemigroupRep s => s -> Bool
 > isTLBs = isLBs . projectedSubsemigroup

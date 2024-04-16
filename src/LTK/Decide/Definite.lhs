@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.Definite
-> Copyright : (c) 2021-2023 Dakotah Lambert
+> Copyright : (c) 2021-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -44,6 +44,8 @@
 > isDefM = isDef
 
 > -- |True iff \(Se=e\) for idempotents \(e\).
+> --
+> -- @since 1.2
 > isDefs :: FiniteSemigroupRep s => s -> Bool
 > isDefs = isRDefs . dual
 
@@ -57,6 +59,8 @@
 > isRDefM = isRDef
 
 > -- |True iff \(eS=e\) for idempotents \(e\).
+> --
+> -- @since 1.2
 > isRDefs :: FiniteSemigroupRep s => s -> Bool
 > isRDefs = both isRTrivial (locally isTrivial)
 
@@ -69,6 +73,8 @@
 > isTDefM = isDefM . project
 
 > -- |Definite on the projected subsemigroup.
+> --
+> -- @since 1.2
 > isTDefs :: FiniteSemigroupRep s => s -> Bool
 > isTDefs = isDefs . projectedSubsemigroup
 
@@ -81,5 +87,7 @@
 > isTRDefM = isRDefM . project
 
 > -- |Reverse definite on the projected subsemigroup.
+> --
+> -- @since 1.2
 > isTRDefs :: FiniteSemigroupRep s => s -> Bool
 > isTRDefs = isRDefs . projectedSubsemigroup

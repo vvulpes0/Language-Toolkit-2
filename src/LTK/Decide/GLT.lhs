@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.GLT
-> Copyright : (c) 2021-2023 Dakotah Lambert
+> Copyright : (c) 2021-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -29,5 +29,7 @@
 > isGLTM = isGLT
 
 > -- |True iff the semigroup lies in \(M_e J_1\).
+> --
+> -- @since 1.2
 > isGLTs :: FiniteSemigroupRep s => s -> Bool
 > isGLTs = all (both isJTrivial isBand) . emee

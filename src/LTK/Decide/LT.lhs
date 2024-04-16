@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.LT
-> Copyright : (c) 2019,2021-2023 Dakotah Lambert
+> Copyright : (c) 2019,2021-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -33,5 +33,7 @@ commutative monoid.
 > isLTM = isLT
 
 > -- |True iff the given semigroup is locally a semilattice.
+> --
+> -- @since 1.2
 > isLTs :: FiniteSemigroupRep s => s -> Bool
 > isLTs = locally (both isJTrivial isBand)

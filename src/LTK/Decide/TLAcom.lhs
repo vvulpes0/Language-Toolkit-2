@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.TLAcom
-> Copyright : (c) 2022-2023 Dakotah Lambert
+> Copyright : (c) 2022-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -27,5 +27,7 @@
 > isTLAcomM = isLAcomM . project
 
 > -- |True iff the semigroup recognizes a TLAcom stringset.
+> --
+> -- @since 1.2
 > isTLAcoms :: FiniteSemigroupRep s => s -> Bool
 > isTLAcoms = isLAcoms . projectedSubsemigroup

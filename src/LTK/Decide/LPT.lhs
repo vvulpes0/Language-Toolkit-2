@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.LPT
-> Copyright : (c) 2021-2023 Dakotah Lambert
+> Copyright : (c) 2021-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a syntactic
@@ -27,5 +27,7 @@
 > isLPTM = isLPT
 
 > -- |True iff the semigroup is locally \(\mathcal{J}\)-trivial.
+> --
+> -- @since 1.2
 > isLPTs :: FiniteSemigroupRep s => s -> Bool
 > isLPTs = locally isJTrivial

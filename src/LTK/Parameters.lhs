@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Parameters
-> Copyright : (c) 2023 Dakotah Lambert
+> Copyright : (c) 2023-2024 Dakotah Lambert
 > License   : MIT
 > 
 > Many subregular classes are parameterized.
@@ -16,6 +16,8 @@
 >
 > All arguments should be given in minimal form.
 > This is never checked.
+>
+> @since 1.2
 > -}
 > module LTK.Parameters ( Parameter(..)
 >                       , pTier

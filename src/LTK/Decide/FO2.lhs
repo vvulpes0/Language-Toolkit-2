@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.FO2
-> Copyright : (c) 2021-2023 Dakotah Lambert
+> Copyright : (c) 2021-2024 Dakotah Lambert
 > License   : MIT
 
 > This module implements an algorithm to decide whether a given FSA
@@ -38,6 +38,8 @@
 > isFO2M = isFO2
 
 > -- |True iff the monoid represents a language in \(\mathrm{FO}^{2}[<]\).
+> --
+> -- @since 1.2
 > isFO2s :: FiniteSemigroupRep s => s -> Bool
 > isFO2s = isDA
 
@@ -57,6 +59,8 @@ the subsemigroup eSe corresponds to something FO2[<]-definable
 
 > -- |True iff the local submonoids are in \(\mathrm{FO}^{2}[<]\).
 > -- This means the whole is in \(\mathrm{FO}^{2}[<,+1]\).
+> --
+> -- @since 1.2
 > isFO2Ss :: FiniteSemigroupRep s => s -> Bool
 > isFO2Ss = locally isDA
 
@@ -88,6 +92,8 @@ is in MeDA.
 
 > -- |True iff the semigroup represents a stringset
 > -- that satisfies @isFO2B@.
+> --
+> -- @since 1.2
 > isFO2Bs :: FiniteSemigroupRep s => s -> Bool
 > isFO2Bs = all isDA . emee
 

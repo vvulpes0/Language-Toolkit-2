@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide.Multitier
-> Copyright : (c) 2022-2023 Dakotah Lambert
+> Copyright : (c) 2022-2024 Dakotah Lambert
 > License   : MIT
 
 > The Boolean closure of tier-based locally V is a subclass
@@ -50,6 +50,8 @@
 > isMTDefM = isMTDef
 
 > -- |True iff the semigroup satisifes \(xyx^{\omega}=yx^{\omega}\).
+> --
+> -- @since 1.2
 > isMTDefs :: FiniteSemigroupRep s => s -> Bool
 > isMTDefs s = all (uncurry go) [(a,b) | a <- xs, b <- xs]
 >     where t = fstable s
@@ -62,6 +64,8 @@
 > isMTRDefM = isMTRDef
 
 > -- |True iff the semigroup satisifes \(x^{\omega}yx=x^{\omega}y\).
+> --
+> -- @since 1.2
 > isMTRDefs :: FiniteSemigroupRep s => s -> Bool
 > isMTRDefs = isMTDefs . dual
 
@@ -72,6 +76,8 @@
 
 > -- |True iff the semigroup is aperiodic and satisfies
 > -- \(x^{\omega}y=yx^{\omega}\).
+> --
+> -- @since 1.2
 > isMTFs :: FiniteSemigroupRep s => s -> Bool
 > isMTFs = both isMTDefs isMTRDefs
 
@@ -83,6 +89,8 @@
 > -- \(x^{\omega}uxvx^{\omega}=x^{\omega}uvx^{\omega}\)
 > -- and \(x^{\omega}uxzvz^{\omega}=x^{\omega}uzxvz^{\omega}\).
 > -- Thanks to Almeida (1995) for the simplification.
+> --
+> -- @since 1.2
 > isMTGDs :: FiniteSemigroupRep s => s -> Bool
 > isMTGDs s = and [f u v x | u <- xs, v <- xs, x <- xs]
 >     where t = fstable s
