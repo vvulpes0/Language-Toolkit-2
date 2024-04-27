@@ -351,10 +351,8 @@ prevents having to descend through the tree to find this information.
 >          Conjunction es   -> f univLang flatIntersection es
 >          Disjunction es   -> f emptyLanguage flatUnion es
 >          Domination es
->              -> f emptyStr
->                 (mconcat .
->                  intersperse (totalWithAlphabet (singleton Nothing))
->                 ) es
+>              -> f emptyStr mconcat
+>                 $ intersperse (Factor $ PLFactor False False []) es
 >          DownClose ex
 >              -> renameStates . minimize . subsequenceClosure $
 >                 automatonFromExpr ex

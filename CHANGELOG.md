@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 1.2.0.1 — 2024-04-27
+### Changed
+* PLEB: fixed @@ ("Domination") operator
+* reenabled -O2 compilation
+
 ## Version 1.2 — 2024-04-16
 ### Added
 * commonPrefix and commonSuffix functions on automata
