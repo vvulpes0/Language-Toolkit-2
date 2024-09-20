@@ -229,7 +229,6 @@
 >              | Unset String
 >              | Write FilePath Expr
 >              | WriteATT FilePath FilePath FilePath Expr
->                deriving (Eq, Read, Show)
 
 > data Relation
 >     = RDyad (  FSA Integer (Maybe String)
@@ -502,6 +501,8 @@ in order to deal with spaces or other special characters.
 >          LearnSL k file -> selearn (fSL k) file
 >          LearnSP k file -> selearn (fSP k) file
 >          LearnTSL k file -> selearn (fTSL k) file
+>          Loadstate file -> hPutStrLn stderr "deprecated" >> return e
+>          {-
 >          Loadstate file
 >              -> catchIOError (read <$> readFileWithExpansion file)
 >                 (const
@@ -509,6 +510,7 @@ in order to deal with spaces or other special characters.
 >                     ("failed to read \"" ++ file ++ "\"")
 >                  >> return e
 >                 )
+>          -}
 >          Read file
 >              -> catchIOError
 >                 (doStatements e <$> readFileWithExpansion file)
@@ -553,12 +555,15 @@ in order to deal with spaces or other special characters.
 >          Reset -> return (Map.empty, Map.empty)
 >          RestoreUniverse -> return (restoreUniverse e)
 >          RestrictUniverse -> return (restrictUniverse e)
+>          Savestate file -> hPutStrLn stderr "deprecated" >> return e
+>          {-
 >          Savestate file
 >              -> catchIOError (writeAndCreateDir file . unlines $ [show e])
 >                 (const $
 >                  hPutStrLn stderr
 >                  ("failed to write \"" ++ file ++ "\"")
 >                 ) >> return e
+>          -}
 >          Show name
 >              -> if both
 >                    (flip Map.notMember subexprs)
@@ -569,7 +574,7 @@ in order to deal with spaces or other special characters.
 >                      >> return e
 >                 else mapM_
 >                      (\a ->
->                       writeStrLn (name ++ " <- " ++ show a)
+>                       writeStrLn (name ++ " <- " {- ++ show a -})
 >                      ) (Map.filterWithKey (\k _ -> k == name) subexprs)
 >                      >> mapM_
 >                      (\s ->
