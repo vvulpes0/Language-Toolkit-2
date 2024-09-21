@@ -54,6 +54,7 @@
 >                            , empty, many, some, (<|>))
 > import Data.Char (isLetter, isSpace)
 > import Data.Foldable (asum)
+> import Data.Functor.Classes (Read1(..),Show1(..))
 > import Data.List (intersperse,foldl1')
 > import Data.Map (Map)
 > import Data.Set (Set)
@@ -83,9 +84,13 @@
 > -- |The environment: defined sets of symbols and defined expressions.
 > type Env = (Dictionary (Set String), Dictionary Expr)
 
-> newtype TypeY a = In { out :: a (TypeY a) }
+> newtype Fix a = In { out :: a (Fix a) }
+> instance Read1 f => Read (Fix f) where
+>     readsPrec d = map (mapfst In) . liftReadsPrec readsPrec readList d
+> instance Show1 f => Show (Fix f) where
+>     showsPrec d = liftShowsPrec showsPrec showList d . out
 
-> type Expr = TypeY ExprF
+> type Expr = Fix ExprF
 > -- |An expression, the root of an expression tree.
 > data ExprF a
 >     = Automaton (FSA Integer (Maybe String))
@@ -244,7 +249,7 @@
 
 > -- |Instantiate variables in an expression.
 > fillVars :: Env -> Expr -> Either String Expr
-> fillVars d = bottomUp (fillVarsEF d)
+> fillVars d = cata (fillVarsEF d)
 > fillVarsEF :: Env -> ExprF (Either String Expr) -> Either String Expr
 > fillVarsEF d@(_,subexprs) e
 >     = case e of
@@ -340,7 +345,7 @@ Therefore, this cleanup step has been removed.
 >                   PLFactor h t ps
 >                       -> PLFactor h t
 >                          $ map (map restrictUniverseS) ps
->           restrictUniverseE = bottomUp restrictUniverseEF
+>           restrictUniverseE = cata restrictUniverseEF
 >           restrictUniverseEF e
 >               = case e of
 >                   Automaton x
@@ -379,7 +384,7 @@ prevents having to descend through the tree to find this information.
 > -- |Create an t'FSA' from an expression tree,
 > -- complete with metadata regarding the constraint(s) it represents.
 > automatonFromExpr :: Expr -> FSA Integer (Maybe String)
-> automatonFromExpr = bottomUp automatonFromEF
+> automatonFromExpr = cata automatonFromEF
 > automatonFromEF :: ExprF (FSA Integer (Maybe String))
 >                 -> FSA Integer (Maybe String)
 > automatonFromEF e
@@ -456,7 +461,7 @@ prevents having to descend through the tree to find this information.
 > getSyms (SSVar _) = error "free variable in symset"
 
 > usedSymbols :: Expr -> Set String
-> usedSymbols = bottomUp usedSymbolsE
+> usedSymbols = cata usedSymbolsE
 > usedSymbolsE :: ExprF (Set String) -> Set String
 > usedSymbolsE e = case e of
 >     Automaton a     -> collapse (maybe id insert) Set.empty $ alphabet a
@@ -746,5 +751,91 @@ prevents having to descend through the tree to find this information.
 
 Traversals
 
-> bottomUp :: Functor f => (f a -> a) -> TypeY f -> a
-> bottomUp f = f . fmap (bottomUp f) . out
+> cata :: Functor f => (f a -> a) -> Fix f -> a
+> cata f = f . fmap (cata f) . out
+
+Read1 and Show1 for ExprF, in order to allow derived Read/Show on Expr
+
+> instance Read1 ExprF where
+>     liftReadsPrec rP rL d
+>         = readParen (d > app_prec)
+>           (\r ->
+>            case lex r of
+>              [("Automaton",s)]
+>                  -> [ (Automaton x, t)
+>                     | (x,t) <- readsPrec (app_prec + 1) s]
+>              [("Concatenation",s)] -> goN Concatenation s
+>              [("Conjunction",s)]   -> goN Conjunction s
+>              [("Disjunction",s)]   -> goN Conjunction s
+>              [("Domination",s)]    -> goN Domination s
+>              [("DownClose",s)]     -> goU DownClose s
+>              [("Factor",s)]
+>                  -> [ (Factor x, t)
+>                     | (x,t) <- readsPrec (app_prec + 1) s]
+>              [("Infiltration",s)]  -> goN Infiltration s
+>              [("Iteration",s)]     -> goU Iteration s
+>              [("Negation",s)]      -> goU Negation s
+>              [("Neutralize",s)]
+>                  -> [ (Neutralize x y, u)
+>                     | (x, t) <- readsPrec (app_prec + 1) s
+>                     , (y, u) <- rP (app_prec + 1) t]
+>              [("Reversal",s)]      -> goU Reversal s
+>              [("Shuffle",s)]       -> goN Shuffle s
+>              [("StrictOrder",s)]   -> goN StrictOrder s
+>              [("Tierify",s)]
+>                  -> [ (Tierify x y, u)
+>                     | (x, t) <- readsPrec (app_prec + 1) s
+>                     , (y, u) <- rP (app_prec + 1) t]
+>              [("QuotientL",s)]     -> goN QuotientL s
+>              [("QuotientR",s)]     -> goN QuotientR s
+>              [("UpClose",s)]       -> goU UpClose s
+>              [("Variable",s)]
+>                  -> [ (Variable x, t)
+>                     | (x,t) <- readsPrec (app_prec + 1) s]
+>              _                     -> []
+>           )
+>         where app_prec = 10
+>               goN f s = [(f xs, t) | (xs, t) <- rL s]
+>               goU f s = [(f x,  t) | (x,  t) <- rP (app_prec + 1) s]
+
+> instance Show1 ExprF where
+>     liftShowsPrec showP showL d e
+>         = case e of
+>             Automaton x
+>                 -> showParen (d > app_prec)
+>                    $ showString "Automaton " . showsPrec (app_prec+1) x
+>             Concatenation xs -> goL "Concatenation " xs
+>             Conjunction xs   -> goL "Conjunction " xs
+>             Disjunction xs   -> goL "Disjunction " xs
+>             Domination xs    -> goL "Domination " xs
+>             DownClose x      -> go1 "DownClose " x
+>             Factor x
+>                 -> showParen (d > app_prec)
+>                    $ showString "Factor " . showsPrec (app_prec+1) x
+>             Infiltration xs  -> goL "Infiltration " xs
+>             Iteration x      -> go1 "Iteration " x
+>             Negation x       -> go1 "Negation " x
+>             Neutralize s x
+>                 -> showParen (d > app_prec)
+>                    $ showString "Neutralize "
+>                      . showsPrec (app_prec+1) s
+>                      . showP (app_prec+1) x
+>             Reversal x       -> go1 "Reversal " x
+>             Shuffle xs       -> goL "Shuffle " xs
+>             StrictOrder xs   -> goL "StrictOrder " xs
+>             Tierify s x
+>                 -> showParen (d > app_prec)
+>                    $ showString "Neutralize "
+>                      . showsPrec (app_prec+1) s
+>                      . showP (app_prec+1) x
+>             QuotientL xs     -> goL "QuotientL " xs
+>             QuotientR xs     -> goL "QuotientR " xs
+>             UpClose x        -> go1 "UpClose " x
+>             Variable x
+>                 -> showParen (d > app_prec)
+>                    $ showString "Variable " . showString x
+>         where app_prec = 10
+>               goL s xs = showParen (d > app_prec)
+>                          $ showString s . showL xs
+>               go1 s x  = showParen (d > app_prec)
+>                          $ showString s . showP (app_prec + 1) x
