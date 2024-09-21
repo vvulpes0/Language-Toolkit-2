@@ -345,21 +345,21 @@ Therefore, this cleanup step has been removed.
 >                   PLFactor h t ps
 >                       -> PLFactor h t
 >                          $ map (map restrictUniverseS) ps
->           restrictUniverseE = cata restrictUniverseEF
+>           restrictUniverseE = cata (In . restrictUniverseEF)
 >           restrictUniverseEF e
 >               = case e of
 >                   Automaton x
->                       ->  In . Automaton $
+>                       ->  Automaton $
 >                           contractAlphabetTo
 >                           (insert Nothing (tmap Just universe))
 >                           x
 >                   Factor pf
->                       ->  In . Factor $ restrictUniverseF pf
+>                       ->  Factor $ restrictUniverseF pf
 >                   Neutralize ts ex
->                       ->  In $ (Neutralize (tmap restrictUniverseS ts)) ex
+>                       ->  Neutralize (tmap restrictUniverseS ts) ex
 >                   Tierify ts ex
->                       ->  In $ (Tierify (tmap restrictUniverseS ts)) ex
->                   _ -> In e
+>                       ->  Tierify (tmap restrictUniverseS ts) ex
+>                   _ -> e
 
 > -- |Create an t'FSA' from an expression tree and environment,
 > -- complete with metadata regarding the constraint(s) it represents.
