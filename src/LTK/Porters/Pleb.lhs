@@ -819,6 +819,7 @@ Read1 and Show1 for ExprF, in order to allow derived Read/Show on Expr
 >                 -> showParen (d > app_prec)
 >                    $ showString "Neutralize "
 >                      . showsPrec (app_prec+1) s
+>                      . showChar ' '
 >                      . showP (app_prec+1) x
 >             Reversal x       -> go1 "Reversal " x
 >             Shuffle xs       -> goL "Shuffle " xs
@@ -827,6 +828,7 @@ Read1 and Show1 for ExprF, in order to allow derived Read/Show on Expr
 >                 -> showParen (d > app_prec)
 >                    $ showString "Neutralize "
 >                      . showsPrec (app_prec+1) s
+>                      . showChar ' '
 >                      . showP (app_prec+1) x
 >             QuotientL xs     -> goL "QuotientL " xs
 >             QuotientR xs     -> goL "QuotientR " xs
