@@ -31,5 +31,5 @@
 
 = heavy-plus {/H, /S, /X, /Y}
 = heavy-plus` {/H`, /S`, /X`, /Y`}
-= heavy-plus' {/H', /S, /X', /Y'}
+= heavy-plus' {/H', /S', /X', /Y'}
 = heavy-plus* {H*,S*,X*,Y*}
