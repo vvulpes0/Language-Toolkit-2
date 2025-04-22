@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module : LTK.Porters
-> Copyright : (c) 2018-2020,2022-2023 Dakotah Lambert
+> Copyright : (c) 2018-2020,2022-2023,2025 Dakotah Lambert
 > License   : MIT
 > 
 > This module provides methods to convert automata to and from
@@ -23,6 +23,7 @@
 >        , Dot(Dot)
 >        , EggBox(EggBox)
 >        , SyntacticOrder(SyntacticOrder)
+>        , SyntacticSemilattice(SyntacticSemilattice)
 >        , Jeff(Jeff)
 >        , Pleb(Pleb)
 >        , ATT(ATT)
@@ -40,6 +41,7 @@
 
 > import LTK.FSA          (FSA, renameStates, renameSymbolsBy
 >                         , syntacticMonoid
+>                         , syntacticJSemigroup
 >                         )
 > import LTK.Porters.ATT  ( exportATT
 >                         , invertATT
@@ -49,6 +51,7 @@
 > import LTK.Porters.Dot  (exportDot, formatSet)
 > import LTK.Porters.EggBox (exportEggBox)
 > import LTK.Porters.SyntacticOrder (exportSyntacticOrder)
+> import LTK.Porters.SyntacticSemilattice (exportSyntacticSemilattice)
 > import LTK.Porters.Jeff ( exportJeff
 >                         , readJeff
 >                         , transliterate
@@ -120,6 +123,15 @@
 > newtype SyntacticOrder = SyntacticOrder SyntacticOrder
 > instance Exportable SyntacticOrder
 >     where fromFSA _ = exportSyntacticOrder . syntacticMonoid
+
+=== instances for SyntacticSemilattice (in Dot format)
+
+> -- |A Hasse diagram of the syntactic semilattice.
+> newtype SyntacticSemilattice
+>     = SyntacticSemilattice SyntacticSemilattice
+> instance Exportable SyntacticSemilattice
+>     where fromFSA _ = exportSyntacticSemilattice . syntacticJSemigroup
+
 
 === instances for Pleb format
 

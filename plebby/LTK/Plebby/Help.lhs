@@ -2,7 +2,7 @@
 
 > import Data.Char (isSpace, toLower, toUpper)
 > import Data.Either (isLeft, isRight)
-> import Data.List (foldl', isPrefixOf, sortBy)
+> import Data.List (isPrefixOf, sortBy)
 > import Data.Map (Map)
 > import qualified Data.Map as Map
 
@@ -1602,6 +1602,25 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "then so too is %<v:uxv>."
 >                   , "%<p:> %<h:SEE% ALSO>"
 >                   , "%<c::orderJ>, %<c::orderL>, %<c:orderR>,"
+>                   , "%<t:VISUALIZATION>"
+>                   ]))
+>             ]))
+>       , ( Left ":synsl"
+>         , ( [ArgE], [GraphCat]
+>           , Map.fromList
+>             [ ( ""
+>               , ( "display syntactic semilattice"
+>                 , unwords
+>                   [ "Graphically display a Hasse diagram"
+>                   , "of the syntactic semilattice"
+>                   , "on the given <%<a:expr>>."
+>                   , "The order is determined in the natural way"
+>                   , "by the join semilattice induced on sets"
+>                   , "of semigroup elements"
+>                   , "acting in simultaneity"
+>                   , "(as opposed to by choice)."
+>                   , "%<p:> %<h:SEE% ALSO>"
+>                   , "%<c::synmon>, %<c::synord>"
 >                   , "%<t:VISUALIZATION>"
 >                   ]))
 >             ]))

@@ -85,6 +85,7 @@
 > import LTK.Porters      ( ATT(ATT), ATTO(ATTO), Dot(Dot)
 >                         , EggBox(EggBox)
 >                         , SyntacticOrder(SyntacticOrder)
+>                         , SyntacticSemilattice(SyntacticSemilattice)
 >                         , Jeff(Jeff)
 >                         , formatSet, fromE, to
 >                         )
@@ -205,6 +206,7 @@
 >              | D_PSG Expr -- Display Powerset Graph
 >              | D_SM Expr -- Display Syntactic Monoid
 >              | D_SO Expr -- Display Syntactic Order
+>              | D_SSL Expr -- Display Syntactic Semilattice
 >              | Display Expr
 >              | Dotify Expr
 >              | DT_PSG Expr -- Dotify Powerset Graph
@@ -455,6 +457,7 @@ in order to deal with spaces or other special characters.
 >                 , (":subset", m2 (apBoth desemantify isSupersetOf))
 >                 , (":synmon", L . D_SM <$> pe)
 >                 , (":synord", L . D_SO <$> pe)
+>                 , (":synsl", L . D_SSL <$> pe)
 >                 , (":unset", error ":unset not defined here")
 >                 , (":writeATT", error ":writeatt not defined here")
 >                 , (":write", error ":write not defined here")
@@ -484,6 +487,7 @@ in order to deal with spaces or other special characters.
 >          D_PSG x -> disp (renameStatesBy formatSet . powersetGraph) x
 >          D_SM x -> disp (renameStatesBy f . syntacticMonoid) x
 >          D_SO x -> disp' (display' pc) (to SyntacticOrder) x
+>          D_SSL x -> disp' (display' pc) (to SyntacticSemilattice) x
 >          Dotify x -> dot id x
 >          DT_PSG x -> dot (renameStatesBy formatSet . powersetGraph) x
 >          DT_SM x -> dot (renameStatesBy f . syntacticMonoid) x

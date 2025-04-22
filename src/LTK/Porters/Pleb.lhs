@@ -112,7 +112,7 @@
 >     | QuotientR [a]
 >     | UpClose a
 >     | Variable String
->       deriving (Eq, Ord, Read, Show)
+>       deriving (Eq, Read, Show)
 > instance Functor ExprF where
 >    fmap _ (Automaton x)      = Automaton x
 >    fmap f (Concatenation xs) = Concatenation (map f xs)

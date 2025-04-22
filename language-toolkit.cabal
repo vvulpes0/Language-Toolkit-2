@@ -59,7 +59,7 @@ extra-source-files:  CHANGELOG.md
 
 source-repository head
   type:      git
-  location:  git://github.com/vvulpes0/Language-Toolkit-2.git
+  location:  https://github.com/vvulpes0/Language-Toolkit-2.git
   branch:    develop
 
 library
@@ -118,13 +118,14 @@ library
                 , LTK.Porters.Jeff
                 , LTK.Porters.Pleb
                 , LTK.Porters.SyntacticOrder
+                , LTK.Porters.SyntacticSemilattice
                 , LTK.Tiers
                 , LTK.Traversals
   -- Modules included in this library but not exported.
   -- other-modules:
   build-depends: array >=0.1 && <0.6
                , base >=4.2 && <5.0
-               , containers >=0.5 && <0.8
+               , containers >=0.5.11 && <0.8
                , deepseq >=1.1 && <1.6
                , parallel >=1.0 && <3.3
                , finite-semigroups >=0.1 && <0.2
