@@ -26,6 +26,7 @@
 >                    -- * Both Local and Piecewise
 >                    , isAcoms
 >                    , isCBs, isGLTs, isLPTs, isGLPTs, isSFs
+>                    , isSPLs
 >                    , isDot1s
 >                    -- * Tier-based generalizations
 >                    , isTDefs, isTRDefs, isTGDs
@@ -57,5 +58,6 @@
 > import LTK.Decide.TLAcom
 > import LTK.Decide.Definite
 > import LTK.Decide.DotDepth
+> import LTK.Decide.SPL
 > import LTK.Decide.Multitier
 > --import LTK.Decide.Variety

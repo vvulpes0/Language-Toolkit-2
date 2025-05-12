@@ -555,7 +555,9 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "If the language is in this class,"
 >                   , "then the value of this parameter, %<v:t>,"
 >                   , "is provided."
->                   , "%<p:>%<h:SEE% ALSO>"
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyM% [x*x=x*;xy=yx]>"
+>                   , "%<p:> %<h:SEE% ALSO>"
 >                   , "%<c::isCB>, %<c::isLTT>"
 >                   ]))
 >             ]))
@@ -569,6 +571,8 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "semigroup in which everything is idempotent,"
 >                   , "also known as a band, with respect to"
 >                   , "the current %<v:universe>."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyM% [x=xx]>"
 >                   ]))
 >             ]))
 >       , ( Left ":isCB"
@@ -587,6 +591,8 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "This is the class of locally 1-testable"
 >                   , "languages, or, equivalently, the piecewise"
 >                   , "1-testable languages."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyM% [x=xx;xy=yx]>"
 >                   , "%<p:> %<h:SEE% ALSO>"
 >                   , "%<c::isAcom>, %<c::isLT>, %<c::isPT>"
 >                   ]))
@@ -605,6 +611,8 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "If the language is in this class,"
 >                   , "then the value of this parameter, %<v:k>,"
 >                   , "is provided."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyS% [yx*=x*]>"
 >                   , "%<p:> %<h:SEE% ALSO>"
 >                   , "%<c::isGD>, %<c::isRDef>,"
 >                   , "%<c::isTDef>, %<c::isMTDef>"
@@ -623,6 +631,15 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "that appear in words. For instance, one might"
 >                   , "require that \"ab\" occurs, followed somewhere"
 >                   , "later by \"cd\"."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyS% [(e*af*b)*e*af*de*(cf*de*)*"
+>                   ++ "(e*af*b)*e*(cf*de*)*]>"
+>                   , "%<p:> %<h:SEE% ALSO>"
+>                   , "KNAST, Robert (1983)."
+>                   , "A Semigroup Characterization"
+>                   , "of Dot-Depth One Languages."
+>                   , "RAIRO 17(4) 321-330."
+>                   , "https://doi.org/10.1051/ita/1983170403211"
 >                   ]))
 >             ]))
 >       , ( Left ":isFinite"
@@ -647,6 +664,16 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "definable in the two-variable restriction of"
 >                   , "first-order logic with general precedence"
 >                   , "in the current %<v:universe>."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyM% [(xyz)*y(xyz)*=(xyz)*]>"
+>                   , "%<p:> %<h:SEE% ALSO>"
+>                   , "THERIEN, Denis & Thomas WILKE (1998)."
+>                   , "Over Words, Two Variables Are as Powerful"
+>                   , "as One Quantifier Alternation:"
+>                   , "FO²=Σ₂∩Π₂."
+>                   , "STOC 1998."
+>                   , "pp234-240."
+>                   , "https://doi.org/10.1145/276698.276749"
 >                   ]))
 >             ]))
 >       , ( Left ":isFO2B"
@@ -702,6 +729,8 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "If the language is in this class,"
 >                   , "then the value of this parameter, %<v:k>,"
 >                   , "is provided."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyS% [x*yx*=x*]>"
 >                   , "%<p:> %<h:SEE% ALSO>"
 >                   , "%<c::isDef>, %<c::isRDef>,"
 >                   , "%<c::isTDef>, %<c::isMTDef>"
@@ -802,6 +831,15 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "based on the substrings of length %<v:k>,"
 >                   , "including length %<v:k>-1 prefixes and suffixes"
 >                   , "and shorter words of length up to %<v:k>-2."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyS% [x*yx*=x*yx*yx*;"
+>                         ++ "x*yx*zx*=x*zx*yx*]>"
+>                   , "%<p:> %<h:SEE% ALSO>"
+>                   , "PIN, Jean-Eric (1997)."
+>                   , "Syntactic Semigroups."
+>                   , "Chapter 10 of \"Handbook of Formal Languages\"."
+>                   , "pp679-746."
+>                   , "https://doi.org/10.1007/978-3-642-59136-5_10"
 >                   ]))
 >             ]))
 >       , ( Left ":isLTT"
@@ -821,6 +859,15 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "Counting saturates at some threshold %<v:t>."
 >                   , "These are the languages definable"
 >                   , "in first-order logic with successor alone."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyS% [e*pf*qe*rf*=e*rf*qe*pf*;"
+>                         ++ "e*e=e*]>"
+>                   , "%<p:> %<h:SEE% ALSO>"
+>                   , "PIN, Jean-Eric (1997)."
+>                   , "Syntactic Semigroups."
+>                   , "Chapter 10 of \"Handbook of Formal Languages\"."
+>                   , "pp679-746."
+>                   , "https://doi.org/10.1007/978-3-642-59136-5_10"
 >                   ]))
 >             ]))
 >       , ( Left ":isMTDef"
@@ -835,6 +882,8 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "based on the length-%<v:k> tier-suffixes"
 >                   , "of words, after projection to any combination"
 >                   , "of subalphabets."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyM% [xyx*=yx*]>"
 >                   , "%<p:> %<h:SEE% ALSO>"
 >                   , "%<c::isDef>, %<c::isMTF>, %<c::isMTGD>,"
 >                   , "%<c::isMTRDef>, %<c::isTDef>"
@@ -851,6 +900,8 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "These are the languages which make distinctions"
 >                   , "based on the whether the tier-projection"
 >                   , "to any subalphabet is in some finite set."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyM% [x*y=yx*;x*x=x*]>"
 >                   , "%<p:> %<h:SEE% ALSO>"
 >                   , "%<c::isFinite>, %<c::isMTDef>, %<c::isMTRDef>"
 >                   ]))
@@ -869,6 +920,9 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "tier-prefixes and tier-suffixes of words,"
 >                   , "after projection to any combination"
 >                   , "of subalphabets."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyM% [x*uxvx*=x*uvx*;"
+>                         ++ "x*uxzvz*=x*uzxvz*]>"
 >                   , "%<p:> %<h:SEE% ALSO>"
 >                   , "%<c::isGD>, %<c::isMTDef>, %<c::isMTRDef>"
 >                   ]))
@@ -886,6 +940,8 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "based on the length-%<v:k> tier-prefixes"
 >                   , "of words, after projection to any combination"
 >                   , "of subalphabets."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyM% [x*yx=x*y]>"
 >                   , "%<p:> %<h:SEE% ALSO>"
 >                   , "%<c::isRDef>, %<c::isMTF>, %<c::isMTDef>,"
 >                   , "%<c::isMTGD>, %<c::isTRDef>"
@@ -903,6 +959,14 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "based on the length-%<v:k>"
 >                   , "subsequences of words."
 >                   , "Their syntactic monoids are J-trivial."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyM% [(xy)*x=(xy)*=y(xy)*]>"
+>                   , "%<p:> %<h:SEE% ALSO>"
+>                   , "SIMON, Imre (1975)."
+>                   , "Piecewise Testable Events."
+>                   , "Automata Theory and Formal Languages 1975."
+>                   , "pp214-222."
+>                   , "https://doi.org/10.1007/3-540-07407-4_23"
 >                   ]))
 >             ]))
 >       , ( Left ":isRDef"
@@ -919,6 +983,8 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "If the language is in this class,"
 >                   , "then the value of this parameter, %<v:k>,"
 >                   , "is provided."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyS% [x*y=x*]>"
 >                   , "%<p:> %<h:SEE% ALSO>"
 >                   , "%<c::isDef>, %<c::isGD>,"
 >                   , "%<c::isTRDef>, %<c::isMTRDef>"
@@ -941,6 +1007,13 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "to disallow the Kleene star."
 >                   , "These are all and only the languages"
 >                   , "whose syntactic semigroups are aperiodic."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyM% [x*x=x*]>"
+>                   , "%<p:> %<h:SEE% ALSO>"
+>                   , "SCHUTZENBERGER, M.P. (1965)."
+>                   , "On Finite Monoids Having Only Trivial Subgroups."
+>                   , "Information and Control 8(2) 190-194."
+>                   , "https://10.1016/s0019-9958(65)90108-7"
 >                   ]))
 >             ]))
 >       , ( Left ":isSL"
@@ -975,6 +1048,26 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "If the language is in this class,"
 >                   , "then the value of this parameter, %<v:k>,"
 >                   , "is provided."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyM% [1<x]>"
+>                   ]))
+>             ]))
+>       , ( Left ":isSPL"
+>         , ( [ArgE], [ClassCat]
+>           , Map.fromList
+>             [ ( ""
+>               , ( "strictly piecewise-local"
+>                 , unwords
+>                   [ "Determine if <%<a:expr>> is strictly"
+>                   , "piecewise-local"
+>                   , "with respect to the current %<v:universe>."
+>                   , "These are the languages which make accept"
+>                   , "all and only those words containing only"
+>                   , "permissible subsequences of length up to %<v:j>"
+>                   , "of substrings of length up to %<v:k>."
+>                   , "That is, generalized %<v:j>,%<v:k> subsequences."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyS% [x*<x*yx*]>"
 >                   ]))
 >             ]))
 >       , ( Left ":isTDef"
@@ -994,6 +1087,8 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "If the language is in this class,"
 >                   , "then the tier %<v:T> and the value"
 >                   , "of this parameter, %<v:k> are provided."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyT% [yx*=x*]>"
 >                   , "%<p:> %<h:SEE% ALSO>"
 >                   , "%<c::isDef>, %<c::isMTDef>"
 >                   ]))
@@ -1015,6 +1110,8 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "If the language is in this class,"
 >                   , "then the tier %<v:T> and the value"
 >                   , "of this parameter, %<v:k> are provided."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyT% [x*yx*=x*]>"
 >                   , "%<p:> %<h:SEE% ALSO>"
 >                   , "%<c::isGD>, %<c::isMTGD>"
 >                   ]))
@@ -1140,6 +1237,8 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "with respect to the current %<v:universe>."
 >                   , "Only two languages are trivial:"
 >                   , "the empty language and its complement."
+>                   , "%<p:> %<h:ALGEBRAIC% TEST>"
+>                   , "%<c::isVarietyM% [1=x]>"
 >                   ]))
 >             ]))
 >       , ( Left ":isTSL"

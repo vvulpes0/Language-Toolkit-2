@@ -59,6 +59,7 @@
 >                         , isLTT
 >                         , isLPT
 >                         , isDot1
+>                         , isSPL
 >                         , isPT
 >                         , isFO2, isFO2B, isFO2BF, isFO2S
 >                         , isSF
@@ -419,6 +420,7 @@ in order to deal with spaces or other special characters.
 >                 , (":isSF", m (fromBool . isSF . n_d))
 >                 , (":isSL", m (pSL . n_d))
 >                 , (":isSP", m (pSP . n_d))
+>                 , (":isSPL", m (fromBool . isSPL . n_d))
 >                 , (":isTDef", m (pTier pDef . n_d))
 >                 , (":isTGD", m (pTier pGDef . n_d))
 >                 , (":isTLAcom", m (pTier (fromBool . isLAcom) . n_d))
