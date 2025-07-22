@@ -69,6 +69,8 @@
 >                         , isB, isLB
 >                         , isTrivial
 >                         , isMTF, isMTDef, isMTRDef, isMTGD
+>                         , isJoinVariety
+>                         , isMJoinVariety
 >                         , isVariety
 >                         )
 > import LTK.FSA
@@ -265,6 +267,14 @@
 >     -> Maybe [Parameter String]
 > isV a b = maybe Nothing fromBool . isVariety a b
 
+> isJV :: (Ord n, Ord e) => String -> FSA n e
+>      -> Maybe [Parameter String]
+> isJV a = maybe Nothing fromBool . isJoinVariety a
+
+> isJVM :: (Ord n, Ord e) => String -> FSA n e
+>       -> Maybe [Parameter String]
+> isJVM a = maybe Nothing fromBool . isMJoinVariety a
+
 > apBoth :: (a -> b) -> (b -> b -> c) -> a -> a -> c
 > apBoth f g x y = f x `g` f y
 
@@ -279,6 +289,21 @@ in order to deal with spaces or other special characters.
 >           $ doStatementsWithError d str
 >     | isStartOf str ":help"
 >         = L . Help . dropWhile isSpace $ drop (length ":help") str
+>     | isStartOf str ":isjvarietym"
+>         = case words str
+>           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
+>                            in g (m (isJVM u . n_d)) v
+>              _         ->  R d
+>     | isStartOf str ":isjvarietys"
+>         = case words str
+>           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
+>                            in g (m (isJV u . n_d)) v
+>              _         ->  R d
+>     | isStartOf str ":isjvarietyt"
+>         = case words str
+>           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
+>                            in g (m (pTier (isJV u) . n_d)) v
+>              _         ->  R d
 >     | isStartOf str ":isvarietym"
 >         = case words str
 >           of (_:a:b)   ->  let ~(u,v) = getVDesc $ unwords (a:b)
@@ -406,6 +431,8 @@ in order to deal with spaces or other special characters.
 >                 , (":isGD", m (pGDef . n_d))
 >                 , (":isGLPT", m (fromBool . isGLPT . n_d))
 >                 , (":isGLT", m (fromBool . isGLT . n_d))
+>                 , (":isJVarietyS",
+>                                  error ":isJVarietyS not defined here")
 >                 , (":isLAcom", m (fromBool . isLAcom . n_d))
 >                 , (":isLB", m (fromBool . isLB . n_d))
 >                 , (":isLPT", m (fromBool . isLPT . n_d))

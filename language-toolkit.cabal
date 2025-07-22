@@ -43,7 +43,7 @@ homepage:            https://github.com/vvulpes0/Language-Toolkit-2
 license:             MIT
 license-file:        LICENSE
 author:              Dakotah Lambert, James Rogers
-copyright:           (c) 2014-2024 Dakotah Lambert
+copyright:           (c) 2014-2025 Dakotah Lambert
 maintainer:          Dakotah Lambert <dakotahlambert@acm.org>
 tested-with:         GHC ==9.8.2
 build-type:          Simple
@@ -79,6 +79,7 @@ library
                 , LTK.Decide.GD
                 , LTK.Decide.GLPT
                 , LTK.Decide.GLT
+                , LTK.Decide.JoinVariety
                 , LTK.Decide.LAcom
                 , LTK.Decide.LPT
                 , LTK.Decide.LT

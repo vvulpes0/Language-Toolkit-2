@@ -13,7 +13,7 @@
 
 > {-|
 > Module    : LTK.FSA
-> Copyright : (c) 2014-2024 Dakotah Lambert
+> Copyright : (c) 2014-2025 Dakotah Lambert
 > License   : MIT
 
 > The purpose of this module is to define an interface to a generic,
@@ -49,6 +49,7 @@
 >        , syntacticSemigroup
 >        , syntacticOSemigroup
 >        , syntacticJSemigroup
+>        , syntacticSemilattice
 >        , residue
 >        , coresidue
 >        , orderGraph
@@ -89,12 +90,14 @@
 >        , forceAlphabetTo
 >        , desemantify
 >        , renameSymbolsBy
+>        , renameSymbolsByMonotonic
 >        -- ** Transformations of t'State' labels
 >        , renameStatesBy
 >        , renameStates
 >        -- * Miscellaneous
 >        , commonPrefix
 >        , commonSuffix
+>        , JSemigroup
 >        , State(..)
 >        , Symbol(..)
 >        , unsymbols
@@ -1648,10 +1651,35 @@ Semigroups With Additional Structure
 >                   in zipWith g (s2a Map.! s) t' == t'
 >           ks = Map.keysSet s2a
 
-> -- |Compute the syntactic join-semigroup
+> -- |Compute the semilattice order induced by the join-semigroup:
+> -- the set S maps to the class of sets it is less than or equal to.
+> syntacticSemilattice :: (Ord n, Ord e) =>
+>                         FSA n e -> Map (Set [e]) (Set (Set [e]))
+> syntacticSemilattice = semilatticeFromIntersectoid . intersectoid
+
+> type JSemigroup e = ( (Map Int (Set Int), Map (Set Int) Int)
+>                     , (Map (Set [e]) [Int], Map [Int] (Set [e]))
+>                     )
+
+> -- |Compute a representation of the syntactic join-semigroup:
+> -- a pair whose first component is a bimap associating
+> -- domain-elements with sets of states and whose second component
+> -- is a bimap associating sets of words with actions over those
+> -- domain elements.
+> --
+> -- To multiply two actions, apply the second to the first.
+> -- To join two actions, convert to statesets, union the results,
+> -- and convert back to an action.
 > syntacticJSemigroup :: (Ord n, Ord e) =>
->                        FSA n e -> Map (Set [e]) (Set (Set [e]))
-> syntacticJSemigroup = semilatticeFromIntersectoid . intersectoid
+>                        FSA n e -> JSemigroup e
+> syntacticJSemigroup f = ( oid
+>                         , actionsOnSets sg (q2qs,qs2q) Map.empty
+>                           . Map.map Set.singleton $ flob sg
+>                         )
+>     where flob = Map.fromList . map (\(a,b) -> (b,a)) . Map.assocs
+>           sg = fst . completeSg base Map.empty . Map.map pure
+>                $ flob base
+>           (oid@(q2qs,qs2q),base) = intersectoid f
 
 
 Graphing an Order

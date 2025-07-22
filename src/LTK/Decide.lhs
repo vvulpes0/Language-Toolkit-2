@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide
-> Copyright : (c) 2019-2023 Dakotah Lambert
+> Copyright : (c) 2019-2025 Dakotah Lambert
 > License   : MIT
 > 
 > Functions used for deciding the complexity class of an automaton.
@@ -34,6 +34,8 @@
 >                   -- * Two-Variable Logics
 >                   , isFO2, isFO2B, isFO2BF, isFO2S
 >                   -- * Generic Algebra
+>                   , isJoinVariety
+>                   , isMJoinVariety
 >                   , isVariety
 >                   ) where
 
@@ -63,4 +65,5 @@
 > import LTK.Decide.SPL
 > import LTK.Decide.Trivial
 > import LTK.Decide.Multitier
+> import LTK.Decide.JoinVariety
 > import LTK.Decide.Variety

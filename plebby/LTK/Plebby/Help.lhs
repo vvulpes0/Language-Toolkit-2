@@ -771,6 +771,81 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "%<c:isGLPT>, %<c:isLT>, %<c:isPT>"
 >                   ]))
 >             ]))
+>       , ( Left ":isJVarietyM"
+>         , ( [ArgS, ArgE], [ClassCat]
+>           , Map.fromList
+>             [ ( ""
+>               , ( "arbitrary conjunctive *-variety"
+>                 , unwords
+>                   [ "Determine if the syntactic join-monoid of"
+>                   , "<%<a:expr>>"
+>                   , "satisfies the given equations and inequalities"
+>                   , "with respect to the current %<v:universe>."
+>                   , "The equations are specified as in"
+>                   , "%<c::isVarietyM>,"
+>                   , "except that the literal 0 cannot be used."
+>                   , "However, there is a second binary operator:"
+>                   , "%<c::+>."
+>                   , "This computes the least upper bound"
+>                   , "of its operands in the syntactic semilattice."
+>                   , "It is preferable to use the plain"
+>                   , "%<c::isVarietyM> where possible,"
+>                   , "as the join-monoid can be exponentially larger"
+>                   , "and thus significantly slower to evaluate."
+>                   , "%<p:> %<h:SEE% ALSO>"
+>                   , "%<c::isVarietyM>, %<c::isVarietyS>,"
+>                   , "%<c::synsl>"
+>                   ]))
+>               ]))
+>       , ( Left ":isJVarietyS"
+>         , ( [ArgS, ArgE], [ClassCat]
+>           , Map.fromList
+>             [ ( ""
+>               , ( "arbitrary conjunctive +-variety"
+>                 , unwords
+>                   [ "Determine if the syntactic join-semigroup of"
+>                   , "<%<a:expr>>"
+>                   , "satisfies the given equations and inequalities"
+>                   , "with respect to the current %<v:universe>."
+>                   , "The equations are specified as in"
+>                   , "%<c::isVarietyM>,"
+>                   , "except that the literal 0 cannot be used,"
+>                   , "and the literal 1 should not be used because"
+>                   , "the semigroup may not have a neutral element."
+>                   , "However, there is a second binary operator:"
+>                   , "%<c::+>."
+>                   , "This computes the least upper bound"
+>                   , "of its operands in the syntactic semilattice."
+>                   , "It is preferable to use the plain"
+>                   , "%<c::isVarietyS> where possible,"
+>                   , "as the join-semigroup can be exponentially larger"
+>                   , "and thus significantly slower to evaluate."
+>                   , "%<p:> %<h:SEE% ALSO>"
+>                   , "%<c::isVarietyM>, %<c::isVarietyS>,"
+>                   , "%<c::synsl>"
+>                   ]))
+>               ]))
+>       , ( Left ":isJVarietyT"
+>         , ( [ArgS, ArgE], [ClassCat]
+>           , Map.fromList
+>             [ ( ""
+>               , ( "arbitrary conjunctive +-variety on a tier"
+>                 , unwords
+>                   [ "Determine if the <%<a:expr>>"
+>                   , "is a tier-based extension of a language"
+>                   , "whose syntactic join-semigroup satisfies"
+>                   , "the given equations and inequalities"
+>                   , "with respect to the current %<v:universe>."
+>                   , "The equations and inequalities are specified"
+>                   , "as for %<c::isVarietyS>."
+>                   , "If these relations hold,"
+>                   , "then the subalphabet %<v:T>"
+>                   , "to which the language projects"
+>                   , "is provided."
+>                   , "%<p:> %<h:SEE% ALSO>"
+>                   , "%<c::isJVarietyS>, %<c::isVarietyT>, %<c::synsl>"
+>                   ]))
+>               ]))
 >       , ( Left ":isLAcom"
 >         , ( [ArgE], [ClassCat]
 >           , Map.fromList
@@ -1317,7 +1392,7 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "words which contain %<b:x> and %<b:y>"
 >                   , "but not %<b:z> is a semilattice: %<p:>"
 >                   , "%<e:%>% =a{/a}=b{/b}=c{/c}> %<-:>"
->                   , "%<e:%>% ⋀{a,b,¬c}> %<-:>"
+>                   , "%<e:%>% ⋀{⟨a⟩,⟨b⟩,¬⟨c⟩}> %<-:>"
 >                   , "%<e:%>% :isVarietyM% [x*=x;xy=yx]% it> %<-:>"
 >                   , "%<e:True>"
 >                   ]))
@@ -1330,9 +1405,9 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                 , unwords
 >                   [ "Determine if the syntactic semigroup of"
 >                   , "<%<a:expr>>"
->                   , "satisfied the given equations and inequalities"
+>                   , "satisfies the given equations and inequalities"
 >                   , "with respect to the current %<v:universe>."
->                   , "The equations are specied as in"
+>                   , "The equations are specified as in"
 >                   , "%<c::isVarietyM>,"
 >                   , "except that the literal 1"
 >                   , "should not be used, as the neutral element"
@@ -1349,9 +1424,9 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                 , unwords
 >                   [ "Determine if the projected subsemigroup of"
 >                   , "<%<a:expr>>"
->                   , "satisfied the given equations and inequalities"
+>                   , "satisfies the given equations and inequalities"
 >                   , "with respect to the current %<v:universe>."
->                   , "The equations are specied as in"
+>                   , "The equations are specified as in"
 >                   , "%<c::isVarietyM>,"
 >                   , "except that the literal 1"
 >                   , "should not be used, as the neutral element"
@@ -1361,7 +1436,7 @@ and the % and > characters can be encoded as %% and %>, respectively.
 >                   , "to which the language projects"
 >                   , "is provided."
 >                   , "%<p:> %<h:SEE% ALSO>"
->                   , "%<c::isVarietyM> %<c::isVarietyS>"
+>                   , "%<c::isVarietyM>, %<c::isVarietyS>"
 >                   ]))
 >               ]))
 >       , ( Left ":Jmin"

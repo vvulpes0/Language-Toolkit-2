@@ -41,7 +41,7 @@
 
 > import LTK.FSA          (FSA, renameStates, renameSymbolsBy
 >                         , syntacticMonoid
->                         , syntacticJSemigroup
+>                         , syntacticSemilattice
 >                         )
 > import LTK.Porters.ATT  ( exportATT
 >                         , invertATT
@@ -130,7 +130,7 @@
 > newtype SyntacticSemilattice
 >     = SyntacticSemilattice SyntacticSemilattice
 > instance Exportable SyntacticSemilattice
->     where fromFSA _ = exportSyntacticSemilattice . syntacticJSemigroup
+>     where fromFSA _ = exportSyntacticSemilattice . syntacticSemilattice
 
 
 === instances for Pleb format
