@@ -144,7 +144,7 @@
 >                    , ":help for help"
 >                    ]
 >           name = "plebby"
->           version = "1.2"
+>           version = "1.3"
 >           url = "https://hackage.haskell.org/package/language-toolkit"
 > main :: IO ()
 > main = do

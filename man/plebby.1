@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEBBY 1 "2023-05-24" "Version 1.2" "Language Toolkit"
+.TH PLEBBY 1 "2025-08-14" "Version 1.3" "Language Toolkit"
 .SH NAME
 plebby \- Piecewise / Local Expression Builder Interpreter
 .SH SYNOPSIS
@@ -238,6 +238,48 @@ Generalized locally J-trivial. Related to LT and PT.
 .RI < expr >
 .RS
 Generalized locally testable.
+.RE
+.
+.PP
+.B :isJVarietyM
+.RI < variety >
+.RI < expr >
+.RS
+Join-monoid is in the given conjunctive *-variety.
+See
+.B Varieties
+below.
+These varieties may also use
+.BR + ,
+which finds the join of two elements.
+.RE
+.
+.PP
+.B :isJVarietyS
+.RI < variety >
+.RI < expr >
+.RS
+Join-semigroup is in the given conjunctive +-variety.
+See
+.B Varieties
+below.
+These varieties may also use
+.BR + ,
+which finds the join of two elements.
+.RE
+.
+.PP
+.B :isJVarietyT
+.RI < variety >
+.RI < expr >
+.RS
+Projected sub-join-semigroup is in the given conjunctive +-variety.
+See
+.B Varieties
+below.
+These varieties may also use
+.BR + ,
+which finds the join of two elements.
 .RE
 .
 .PP

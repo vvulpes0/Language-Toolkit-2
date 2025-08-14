@@ -17,13 +17,23 @@
 > import LTK.FSA
 > import LTK.Algebra(SynMon)
 
+> -- |True iff the language is strictly piecewise-local,
+> -- characterized by a set of forbidden subsequences of substrings.
+> --
+> -- @since 1.3
 > isSPL :: (Ord n, Ord e) => FSA n e -> Bool
 > isSPL = isSPLs . syntacticOSemigroup
 
+> -- |True iff the language is strictly piecewise-local,
+> -- characterized by a set of forbidden subsequences of substrings.
+> --
+> -- @since 1.3
 > isSPLM :: (Ord n, Ord e) => SynMon n e -> Bool
 > isSPLM = isSPL
 
 > -- |True iff the semigroup satisifes
 > -- \(x^{\omega}\leq x^{\omega}yx^{\omega}\).
+> --
+> -- @since 1.3
 > isSPLs :: FiniteSemigroupRep s => OrderedSemigroup s -> Bool
 > isSPLs s = maybe False id $ isVariety "[x*<x*yx*]" s

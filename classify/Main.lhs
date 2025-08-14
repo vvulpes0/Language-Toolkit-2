@@ -176,33 +176,36 @@ so that results may be listed in topographic order.
 >             ( Either (FSA n e -> Bool) (FSMult -> Bool)
 >             , [String])
 > classmap = Map.fromList
->            [ ("1", (Left isTrivial, ["Fin","CB","SP"]))
+>            [ ("1", (Left isTrivial, ["Trivial","Fin","CB","SP"]))
 >            , ("Acom", (Right isAcoms, ["LTT","MTF"]))
 >            , ("B", (Right isBs, ["FO2"]))
 >            , ("CB", (Right isCBs, ["B","LT","Acom"]))
 >            , ("Def", (Right isDefs, ["GD", "SL", "TDef"]))
+>            , ("Dot1", (Right isDot1s, ["LPT"]))
 >            , ("FO2", (Right isFO2s, ["FO2S", "GLT"]))
 >            , ("FO2BF", (Left isFO2BF, ["SF"]))
 >            , ("FO2B", (Right isFO2Bs, ["FO2BF"]))
 >            , ("FO2S", (Right isFO2Ss, ["FO2B"]))
->            , ("Fin", (Left isFinite, ["Def", "PT", "RDef"]))
->            , ("GD", (Right isGDs, ["LT", "TGD"]))
+>            , ("Fin", (Left isFinite, ["Finite","Def", "PT", "RDef"]))
+>            , ("Finite", (Left isFinite, ["Def", "PT", "RDef"]))
+>            , ("GD", (Right isGDs, ["LT", "SPL", "TGD"]))
 >            , ("GLPT", (Right isGLPTs, ["FO2B"]))
 >            , ("GLT", (Right isGLTs, ["GLPT"]))
 >            , ("LAcom", (Right isLAcoms, ["LPT", "TLAcom"]))
 >            , ("LB", (Right isLBs, ["FO2S"]))
 >            , ("LPT", (Right isLPTs, ["GLPT"]))
 >            , ("LT", (Right isLTs, ["LB", "LTT", "TLT"]))
->            , ("LTT", (Right isLTTs, ["LAcom", "TLTT"]))
+>            , ("LTT", (Right isLTTs, ["Dot1", "LAcom", "TLTT"]))
 >            , ("MTDef", (Right isMTDefs, ["MTGD"]))
 >            , ("MTF", (Right isMTFs, ["MTDef","MTRdef","PT"]))
 >            , ("MTGD", (Right isMTGDs, ["FO2"]))
 >            , ("MTRDef", (Right isMTRDefs, ["MTGD"]))
->            , ("PT", (Right isPTs, ["FO2"]))
+>            , ("PT", (Right isPTs, ["Dot1","FO2"]))
 >            , ("RDef", (Right isRDefs, ["GD", "SL", "TRDef"]))
 >            , ("SF", (Right isSFs, []))
->            , ("SL", (Left isSL, ["LT", "TSL"]))
->            , ("SP", (Left isSP, ["PT"]))
+>            , ("SL", (Left isSL, ["LT", "SPL","TSL"]))
+>            , ("SP", (Left isSP, ["PT","SPL"]))
+>            , ("SPL", (Left isSP, ["Dot1"]))
 >            , ("TDef", (Right isTDefs, ["TGD", "TSL", "MTDef"]))
 >            , ("TGD", (Right isTGDs, ["MTGD", "TLT"]))
 >            , ("TLAcom", (Right isTLAcoms, ["TLPT"]))
@@ -211,6 +214,7 @@ so that results may be listed in topographic order.
 >            , ("TLT", (Right isTLTs, ["GLT", "TLB", "TLTT"]))
 >            , ("TLTT", (Right isTLTTs, ["TLAcom"]))
 >            , ("TRDef", (Right isTRDefs, ["TGD", "TSL", "MTRDef"]))
+>            , ("Trivial", (Left isTrivial, ["Fin","CB","SP"]))
 >            , ("TSL", (Left isTSL, ["TLT"]))
 >            ]
 
@@ -249,7 +253,7 @@ then A comes before B.
 Version numbers are no longer per utility
 
 > printVersion :: IO ()
-> printVersion = putStrLn "Version 1.2"
+> printVersion = putStrLn "Version 1.3"
 
 > usageHeader :: String
 > usageHeader = "usage: classify [OPTION...] class ..."

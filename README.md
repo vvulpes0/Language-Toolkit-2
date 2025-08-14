@@ -1,5 +1,5 @@
 # The Language Toolkit
-![Current Version](https://img.shields.io/badge/version-1.0-informational.svg)
+![Current Version](https://img.shields.io/badge/version-1.3-informational.svg)
 ![Licence](https://img.shields.io/github/license/vvulpes0/Language-Toolkit-2)
 ![Issues](https://img.shields.io/github/issues/vvulpes0/Language-Toolkit-2)
 

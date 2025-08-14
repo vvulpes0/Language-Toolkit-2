@@ -90,6 +90,7 @@
 > instance Show1 f => Show (Fix f) where
 >     showsPrec d = liftShowsPrec showsPrec showList d . out
 
+> -- |An expression tree of arbitrary depth.
 > type Expr = Fix ExprF
 > -- |An expression, the root of an expression tree.
 > data ExprF a

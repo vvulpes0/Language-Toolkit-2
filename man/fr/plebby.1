@@ -1,5 +1,5 @@
 .\" The version string should track the overall package version
-.TH PLEBBY 1 "2023-05-24" "Version 1.2" "Language Toolkit"
+.TH PLEBBY 1 "2025-08-14" "Version 1.3" "Language Toolkit"
 .SH NOM
 plebby \- Piecewise / Local Expression Builder interpreteur
 .SH SYNOPSIS
@@ -241,6 +241,49 @@ et que les relations ordre et successeur.
 .RE
 .
 .PP
+.B :isJVarietyM
+.RI < variété >
+.RI < expr >
+.RS
+Le monoïde avec bornes supérieures
+appartient à la *-variété conjonctive donnée.
+Voir plus loin la section
+.BR Variétés .
+Ces variétés-ci peuvent aussi utiliser l'opération
+.BR + ,
+qui trouve la borne supérieure de deux éléments.
+.RE
+.
+.PP
+.B :isJVarietyS
+.RI < variété >
+.RI < expr >
+.RS
+Le demi-groupe avec bornes supérieures
+appartient à la +-variété conjonctive donnée.
+Voir plus loin la section
+.BR Variétés .
+Ces variétés-ci peuvent aussi utiliser l'opération
+.BR + ,
+qui trouve la borne supérieure de deux éléments.
+.RE
+.
+.PP
+.B :isJVarietyT
+.RI < variété >
+.RI < expr >
+.RS
+Le demi-groupe projeté avec bornes supérieures
+appartient à la +-variété conjonctive donnée,
+après ignorant les symboles non-saillant.
+Voir plus loin la section
+.BR Variétés .
+Ces variétés-ci peuvent aussi utiliser l'opération
+.BR + ,
+qui trouve la borne supérieure de deux éléments.
+.RE
+.
+.PP
 .B :isLAcom
 .RI < expr >
 .RS
@@ -410,26 +453,32 @@ après ignorant les symboles non-saillant.
 .B :isVarietyM
 .RI < variété >
 .RI < expr >
+.RS
 Le monoïde appartient à la *-variété donnée.
 Voir plus loin la section
 .BR Variétés .
+.RE
 .
 .PP
 .B :isVarietyS
 .RI < variété >
 .RI < expr >
+.RS
 Le demi-groupe appartient à la +-variété donnée.
 Voir plus loin la section
 .BR Variétés .
+.RE
 .
 .PP
 .B :isVarietyT
 .RI < variété >
 .RI < expr >
+.RS
 Le demi-groupe projeté appartient à la +-variété donnée,
 après ignorant les symboles non-saillant.
 Voir plus loin la section
 .BR Variétés .
+.RE
 .
 .SS L'inférence des grammaires
 .B :learnSL

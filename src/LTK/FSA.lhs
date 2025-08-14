@@ -1657,6 +1657,7 @@ Semigroups With Additional Structure
 >                         FSA n e -> Map (Set [e]) (Set (Set [e]))
 > syntacticSemilattice = semilatticeFromIntersectoid . intersectoid
 
+> -- |Convenience type alias: A representation of a semigroup with join.
 > type JSemigroup e = ( (Map Int (Set Int), Map (Set Int) Int)
 >                     , (Map (Set [e]) [Int], Map [Int] (Set [e]))
 >                     )
