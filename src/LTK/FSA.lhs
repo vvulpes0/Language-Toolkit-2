@@ -13,7 +13,7 @@
 
 > {-|
 > Module    : LTK.FSA
-> Copyright : (c) 2014-2024 Dakotah Lambert
+> Copyright : (c) 2014-2025 Dakotah Lambert
 > License   : MIT
 
 > The purpose of this module is to define an interface to a generic,
@@ -48,6 +48,8 @@
 >        , syntacticOMonoid
 >        , syntacticSemigroup
 >        , syntacticOSemigroup
+>        , syntacticJSemigroup
+>        , syntacticSemilattice
 >        , residue
 >        , coresidue
 >        , orderGraph
@@ -88,12 +90,14 @@
 >        , forceAlphabetTo
 >        , desemantify
 >        , renameSymbolsBy
+>        , renameSymbolsByMonotonic
 >        -- ** Transformations of t'State' labels
 >        , renameStatesBy
 >        , renameStates
 >        -- * Miscellaneous
 >        , commonPrefix
 >        , commonSuffix
+>        , JSemigroup
 >        , State(..)
 >        , Symbol(..)
 >        , unsymbols
@@ -113,6 +117,7 @@
 #endif
 #endif
 > import Data.Maybe (fromMaybe)
+> import Data.Map.Lazy (Map)
 > import Data.Set (Set)
 > import Data.Representation.FiniteSemigroup
 >     ( GeneratedAction, OrderedSemigroup
@@ -404,24 +409,6 @@ harder problem.
 >                  (isize (states a)   == s)
 >     where c  =  autUnion a b
 >           s  =  isize . keep (State (Nothing, Nothing) /=) $ states c
-
-A Set of FSAs could be useful, and an Ord instance is needed for that.
-If two automata are equal, they should certainly compare EQ.
-If A is a subset of B, compare A B ought be LT and the reverse GT.
-When neither is a subset of the other, they are incomparable by this
-measure, so instead they are compared by a standard Haskell comparison
-of tuples consisting of their alphabets, transitions, initial states,
-and final states.
-
-> instance (Ord e, Ord n) => Ord (FSA n e)
->     where compare a b
->               | a == b                  =  EQ
->               | isSubsetOf (f b) (f a)  =  LT
->               | isSubsetOf (f a) (f b)  =  GT
->               | otherwise               =  compare (g a) (g b)
->               where f :: (Ord e, Ord n) => FSA n e -> FSA Integer e
->                     f = renameStates
->                     g x = (alphabet x, transitions x, initials x, finals x)
 
 > instance (Enum n, Ord n, Ord e) => Container (FSA n e) [e]
 >     where isEmpty       =  isNull
@@ -1581,6 +1568,119 @@ this is not necessarily represented as a graph.
 >                            then ([0 .. Set.size (states x) - 1] :)
 >                            else id) (f x)
 >                  in fromBasesWith (syntacticOrder q0 fs) bs
+
+
+Semigroups With Additional Structure
+====================================
+
+> -- |Extract a representation of a semigroup whose elements
+> -- are sets of the elements in the syntactic semigroup
+> -- and which are ordered by a separate interacting semilattice.
+> -- This aids in investigating conjunctive varieties.
+> intersectoid :: (Ord n, Ord e) => FSA n e
+>              -> ((Map Int (Set Int), Map (Set Int) Int), Map e [Int])
+> intersectoid f' = ((i2q, q2i), Map.fromSet action $ sigma f)
+>     where f = renameStates $ determinize f'
+>           qbar = groupBy int . Set.toList
+>                  . Set.delete Set.empty . Set.powerSet
+>                  . Set.mapMonotonic nodeLabel $ states f
+>           expand [] = []
+>           expand ((xs,i):ys) = map (\x -> (x,i)) xs ++ expand ys
+>           repr i ((x:_):ys) = (i,x) : repr (i+1) ys
+>           repr i (_:ys) = (i,Set.empty) : repr (i+1) ys
+>           repr _ [] = []
+>           action e = map (t (Symbol e)) $ Map.keys i2q
+>           t e i = q2i Map.!
+>                   Set.map (nodeLabel . deltaD f e . State)
+>                           (i2q Map.! i)
+>           q2i  = Map.fromList . expand $ zip qbar [(0::Int)..]
+>           i2q  = Map.fromList $ repr (0::Int) qbar
+>           go x y = renameStates . minimizeDeterministic
+>                    $ autIntersection x y
+>           int  = pfold go
+>                  . map (\x ->
+>                         f { initials = Set.singleton (State x) })
+>                  . Set.toList
+
+> -- |Expand from generators to entire multiplicative semigroup.
+> completeSg :: (Ord e) => Map e [Int] -> Map [Int] [e] -> Map [Int] [e]
+>            -> (Map [e] [Int], Map [Int] [e])
+> completeSg base closed open
+>     | Map.null open = (flob closed, closed)
+>     | otherwise = completeSg base closed' open'
+>     where f (e,s) (t,w) = (map (t!!) s, e:w)
+>           flob = Map.fromList . map (\(a,b) -> (b,a)) . Map.assocs
+>           closed' = Map.union closed open
+>           open' = new `Map.withoutKeys` Map.keysSet closed'
+>           new = Map.fromList
+>                 (f <$> Map.assocs base <*> Map.assocs open)
+
+> -- |Add addition to a semigroup of sets of semigroup elements.
+> actionsOnSets :: (Ord e) => Map [e] [Int]
+>               -> ((Map Int (Set Int), Map (Set Int) Int))
+>               -> Map [Int] (Set [e]) -> Map [Int] (Set [e])
+>               -> (Map (Set [e]) [Int], Map [Int] (Set [e]))
+> actionsOnSets sg (q2qs,qs2q) closed open
+>     | Map.null open = (flob closed, closed)
+>     | otherwise = actionsOnSets sg (q2qs,qs2q) closed' open'
+>     where f (w,s) (t,ws) = (zipWith g s t, Set.insert w ws)
+>           g x y = qs2q Map.!
+>                   ((q2qs Map.! x) `Set.union` (q2qs Map.! y))
+>           flob = Map.fromList . map (\(a,b) -> (b,a)) . Map.assocs
+>           closed' = Map.union closed open
+>           open' = new `Map.withoutKeys` Map.keysSet closed'
+>           new = Map.fromList
+>                 (f <$> Map.assocs sg <*> Map.assocs open)
+
+> -- |Compute the order induced by the addition
+> -- derived from actionsOnSets
+> semilatticeFromIntersectoid
+>     :: (Ord e) =>
+>        ((Map Int (Set Int), Map (Set Int) Int), Map e [Int])
+>     -> Map (Set [e]) (Set (Set [e]))
+> semilatticeFromIntersectoid ((q2qs,qs2q), base)
+>     = Map.fromSet (\k -> Set.filter (k #) ks) ks
+>     where flob = Map.fromList . map (\(a,b) -> (b,a)) . Map.assocs
+>           sg = fst . completeSg base Map.empty . Map.map pure
+>                $ flob base
+>           s2a = fst . actionsOnSets sg (q2qs,qs2q) Map.empty
+>                 . Map.map Set.singleton $ flob sg
+>           g x y = qs2q Map.!
+>                   ((q2qs Map.! x) `Set.union` (q2qs Map.! y))
+>           s # t = let t' = s2a Map.! t
+>                   in zipWith g (s2a Map.! s) t' == t'
+>           ks = Map.keysSet s2a
+
+> -- |Compute the semilattice order induced by the join-semigroup:
+> -- the set S maps to the class of sets it is less than or equal to.
+> syntacticSemilattice :: (Ord n, Ord e) =>
+>                         FSA n e -> Map (Set [e]) (Set (Set [e]))
+> syntacticSemilattice = semilatticeFromIntersectoid . intersectoid
+
+> -- |Convenience type alias: A representation of a semigroup with join.
+> type JSemigroup e = ( (Map Int (Set Int), Map (Set Int) Int)
+>                     , (Map (Set [e]) [Int], Map [Int] (Set [e]))
+>                     )
+
+> -- |Compute a representation of the syntactic join-semigroup:
+> -- a pair whose first component is a bimap associating
+> -- domain-elements with sets of states and whose second component
+> -- is a bimap associating sets of words with actions over those
+> -- domain elements.
+> --
+> -- To multiply two actions, apply the second to the first.
+> -- To join two actions, convert to statesets, union the results,
+> -- and convert back to an action.
+> syntacticJSemigroup :: (Ord n, Ord e) =>
+>                        FSA n e -> JSemigroup e
+> syntacticJSemigroup f = ( oid
+>                         , actionsOnSets sg (q2qs,qs2q) Map.empty
+>                           . Map.map Set.singleton $ flob sg
+>                         )
+>     where flob = Map.fromList . map (\(a,b) -> (b,a)) . Map.assocs
+>           sg = fst . completeSg base Map.empty . Map.map pure
+>                $ flob base
+>           (oid@(q2qs,qs2q),base) = intersectoid f
 
 
 Graphing an Order

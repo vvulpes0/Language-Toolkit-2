@@ -1,5 +1,28 @@
 # Changelog
 
+## Version 1.3 — 2025-08-14
+### Added
+* decision procedures for SPL (strictly piecewise-local)
+* join-semigroups and join-monoids
+  + syntacticJSemigroup and syntacticSemilattice to compute them
+  + a new Porter, LTK.Porters.SyntacticSemilattice to display them
+  + isJoinVariety and isMJoinVariety for arbitrary membership queries
+  + :isJVarietyS and :isJVarietyM in plebby
+  + :isJVarietyT is the natural extension to tiers of :isJVarietyS
+* LTK.FSA.renameSymbolsByMonotonic is now exported
+* classify synonyms to match plebby but retain compatibility:
+  + "1" is now also "Trivial" from :isTrivial
+  + "Fin" is now also "Finite" from :isFinite
+* classify now accepts "Dot1" and "SPL"
+### Changed
+* improved some documentation inside plebby
+* fixed one of the examples
+* LTK.Porters.Pleb was redesigned in terms of recursive schemes
+* moved optimization level from language-toolkit.cabal to cabal.project
+### Removed
+* The Ord instance for FSA was a dangerous lie, it is now gone.
+
+
 ## Version 1.2.0.1 — 2024-04-27
 ### Changed
 * PLEB: fixed @@ ("Domination") operator

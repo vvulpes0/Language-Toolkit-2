@@ -1,7 +1,7 @@
 > {-# OPTIONS_HADDOCK show-extensions #-}
 > {-|
 > Module    : LTK.Decide
-> Copyright : (c) 2019-2023 Dakotah Lambert
+> Copyright : (c) 2019-2025 Dakotah Lambert
 > License   : MIT
 > 
 > Functions used for deciding the complexity class of an automaton.
@@ -23,6 +23,7 @@
 >                   -- * Both Local and Piecewise
 >                   , isAcom
 >                   , isCB, isGLT, isLPT, isGLPT, isSF
+>                   , isSPL
 >                   , isDot1
 >                   -- * Tier-based generalizations
 >                   , isTDef, isTRDef, isTGD
@@ -33,6 +34,8 @@
 >                   -- * Two-Variable Logics
 >                   , isFO2, isFO2B, isFO2BF, isFO2S
 >                   -- * Generic Algebra
+>                   , isJoinVariety
+>                   , isMJoinVariety
 >                   , isVariety
 >                   ) where
 
@@ -59,6 +62,8 @@
 > import LTK.Decide.TLAcom
 > import LTK.Decide.Definite
 > import LTK.Decide.DotDepth
+> import LTK.Decide.SPL
 > import LTK.Decide.Trivial
 > import LTK.Decide.Multitier
+> import LTK.Decide.JoinVariety
 > import LTK.Decide.Variety

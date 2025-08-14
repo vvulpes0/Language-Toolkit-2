@@ -67,7 +67,7 @@
 > usageHeader = "Usage: dotify [OPTION...] [file]"
 
 > printVersion :: IO ()
-> printVersion = putStrLn "Version 1.2"
+> printVersion = putStrLn "Version 1.3"
 
 > defaultOptions :: Options
 > defaultOptions = Options
