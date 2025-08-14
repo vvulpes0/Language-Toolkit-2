@@ -8,6 +8,8 @@
 > in conjunctive varieties.  It extends the systems defined by
 > LTK.Decide.Variety, but the more complex structure used
 > incurs a performance cost.
+>
+> @since 1.3
 > -}
 
 > module LTK.Decide.JoinVariety ( isJoinVariety

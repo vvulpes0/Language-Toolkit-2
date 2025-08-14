@@ -2,9 +2,12 @@
 
 > import Data.Char (isSpace, toLower, toUpper)
 > import Data.Either (isLeft, isRight)
+> import Data.Foldable (Foldable(..))
 > import Data.List (isPrefixOf, sortBy)
 > import Data.Map (Map)
 > import qualified Data.Map as Map
+
+> import Prelude hiding (Foldable(..)) -- foldl' Prelude migration
 
 > type Language = String
 > type HelpKey = String
